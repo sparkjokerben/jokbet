@@ -4,7 +4,7 @@
   import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
   import { onMount } from "svelte";
   import { t } from "../../lib/i18n";
-  import type { PetSize, Settings } from "../../lib/types";
+  import type { ActionAnim, IdleAnim, PetSize, Settings } from "../../lib/types";
   import Segmented from "../ui/Segmented.svelte";
   import Toggle from "../ui/Toggle.svelte";
   import MilestoneEditor from "./MilestoneEditor.svelte";
@@ -13,6 +13,18 @@
   let error = $state("");
   let autostart = $state<boolean | null>(null);
   const isMac = navigator.userAgent.includes("Mac");
+
+  const IDLE_OPTIONS: { value: IdleAnim; label: string }[] = [
+    { value: "breathe", label: t("animBreathe") },
+    { value: "soccer", label: t("animSoccer") },
+    { value: "lookAround", label: t("animLookAround") },
+  ];
+  const ACTION_OPTIONS: { value: ActionAnim; label: string }[] = [
+    { value: "poke", label: t("animPoke") },
+    { value: "hearts", label: t("animHearts") },
+    { value: "soccer", label: t("animSoccer") },
+    { value: "wave", label: t("animWave") },
+  ];
 
   async function setAutostart(on: boolean) {
     try {
@@ -70,6 +82,34 @@
           onchange={(e) => update({ sleepAfterMin: Math.round(Number(e.currentTarget.value)) })}
         />
       </label>
+    </section>
+
+    <section class="card">
+      <h2>{t("sectionAnims")}</h2>
+      <div class="field">
+        <span>{t("idleAnim")}</span>
+        <Segmented
+          label={t("idleAnim")}
+          bind:value={() => s!.idleAnim, (v: IdleAnim) => update({ idleAnim: v })}
+          options={IDLE_OPTIONS}
+        />
+      </div>
+      <div class="field">
+        <span>{t("clickAnim")}</span>
+        <Segmented
+          label={t("clickAnim")}
+          bind:value={() => s!.clickAnim, (v: ActionAnim) => update({ clickAnim: v })}
+          options={ACTION_OPTIONS}
+        />
+      </div>
+      <div class="field">
+        <span>{t("doubleClickAnim")}</span>
+        <Segmented
+          label={t("doubleClickAnim")}
+          bind:value={() => s!.doubleClickAnim, (v: ActionAnim) => update({ doubleClickAnim: v })}
+          options={ACTION_OPTIONS}
+        />
+      </div>
     </section>
 
     <section class="card">

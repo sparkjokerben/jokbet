@@ -9,7 +9,7 @@ use tauri::{
 
 pub const PET_LABEL: &str = "pet";
 
-/// Sprite grid in cells (see src/sprites/clawd.ts).
+/// Sprite grid in cells (see src/sprites/jokbet.ts).
 const GRID_W: f64 = 24.0;
 const GRID_H: f64 = 16.0;
 /// Room above the sprite for the head counter and the hover bubble.

@@ -47,9 +47,12 @@ pub fn set_hit_rect(rect: HitRect, hover: State<'_, HoverState>) {
     *hover.hit_rect.lock().unwrap() = Some(rect);
 }
 
+/// The pet starts a native window drag; the hover thread reports its end.
 #[tauri::command]
-pub fn pet_drag_end(window: WebviewWindow) -> Result<(), String> {
-    pet_window::save_position(&window).map_err(|e| e.to_string())
+pub fn pet_drag_start(hover: State<'_, HoverState>) {
+    hover
+        .dragging
+        .store(true, std::sync::atomic::Ordering::Release);
 }
 
 #[tauri::command]

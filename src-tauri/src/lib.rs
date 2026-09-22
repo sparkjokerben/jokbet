@@ -33,7 +33,7 @@ pub fn run() {
             commands::get_settings,
             commands::update_settings,
             commands::set_hit_rect,
-            commands::pet_drag_end,
+            commands::pet_drag_start,
             commands::show_context_menu,
             commands::pet_ready,
             commands::get_stats,

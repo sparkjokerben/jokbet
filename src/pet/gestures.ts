@@ -1,11 +1,11 @@
-// Tells apart poke (single click), special (double click), drag and context menu.
+// Tells apart single click, double click, drag and context menu.
 
 export const DRAG_THRESHOLD_PX = 4;
 export const DOUBLE_CLICK_MS = 250;
 
 export interface GestureHandlers {
-  poke(): void;
-  special(): void;
+  click(): void;
+  doubleClick(): void;
   dragStart(): void;
   context(): void;
 }
@@ -36,11 +36,11 @@ export function attachGestures(el: HTMLElement, h: GestureHandlers): () => void 
     clearTimeout(clickTimer);
     if (clicks >= 2) {
       clicks = 0;
-      h.special();
+      h.doubleClick();
     } else {
       clickTimer = setTimeout(() => {
         clicks = 0;
-        h.poke();
+        h.click();
       }, DOUBLE_CLICK_MS);
     }
   };

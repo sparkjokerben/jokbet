@@ -7,7 +7,7 @@
   import { t } from "../../lib/i18n";
   import type { Settings, Status } from "../../lib/types";
   import Sprite from "../../pet/Sprite.svelte";
-  import { ANIMS, compose } from "../../sprites/clawd";
+  import { compose } from "../../sprites/jokbet";
 
   type Step = "welcome" | "permission" | "autostart";
 
@@ -30,9 +30,11 @@
   const needsRestart = $derived(
     status?.permission === "granted" && !status.listening && grantedAt !== null && now - grantedAt > RESTART_HINT_AFTER_MS,
   );
+  // Always open-eyed here; a question mark while it cannot see input yet.
   const face = $derived(
-    step === "permission" && !status?.listening ? compose(ANIMS.noperm.frames[0].pose) : compose({ eyes: "happy" }),
+    compose(step === "permission" && !status?.listening ? { fx: ["question"] } : {}),
   );
+  let error = $state("");
 
   function applyStatus(s: Status) {
     if (s.permission === "granted" && status?.permission !== "granted") grantedAt = Date.now();
@@ -40,11 +42,15 @@
   }
 
   async function finish() {
-    if (!settings?.onboarded) {
-      await (autostart ? enable() : disable()).catch(() => {});
-      await invoke("update_settings", { patch: { onboarded: true } });
+    try {
+      if (!settings?.onboarded) {
+        await (autostart ? enable() : disable()).catch(() => {});
+        await invoke("update_settings", { patch: { onboarded: true } });
+      }
+      await getCurrentWindow().close();
+    } catch (e) {
+      error = String(e);
     }
-    await getCurrentWindow().close();
   }
 
   onMount(() => {
@@ -92,6 +98,10 @@
     <h1>{t("autostartTitle")}</h1>
     <p>{t("autostartBody")}</p>
     <label class="check"><input type="checkbox" bind:checked={autostart} /> {t("autostartTitle")}</label>
+  {/if}
+
+  {#if error}
+    <p class="warn" role="alert">{error}</p>
   {/if}
 
   <footer>

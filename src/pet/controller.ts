@@ -1,7 +1,7 @@
 // Drives the pet's animation: tracks signals, applies blink/gaze/pause
 // overlays and schedules the next frame with plain timers (no rAF loop).
 
-import { ANIMS, compose, type AnimName, type Effect, type Pose } from "../sprites/clawd";
+import { ANIMS, compose, type AnimName, type Effect, type Pose } from "../sprites/jokbet";
 import {
   animDuration,
   frameAt,
@@ -20,6 +20,8 @@ const blinkGap = () => 3000 + Math.random() * 3000;
 export class PetController {
   private signals: Signals;
   private anim: AnimName = "idle";
+  /** What the idle state plays: breathing, soccer or looking around. */
+  private idleAnim: AnimName = "idle";
   private animStart = 0;
   private gaze: readonly [number, number] = [0, 0];
   private blinkAt: number;
@@ -92,6 +94,13 @@ export class PetController {
     this.kpm = kpm;
   }
 
+  setIdleAnim(anim: AnimName) {
+    if (anim === this.idleAnim) return;
+    this.idleAnim = anim;
+    if (this.anim === "idle") this.animStart = this.now();
+    this.update();
+  }
+
   setSleepAfter(ms: number) {
     this.signals.sleepAfterMs = ms;
     this.update();
@@ -109,7 +118,7 @@ export class PetController {
       this.anim = next;
       this.animStart = t;
     }
-    const anim = ANIMS[this.anim];
+    const anim = ANIMS[this.anim === "idle" ? this.idleAnim : this.anim];
     const { index, nextIn } = frameAt(
       anim,
       t - this.animStart,

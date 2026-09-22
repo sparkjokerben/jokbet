@@ -1,4 +1,4 @@
-// Clawd, decoded from the Claude Code terminal logo:
+// Jokbet, the pet. Its pixels are decoded from the Claude Code terminal logo:
 //
 //    ▐▛███▜▌
 //   ▝▜█████▛▘
@@ -18,7 +18,7 @@ export const GRID_H = 16;
 const OX = 3;
 const OY = 6;
 
-export type ArmPose = "rest" | "up" | "down";
+export type ArmPose = "rest" | "up" | "high" | "down";
 export type EyeState = "open" | "closed" | "wide" | "happy" | "x";
 export type Effect =
   | "zzz1"
@@ -31,7 +31,11 @@ export type Effect =
   | "question"
   | "pause"
   | "tapL"
-  | "tapR";
+  | "tapR"
+  | "ballGround"
+  | "ballLow"
+  | "ballMid"
+  | "ballHigh";
 
 export interface Pose {
   /** Whole-body vertical offset; negative jumps up. */
@@ -42,6 +46,8 @@ export interface Pose {
   armR?: ArmPose;
   /** Length (0..2) of each of the four legs, left to right. */
   legs?: readonly [number, number, number, number];
+  /** The right-most leg swings out to the right (kicking the ball). */
+  kick?: boolean;
   eyes?: EyeState;
   /** Eye offset, each component in -1..1. */
   gaze?: readonly [number, number];
@@ -77,9 +83,11 @@ function stamp(g: Grid, x: number, y: number, rows: readonly string[]) {
   });
 }
 
-const ARM_Y: Record<ArmPose, number> = { up: 2, rest: 4, down: 6 };
+const ARM_Y: Record<ArmPose, number> = { high: 0, up: 2, rest: 4, down: 6 };
 const LEG_X = [4, 6, 11, 13] as const;
 const EYE_X = [5, 12] as const;
+
+const BALL = [".EE.", "EWWE", "EWEE", ".EE."];
 
 const GLYPHS: Record<Effect, { x: number; y: number; rows: readonly string[] }> = {
   zzz1: { x: 17, y: 2, rows: ["ZZZZ", "..Z.", ".Z..", "ZZZZ"] },
@@ -93,6 +101,11 @@ const GLYPHS: Record<Effect, { x: number; y: number; rows: readonly string[] }> 
   pause: { x: 19, y: 1, rows: ["Z.Z", "Z.Z", "Z.Z"] },
   tapL: { x: 2, y: 11, rows: ["Y"] },
   tapR: { x: 21, y: 11, rows: ["Y"] },
+  // A soccer ball beside the right feet, then rising up the right side.
+  ballGround: { x: 18, y: 12, rows: BALL },
+  ballLow: { x: 20, y: 8, rows: BALL },
+  ballMid: { x: 20, y: 4, rows: BALL },
+  ballHigh: { x: 20, y: 0, rows: BALL },
 };
 
 /** Renders a pose into GRID_H strings of GRID_W palette characters. */
@@ -104,7 +117,15 @@ export function compose(pose: Pose = {}): string[] {
   const by = (y: number) => OY + dy + y;
 
   const legs = pose.legs ?? [2, 2, 2, 2];
-  legs.forEach((len, i) => rect(g, bx(LEG_X[i]), by(8), 1, len, "O"));
+  legs.forEach((len, i) => {
+    if (pose.kick && i === 3) {
+      // Knee stays put, foot swings out diagonally.
+      put(g, bx(LEG_X[i]), by(8), "O");
+      put(g, bx(LEG_X[i] + 1), by(9), "O");
+    } else {
+      rect(g, bx(LEG_X[i]), by(8), 1, len, "O");
+    }
+  });
 
   rect(g, bx(3), by(sq), 12, 8 - sq, "O");
   rect(g, bx(1), by(ARM_Y[pose.armL ?? "rest"] + sq), 2, 2, "O");
@@ -154,10 +175,14 @@ export type AnimName =
   | "wake"
   | "celebrate"
   | "poke"
-  | "special"
+  | "hearts"
+  | "soccer"
+  | "wave"
   | "dragged"
   | "noperm"
-  | "secure";
+  | "secure"
+  | "soccerIdle"
+  | "lookAround";
 
 export interface Anim {
   frames: readonly Frame[];
@@ -165,6 +190,17 @@ export interface Anim {
 }
 
 const UP = { armL: "up", armR: "up" } as const;
+
+/** Wind up, kick the ball up the right side, watch it fall back to the foot. */
+const KICK: readonly Frame[] = [
+  { ms: 140, pose: { squash: 1, gaze: [1, 1], fx: ["ballGround"] } },
+  { ms: 120, pose: { kick: true, gaze: [1, 0], fx: ["ballLow"] } },
+  { ms: 130, pose: { armL: "up", gaze: [1, -1], fx: ["ballMid"] } },
+  { ms: 220, pose: { ...UP, gaze: [1, -1], fx: ["ballHigh"] } },
+  { ms: 130, pose: { armL: "up", gaze: [1, -1], fx: ["ballMid"] } },
+  { ms: 120, pose: { gaze: [1, 0], fx: ["ballLow"] } },
+];
+const BALL_AT_FEET: Pose = { gaze: [1, 1], fx: ["ballGround"] };
 
 export const ANIMS: Record<AnimName, Anim> = {
   idle: {
@@ -223,7 +259,7 @@ export const ANIMS: Record<AnimName, Anim> = {
       { ms: 350, pose: { eyes: "wide", fx: ["sweat"] } },
     ],
   },
-  special: {
+  hearts: {
     loop: false,
     frames: [
       { ms: 120, pose: { squash: 1, eyes: "happy" } },
@@ -231,6 +267,37 @@ export const ANIMS: Record<AnimName, Anim> = {
       { ms: 220, pose: { ...UP, dy: -1, eyes: "happy", fx: ["heart"] } },
       { ms: 150, pose: { squash: 1, eyes: "happy", fx: ["heart"] } },
       { ms: 400, pose: { eyes: "happy", fx: ["heart"] } },
+    ],
+  },
+  // Two juggles, then the ball comes to rest.
+  soccer: {
+    loop: false,
+    frames: [...KICK, ...KICK.slice(1), { ms: 450, pose: BALL_AT_FEET }],
+  },
+  wave: {
+    loop: false,
+    frames: [
+      { ms: 180, pose: { armR: "high" } },
+      { ms: 180, pose: { armR: "up" } },
+      { ms: 180, pose: { armR: "high" } },
+      { ms: 180, pose: { armR: "up" } },
+      { ms: 180, pose: { armR: "high" } },
+      { ms: 250, pose: {} },
+    ],
+  },
+  // Idle variants: the ball waits at the feet between juggles.
+  soccerIdle: {
+    loop: true,
+    frames: [{ ms: 2400, pose: BALL_AT_FEET }, ...KICK],
+  },
+  lookAround: {
+    loop: true,
+    frames: [
+      { ms: 1600, pose: { gaze: [0, 0] } },
+      { ms: 900, pose: { gaze: [-1, 0] } },
+      { ms: 400, pose: { gaze: [0, 0] } },
+      { ms: 900, pose: { gaze: [1, 0] } },
+      { ms: 700, pose: { gaze: [1, -1] } },
     ],
   },
   dragged: {

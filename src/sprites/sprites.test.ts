@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ANIMS, GRID_H, GRID_W, compose } from "./clawd";
+import { ANIMS, GRID_H, GRID_W, compose } from "./jokbet";
 import { compileGrid } from "./compile";
 import { PALETTE, TRANSPARENT } from "./palette";
 
 const valid = new Set([TRANSPARENT, ...Object.keys(PALETTE)]);
 
-describe("clawd sprite", () => {
+describe("jokbet sprite", () => {
   it("matches the Claude Code logo in the idle pose", () => {
     expect(compose().slice(6)).toEqual([
       "......OOOOOOOOOOOO......",

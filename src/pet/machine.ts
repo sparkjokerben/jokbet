@@ -1,10 +1,10 @@
 // Pure animation state selection and frame timing for the pet.
 
-import type { Anim, AnimName } from "../sprites/clawd";
+import type { Anim, AnimName } from "../sprites/jokbet";
 
 export type Blocked = "noperm" | "secure";
 export type Activity = "typing" | "click" | "scroll";
-export type OneShot = "poke" | "special" | "wake";
+export type OneShot = "poke" | "hearts" | "soccer" | "wave" | "wake";
 
 export interface Signals {
   blocked: Blocked | null;

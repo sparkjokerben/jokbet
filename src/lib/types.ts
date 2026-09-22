@@ -6,6 +6,8 @@ export type Period = "daily" | "lifetime";
 export type Metric = "keys" | "clicks" | "scrolls" | "distance";
 export type Activity = "typing" | "click" | "scroll";
 export type Permission = "granted" | "denied" | "notRequired" | "unsupported";
+export type IdleAnim = "breathe" | "soccer" | "lookAround";
+export type ActionAnim = "poke" | "hearts" | "soccer" | "wave";
 
 export interface HeadCounter {
   enabled: boolean;
@@ -26,6 +28,9 @@ export interface Settings {
   petSize: PetSize;
   petPosition: [number, number] | null;
   headCounter: HeadCounter;
+  idleAnim: IdleAnim;
+  clickAnim: ActionAnim;
+  doubleClickAnim: ActionAnim;
   bubble: boolean;
   typingSpeed: boolean;
   milestones: boolean;

@@ -1,10 +1,14 @@
-//! Polls the cursor to drive click-through, hover and eye gaze.
+//! Polls the cursor to drive click-through, hover, eye gaze and the end of
+//! a drag.
 //!
-//! Polling `cursor_position` needs no Input Monitoring permission, so the pet
-//! stays clickable and keeps looking at the cursor even before it is granted.
+//! Polling `cursor_position` and the button state needs no Input Monitoring
+//! permission, so the pet stays clickable and keeps looking at the cursor
+//! even before it is granted.
 
-use crate::pet_window::PET_LABEL;
+use crate::pet_window::{self, PET_LABEL};
+use crate::platform::PrimaryButton;
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
@@ -13,6 +17,9 @@ const POLL: Duration = Duration::from_millis(33);
 const IDLE_POLL: Duration = Duration::from_millis(250);
 /// Logical-pixel distance from the pet's center before the eyes turn.
 const GAZE_DEAD_ZONE: f64 = 40.0;
+/// Consecutive polls with the button up before a drag counts as finished
+/// (debounces a single missed sample).
+const RELEASE_POLLS: u32 = 2;
 
 /// The sprite's clickable area in logical pixels, relative to the window.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -26,6 +33,9 @@ pub struct HitRect {
 #[derive(Default)]
 pub struct HoverState {
     pub hit_rect: Mutex<Option<HitRect>>,
+    /// The pet is being dragged; ends when the primary button is released,
+    /// however long the pointer rests on the way.
+    pub dragging: AtomicBool,
 }
 
 /// Where the cursor is relative to the hit rect, in logical pixels.
@@ -71,6 +81,8 @@ pub fn spawn<R: Runtime>(app: AppHandle<R>) {
 fn run<R: Runtime>(app: AppHandle<R>) {
     let mut ignoring: Option<bool> = None;
     let mut last: Option<CursorSample> = None;
+    let mut button = PrimaryButton::new();
+    let mut released_polls = 0;
     loop {
         let Some(window) = app.get_webview_window(PET_LABEL) else {
             std::thread::sleep(IDLE_POLL);
@@ -89,6 +101,21 @@ fn run<R: Runtime>(app: AppHandle<R>) {
             std::thread::sleep(IDLE_POLL);
             continue;
         };
+        let state = app.state::<HoverState>();
+        if state.dragging.load(Ordering::Acquire) {
+            if button.pressed() {
+                released_polls = 0;
+            } else {
+                released_polls += 1;
+                if released_polls >= RELEASE_POLLS {
+                    released_polls = 0;
+                    state.dragging.store(false, Ordering::Release);
+                    let _ = pet_window::save_position(&window);
+                    let _ = app.emit_to(PET_LABEL, "pet://drag-end", ());
+                }
+            }
+        }
+
         let s = sample(
             (cursor.x, cursor.y),
             (pos.x as f64, pos.y as f64),

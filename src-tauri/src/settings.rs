@@ -14,7 +14,7 @@ pub enum PetSize {
 }
 
 impl PetSize {
-    /// Pixels per sprite cell; Clawd's body is 16 cells wide (64/96/128 px).
+    /// Pixels per sprite cell; Jokbet's body is 16 cells wide (64/96/128 px).
     pub fn scale(self) -> f64 {
         match self {
             PetSize::Small => 4.0,
@@ -55,6 +55,26 @@ impl Default for HeadCounter {
             mouse: false,
         }
     }
+}
+
+/// What the pet does while nothing else is going on.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum IdleAnim {
+    #[default]
+    Breathe,
+    Soccer,
+    LookAround,
+}
+
+/// A one-off reaction the user can assign to a click or a double click.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum ActionAnim {
+    Poke,
+    Hearts,
+    Soccer,
+    Wave,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -103,6 +123,9 @@ pub struct Settings {
     /// Top-left of the pet window in physical pixels; `None` means default placement.
     pub pet_position: Option<[i32; 2]>,
     pub head_counter: HeadCounter,
+    pub idle_anim: IdleAnim,
+    pub click_anim: ActionAnim,
+    pub double_click_anim: ActionAnim,
     /// Show today's stats in a bubble while hovering the pet.
     pub bubble: bool,
     /// Live typing speed: shown in the bubble and drives the typing animation.
@@ -123,6 +146,9 @@ impl Default for Settings {
             pet_size: PetSize::Medium,
             pet_position: None,
             head_counter: HeadCounter::default(),
+            idle_anim: IdleAnim::Breathe,
+            click_anim: ActionAnim::Poke,
+            double_click_anim: ActionAnim::Hearts,
             bubble: true,
             typing_speed: true,
             milestones: true,
@@ -276,6 +302,20 @@ mod tests {
             10,
             "rejected patch leaves settings untouched"
         );
+    }
+
+    #[test]
+    fn animation_choices_round_trip() {
+        let store = SettingsStore::load(temp_path("anims"));
+        let next = store
+            .patch(&serde_json::json!({"idleAnim": "soccer", "clickAnim": "wave", "doubleClickAnim": "soccer"}))
+            .unwrap();
+        assert_eq!(next.idle_anim, IdleAnim::Soccer);
+        assert_eq!(next.click_anim, ActionAnim::Wave);
+        assert_eq!(next.double_click_anim, ActionAnim::Soccer);
+        assert!(store
+            .patch(&serde_json::json!({"clickAnim": "moonwalk"}))
+            .is_err());
     }
 
     #[test]

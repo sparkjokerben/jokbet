@@ -15,7 +15,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager, Runtime};
+use tauri::{AppHandle, Emitter, Runtime};
 
 const EVENT_QUEUE: usize = 16_384;
 const TICK: Duration = Duration::from_millis(100);
@@ -159,9 +159,6 @@ struct Worker<R: Runtime> {
     reached: Reached,
     celebrations: Celebrations,
     status: Option<Status>,
-    fullscreen: platform::FullscreenProbe,
-    /// The pet was hidden because a fullscreen app came to the front.
-    hidden_for_fullscreen: bool,
     last_tick: Option<Tick>,
     activity: Option<Activity>,
 }
@@ -202,8 +199,6 @@ impl<R: Runtime> Worker<R> {
             reached,
             celebrations: Celebrations::default(),
             status: None,
-            fullscreen: platform::FullscreenProbe::new(),
-            hidden_for_fullscreen: false,
             last_tick: None,
             activity: None,
         }
@@ -297,7 +292,6 @@ impl<R: Runtime> Worker<R> {
             self.status = Some(status);
             let _ = self.app.emit("app://status", status);
         }
-        self.step_aside_for_fullscreen();
 
         let today = Local::now().date_naive();
         if today != self.date {
@@ -308,27 +302,6 @@ impl<R: Runtime> Worker<R> {
             if let Some(db) = self.db.as_mut() {
                 let _ = db.prune_reached(today);
             }
-        }
-    }
-
-    /// Hides the pet while a fullscreen app is in front, and brings it back after.
-    fn step_aside_for_fullscreen(&mut self) {
-        let fullscreen = self.fullscreen.active();
-        if fullscreen == self.hidden_for_fullscreen {
-            return;
-        }
-        let Some(pet) = self.app.get_webview_window(PET_LABEL) else {
-            return;
-        };
-        if fullscreen {
-            // Only step aside if the user has not hidden the pet themselves.
-            if pet.is_visible().unwrap_or(false) {
-                let _ = pet.hide();
-                self.hidden_for_fullscreen = true;
-            }
-        } else {
-            let _ = pet.show();
-            self.hidden_for_fullscreen = false;
         }
     }
 

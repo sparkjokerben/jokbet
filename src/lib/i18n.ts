@@ -76,7 +76,7 @@ const zh = {
   celebrateLifetime: "累计{metric} {n}！",
   celebrateMore: "（还有 {n} 项）",
   metricDistanceVerb: "移动",
-  welcomeTitle: "你好，我是 Clawd",
+  welcomeTitle: "你好，我是 Jokbet",
   welcomeBody: "我会待在屏幕角落陪你干活，顺便数一数你按了多少次键、点了多少次鼠标。",
   welcomePrivacy: "我只数次数，不记录你输入的内容，也不记录按键顺序。所有数据只存在这台电脑上。",
   next: "下一步",
@@ -94,6 +94,16 @@ const zh = {
   autostartTitle: "开机自动启动",
   autostartBody: "开机后自动出现在屏幕角落，不用每次手动打开。随时可以在设置里改。",
   fixPermission: "重新授权输入监控…",
+  sectionAnims: "动画",
+  idleAnim: "闲时动画",
+  clickAnim: "单击动画",
+  doubleClickAnim: "双击动画",
+  animBreathe: "发呆",
+  animSoccer: "踢足球",
+  animLookAround: "东张西望",
+  animPoke: "被戳",
+  animHearts: "比心",
+  animWave: "挥手",
 } as const;
 
 export type MessageKey = keyof typeof zh;
@@ -174,7 +184,7 @@ const en: Record<MessageKey, string> = {
   celebrateLifetime: "{n} {metric} all time!",
   celebrateMore: " (+{n} more)",
   metricDistanceVerb: "of mouse travel",
-  welcomeTitle: "Hi, I'm Clawd",
+  welcomeTitle: "Hi, I'm Jokbet",
   welcomeBody: "I'll hang out in a corner of your screen while you work, and count how many keys you press and how often you click.",
   welcomePrivacy: "I only count. I never record what you type or the order of your keys, and all data stays on this computer.",
   next: "Next",
@@ -192,6 +202,16 @@ const en: Record<MessageKey, string> = {
   autostartTitle: "Start at login",
   autostartBody: "Show up in the corner every time you log in. You can change this in Settings any time.",
   fixPermission: "Fix Input Monitoring…",
+  sectionAnims: "Animations",
+  idleAnim: "When idle",
+  clickAnim: "On click",
+  doubleClickAnim: "On double click",
+  animBreathe: "Breathe",
+  animSoccer: "Soccer",
+  animLookAround: "Look around",
+  animPoke: "Flinch",
+  animHearts: "Hearts",
+  animWave: "Wave",
 };
 
 export const messages = { zh, en } as const;

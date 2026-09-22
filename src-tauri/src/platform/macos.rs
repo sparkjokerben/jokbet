@@ -35,6 +35,7 @@ pub fn secure_input_enabled() -> bool {
 
 #[link(name = "ApplicationServices", kind = "framework")]
 extern "C" {
+    fn CGEventSourceButtonState(state_id: i32, button: u32) -> bool;
     fn CGGetActiveDisplayList(max: u32, displays: *mut u32, count: *mut u32) -> i32;
     fn CGDisplayBounds(display: u32) -> CGRect;
     fn CGDisplayScreenSize(display: u32) -> CGSize;
@@ -67,6 +68,7 @@ pub fn displays() -> Vec<Display> {
 const CAN_JOIN_ALL_SPACES: usize = 1 << 0;
 const STATIONARY: usize = 1 << 4;
 const IGNORES_CYCLE: usize = 1 << 6;
+const FULL_SCREEN_AUXILIARY: usize = 1 << 8;
 
 pub fn pin_to_all_spaces(ns_window: *mut std::ffi::c_void) {
     use objc2::msg_send;
@@ -77,7 +79,18 @@ pub fn pin_to_all_spaces(ns_window: *mut std::ffi::c_void) {
         let behavior: usize = msg_send![window, collectionBehavior];
         let _: () = msg_send![
             window,
-            setCollectionBehavior: behavior | CAN_JOIN_ALL_SPACES | STATIONARY | IGNORES_CYCLE
+            setCollectionBehavior: behavior
+                | CAN_JOIN_ALL_SPACES
+                | STATIONARY
+                | IGNORES_CYCLE
+                | FULL_SCREEN_AUXILIARY
         ];
     }
+}
+
+const COMBINED_SESSION_STATE: i32 = 0;
+const LEFT_BUTTON: u32 = 0;
+
+pub fn primary_button_pressed() -> bool {
+    unsafe { CGEventSourceButtonState(COMBINED_SESSION_STATE, LEFT_BUTTON) }
 }

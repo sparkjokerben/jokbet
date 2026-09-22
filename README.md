@@ -1,8 +1,8 @@
 # jokerben-desktop-pet
 
-A lightweight desktop pet in the shape of Clawd, the pixel mascot from Claude Code. It sits in a corner of your screen, reacts while you type and click, and counts your keyboard and mouse activity.
+Jokbet is a lightweight desktop pet drawn in the pixel style of Claude Code's mascot. It sits in a corner of your screen, reacts while you type and click, and counts your keyboard and mouse activity.
 
-一个轻量级桌宠，形象是 Claude Code 的像素吉祥物 Clawd。它待在屏幕角落，会跟着你打字和点击做出反应，并统计你的键盘和鼠标操作次数。
+Jokbet 是一个轻量级桌宠，画风取自 Claude Code 的像素吉祥物。它待在屏幕角落，会跟着你打字和点击做出反应，并统计你的键盘和鼠标操作次数。
 
 > **Unofficial fan project.** This project is not affiliated with, endorsed by, or sponsored by Anthropic. Claude, Claude Code and Clawd are trademarks or characters of Anthropic.
 >
@@ -13,7 +13,8 @@ A lightweight desktop pet in the shape of Clawd, the pixel mascot from Claude Co
 - Counts key presses (per key), left/right/middle clicks, scroll gestures and mouse travel (in metres), stored per day
 - A number above the pet's head: today's count or live per-minute speed, from the keyboard, the mouse, or both combined
 - Hover the pet for today's stats; right-click (or use the tray icon) for the menu
-- Clawd types along with you, reacts to clicks and scrolling, follows your cursor with its eyes, falls asleep when you're away, and likes being poked
+- Jokbet types along with you, reacts to clicks and scrolling, follows your cursor with its eyes, falls asleep when you're away, and likes being poked
+- Pick what it does when idle (breathe, juggle a soccer ball, look around) and when you click or double-click it (flinch, hearts, soccer, wave)
 - 中英双语，跟随系统语言
 
 ## Privacy / 隐私
@@ -59,7 +60,7 @@ Use the AppImage (auto-updates) or the `.deb`. Only X11 sessions are supported: 
 - macOS: keys typed while **Secure Keyboard Entry** is on (e.g. enabled in Terminal or iTerm, or in password fields) are hidden from every app, including this one. The pet puts on a blindfold while that happens.
 - Windows: input sent to windows running as administrator is not seen unless the pet also runs as administrator. The pet stays on the virtual desktop it was started on.
 - Linux: X11 only.
-- The pet steps aside while a fullscreen app (video, game, presentation) is in front: on macOS because it never joins fullscreen Spaces, on Windows and X11 by hiding until the app leaves fullscreen.
+- The pet stays on top of fullscreen apps too; hide it from the tray menu when it gets in the way.
 
 ## Where the data lives / 数据位置
 

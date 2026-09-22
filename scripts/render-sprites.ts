@@ -1,11 +1,11 @@
-// Renders Clawd to PNG without any image library:
+// Renders Jokbet to PNG without any image library:
 //   node scripts/render-sprites.ts sheet <out.png>   every animation frame, for review
 //   node scripts/render-sprites.ts icons <dir>       app icon source + tray icons
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { deflateSync } from "node:zlib";
-import { ANIMS, GRID_H, GRID_W, compose, type Pose } from "../src/sprites/clawd.ts";
+import { ANIMS, GRID_H, GRID_W, compose, type Pose } from "../src/sprites/jokbet.ts";
 import { PALETTE, TRANSPARENT } from "../src/sprites/palette.ts";
 
 type RGBA = [number, number, number, number];
@@ -105,7 +105,7 @@ function renderSheet(out: string) {
   console.log(`sheet: ${entries.map(([n]) => n).join(", ")} -> ${out}`);
 }
 
-/** Tight bounds of Clawd's body in the idle pose (grid columns 4..19, rows 6..15). */
+/** Tight bounds of Jokbet's body in the idle pose (grid columns 4..19, rows 6..15). */
 const BODY = { x: 4, y: 6, w: 16, h: 10 };
 const bodyRows = () =>
   compose()
@@ -116,7 +116,7 @@ function renderIcons(dir: string) {
   mkdirSync(dir, { recursive: true });
   const rows = bodyRows();
 
-  // App icon source (1024², fed to `tauri icon`): Clawd on a rounded cream tile.
+  // App icon source (1024², fed to `tauri icon`): Jokbet on a rounded cream tile.
   const size = 1024;
   const icon = new Canvas(size, size);
   const inset = 100;

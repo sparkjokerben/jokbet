@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { GRID_H, GRID_W } from "../sprites/clawd";
+  import { GRID_H, GRID_W } from "../sprites/jokbet";
   import { compileGrid } from "../sprites/compile";
 
   let { rows, scale }: { rows: string[]; scale: number } = $props();

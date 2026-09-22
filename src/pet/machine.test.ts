@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ANIMS } from "../sprites/clawd";
+import { ANIMS } from "../sprites/jokbet";
 import { blockedBy, frameAt, nextDeadline, pickAnim, typingFrameMs, type Signals } from "./machine";
 
 const base = (over: Partial<Signals> = {}): Signals => ({
@@ -23,7 +23,7 @@ describe("pickAnim priorities", () => {
     expect(pickAnim(s, 100)).toBe("dragged");
   });
   it("celebrate beats one-shots", () => {
-    const s = base({ celebrateUntil: 10_000, oneShot: { anim: "special", until: 10_000 } });
+    const s = base({ celebrateUntil: 10_000, oneShot: { anim: "hearts", until: 10_000 } });
     expect(pickAnim(s, 100)).toBe("celebrate");
   });
   it("one-shot beats sleep", () => {

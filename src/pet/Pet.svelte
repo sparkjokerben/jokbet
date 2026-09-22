@@ -5,16 +5,24 @@
   import { onMount } from "svelte";
   import { celebrationText, headValue } from "../lib/format";
   import { blockedBy } from "./machine";
-  import { SCALE, type MilestoneHit, type Settings, type Status, type Tick } from "../lib/types";
-  import { GRID_H, GRID_W } from "../sprites/clawd";
+  import {
+    SCALE,
+    type ActionAnim,
+    type IdleAnim,
+    type MilestoneHit,
+    type Settings,
+    type Status,
+    type Tick,
+  } from "../lib/types";
+  import type { AnimName } from "../sprites/jokbet";
+  import { GRID_H, GRID_W } from "../sprites/jokbet";
   import Bubble from "./Bubble.svelte";
   import { PetController } from "./controller";
   import Counter from "./Counter.svelte";
   import { attachGestures } from "./gestures";
   import Sprite from "./Sprite.svelte";
 
-  /** Drag counts as over once the window stops moving for this long. */
-  const DRAG_SETTLE_MS = 250;
+  const IDLE: Record<IdleAnim, AnimName> = { breathe: "idle", soccer: "soccerIdle", lookAround: "lookAround" };
   /** Typing animation speed when live typing speed is turned off. */
   const FIXED_KPM = 150;
   const CELEBRATE_MS = 3500;
@@ -41,7 +49,7 @@
   const pet = new PetController((r) => (rows = r));
 
   function reportHitRect() {
-    // Clawd's body spans grid columns 4..19 and rows 3..15 (room for jumps).
+    // Jokbet's body spans grid columns 4..19 and rows 3..15 (room for jumps).
     const box = spriteEl.getBoundingClientRect();
     invoke("set_hit_rect", {
       rect: { x: box.left + 4 * scale, y: box.top + 3 * scale, w: 16 * scale, h: 13 * scale },
@@ -51,6 +59,7 @@
   function applySettings(s: Settings) {
     settings = s;
     pet.setSleepAfter(s.sleepAfterMin * 60_000);
+    pet.setIdleAnim(IDLE[s.idleAnim]);
     if (!s.typingSpeed) pet.setKpm(FIXED_KPM);
   }
 
@@ -79,26 +88,24 @@
     requestAnimationFrame(reportHitRect);
   });
 
+  function react(anim: ActionAnim | undefined) {
+    // A pet that cannot see input leads straight to the fix.
+    if (blocked === "noperm") invoke("open_panel", { view: "onboarding" });
+    else if (anim) pet.oneShot(anim);
+  }
+
   onMount(() => {
     const win = getCurrentWindow();
-    let settleTimer: ReturnType<typeof setTimeout> | undefined;
-    const endDragSoon = () => {
-      clearTimeout(settleTimer);
-      settleTimer = setTimeout(() => {
-        settleTimer = undefined;
-        pet.setDragging(false);
-        invoke("pet_drag_end");
-      }, DRAG_SETTLE_MS);
-    };
 
     const detach = attachGestures(spriteEl, {
-      // A pet that cannot see input leads straight to the fix.
-      poke: () => (blocked === "noperm" ? invoke("open_panel", { view: "onboarding" }) : pet.oneShot("poke")),
-      special: () => pet.oneShot("special"),
-      dragStart: () => {
+      click: () => react(settings?.clickAnim),
+      doubleClick: () => react(settings?.doubleClickAnim),
+      dragStart: async () => {
         pet.setDragging(true);
-        win.startDragging();
-        endDragSoon();
+        // Rust watches the mouse button and sends pet://drag-end on release,
+        // however long the pointer rests mid-drag.
+        await invoke("pet_drag_start");
+        await win.startDragging();
       },
       context: () => invoke("show_context_menu"),
     });
@@ -110,9 +117,7 @@
       listen<Status>("app://status", (e) => applyStatus(e.payload)),
       listen<Settings>("settings://changed", (e) => applySettings(e.payload)),
       listen<{ hits: MilestoneHit[] }>("pet://celebrate", (e) => celebrate(e.payload.hits)),
-      win.onMoved(() => {
-        if (settleTimer !== undefined) endDragSoon();
-      }),
+      listen("pet://drag-end", () => pet.setDragging(false)),
     ];
 
     invoke<Settings>("get_settings").then(async (s) => {
@@ -124,7 +129,6 @@
     return () => {
       detach();
       pet.destroy();
-      clearTimeout(settleTimer);
       clearTimeout(bannerTimer);
       unlisteners.forEach((u) => u.then((f) => f()));
     };

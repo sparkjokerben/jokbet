@@ -33,33 +33,35 @@ pub fn secure_input_enabled() -> bool {
     false
 }
 
-/// Whether a fullscreen app (game, video, presentation) is in front, so the
-/// pet should step aside. macOS needs no probe: native fullscreen happens in
-/// its own Space, which the pet window does not join.
-pub struct FullscreenProbe {
+/// Whether the primary mouse button is held right now. Needs no permission;
+/// used to tell when a window drag really ends.
+pub struct PrimaryButton {
     #[cfg(target_os = "linux")]
-    x11: linux::FullscreenX11,
+    x11: linux::PointerX11,
 }
 
-impl FullscreenProbe {
+impl PrimaryButton {
     pub fn new() -> Self {
         Self {
             #[cfg(target_os = "linux")]
-            x11: linux::FullscreenX11::default(),
+            x11: linux::PointerX11::default(),
         }
     }
 
-    pub fn active(&mut self) -> bool {
+    pub fn pressed(&mut self) -> bool {
+        #[cfg(target_os = "macos")]
+        return macos::primary_button_pressed();
         #[cfg(windows)]
-        return windows::fullscreen_active();
+        return windows::primary_button_pressed();
         #[cfg(target_os = "linux")]
-        return self.x11.active();
+        return self.x11.primary_pressed();
         #[allow(unreachable_code)]
         false
     }
 }
 
-/// Keeps the pet on every Space, out of Mission Control and the Cmd-` cycle.
+/// Keeps the pet on every Space (fullscreen ones too), out of Mission Control
+/// and the Cmd-` cycle.
 /// Must run on the main thread.
 #[cfg(target_os = "macos")]
 pub fn pin_to_all_spaces<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) {
