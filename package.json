@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run --passWithNoTests",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "icons": "node scripts/render-sprites.ts icons src-tauri/icons/source && tauri icon src-tauri/icons/source/icon-source.png && rm -rf src-tauri/icons/android src-tauri/icons/ios",
+    "sprites": "node scripts/render-sprites.ts sheet sprites.png"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1"

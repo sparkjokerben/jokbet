@@ -1,0 +1,151 @@
+//! Polls the cursor to drive click-through, hover and eye gaze.
+//!
+//! Polling `cursor_position` needs no Input Monitoring permission, so the pet
+//! stays clickable and keeps looking at the cursor even before it is granted.
+
+use crate::pet_window::PET_LABEL;
+use serde::{Deserialize, Serialize};
+use std::sync::Mutex;
+use std::time::Duration;
+use tauri::{AppHandle, Emitter, Manager, Runtime};
+
+const POLL: Duration = Duration::from_millis(33);
+const IDLE_POLL: Duration = Duration::from_millis(250);
+/// Logical-pixel distance from the pet's center before the eyes turn.
+const GAZE_DEAD_ZONE: f64 = 40.0;
+
+/// The sprite's clickable area in logical pixels, relative to the window.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct HitRect {
+    pub x: f64,
+    pub y: f64,
+    pub w: f64,
+    pub h: f64,
+}
+
+#[derive(Default)]
+pub struct HoverState {
+    pub hit_rect: Mutex<Option<HitRect>>,
+}
+
+/// Where the cursor is relative to the hit rect, in logical pixels.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CursorSample {
+    pub inside: bool,
+    pub gaze: (i8, i8),
+}
+
+pub fn sample(
+    cursor: (f64, f64),
+    window_pos: (f64, f64),
+    scale: f64,
+    rect: HitRect,
+) -> CursorSample {
+    let lx = (cursor.0 - window_pos.0) / scale;
+    let ly = (cursor.1 - window_pos.1) / scale;
+    let inside = lx >= rect.x && lx < rect.x + rect.w && ly >= rect.y && ly < rect.y + rect.h;
+    let dx = lx - (rect.x + rect.w / 2.0);
+    let dy = ly - (rect.y + rect.h / 2.0);
+    let axis = |d: f64| {
+        if d < -GAZE_DEAD_ZONE {
+            -1
+        } else if d > GAZE_DEAD_ZONE {
+            1
+        } else {
+            0
+        }
+    };
+    CursorSample {
+        inside,
+        gaze: (axis(dx), axis(dy)),
+    }
+}
+
+pub fn spawn<R: Runtime>(app: AppHandle<R>) {
+    std::thread::Builder::new()
+        .name("hover".into())
+        .spawn(move || run(app))
+        .expect("spawn hover thread");
+}
+
+fn run<R: Runtime>(app: AppHandle<R>) {
+    let mut ignoring: Option<bool> = None;
+    let mut last: Option<CursorSample> = None;
+    loop {
+        let Some(window) = app.get_webview_window(PET_LABEL) else {
+            std::thread::sleep(IDLE_POLL);
+            continue;
+        };
+        let rect = *app.state::<HoverState>().hit_rect.lock().unwrap();
+        let (Some(rect), Ok(true)) = (rect, window.is_visible()) else {
+            std::thread::sleep(IDLE_POLL);
+            continue;
+        };
+        let (Ok(cursor), Ok(pos), Ok(scale)) = (
+            app.cursor_position(),
+            window.outer_position(),
+            window.scale_factor(),
+        ) else {
+            std::thread::sleep(IDLE_POLL);
+            continue;
+        };
+        let s = sample(
+            (cursor.x, cursor.y),
+            (pos.x as f64, pos.y as f64),
+            scale,
+            rect,
+        );
+
+        if ignoring != Some(!s.inside) && window.set_ignore_cursor_events(!s.inside).is_ok() {
+            ignoring = Some(!s.inside);
+        }
+        if last.map(|l| l.inside) != Some(s.inside) {
+            let _ = app.emit_to(PET_LABEL, "pet://hover", s.inside);
+        }
+        if last.map(|l| l.gaze) != Some(s.gaze) {
+            let _ = app.emit_to(PET_LABEL, "pet://gaze", [s.gaze.0, s.gaze.1]);
+        }
+        last = Some(s);
+        std::thread::sleep(POLL);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const RECT: HitRect = HitRect {
+        x: 60.0,
+        y: 180.0,
+        w: 100.0,
+        h: 60.0,
+    };
+
+    #[test]
+    fn inside_uses_logical_coordinates() {
+        // Window at physical (1000, 500) on a 2x display; cursor over the sprite center.
+        let s = sample(
+            (1000.0 + 110.0 * 2.0, 500.0 + 210.0 * 2.0),
+            (1000.0, 500.0),
+            2.0,
+            RECT,
+        );
+        assert!(s.inside);
+        assert_eq!(s.gaze, (0, 0));
+    }
+
+    #[test]
+    fn transparent_area_is_outside() {
+        let s = sample((1000.0 + 20.0, 500.0 + 20.0), (1000.0, 500.0), 1.0, RECT);
+        assert!(!s.inside);
+        assert_eq!(s.gaze, (-1, -1));
+    }
+
+    #[test]
+    fn gaze_follows_far_cursor() {
+        let s = sample((5000.0, 500.0 + 210.0), (1000.0, 500.0), 1.0, RECT);
+        assert_eq!(s.gaze, (1, 0));
+        let s = sample((1000.0 + 110.0, 2000.0), (1000.0, 500.0), 1.0, RECT);
+        assert_eq!(s.gaze, (0, 1));
+    }
+}

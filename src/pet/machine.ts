@@ -1,0 +1,65 @@
+// Pure animation state selection and frame timing for the pet.
+
+import type { Anim, AnimName } from "../sprites/clawd";
+
+export type Blocked = "noperm" | "secure";
+export type Activity = "typing" | "click" | "scroll";
+export type OneShot = "poke" | "special" | "wake";
+
+export interface Signals {
+  blocked: Blocked | null;
+  dragging: boolean;
+  celebrateUntil: number;
+  oneShot: { anim: OneShot; until: number } | null;
+  lastInputAt: number;
+  lastActivity: Activity | null;
+  sleepAfterMs: number;
+}
+
+/** How long a reaction lasts after the last input of that kind. */
+export const REACT_MS: Record<Activity, number> = { typing: 800, scroll: 500, click: 300 };
+
+/** Highest priority first: blocked > dragged > celebrate > one-shot > sleep > react > idle. */
+export function pickAnim(s: Signals, now: number): AnimName {
+  if (s.blocked) return s.blocked;
+  if (s.dragging) return "dragged";
+  if (now < s.celebrateUntil) return "celebrate";
+  if (s.oneShot && now < s.oneShot.until) return s.oneShot.anim;
+  if (now - s.lastInputAt >= s.sleepAfterMs) return "sleep";
+  if (s.lastActivity && now - s.lastInputAt < REACT_MS[s.lastActivity]) return s.lastActivity;
+  return "idle";
+}
+
+/** Earliest future time at which pickAnim may change without new signals. */
+export function nextDeadline(s: Signals, now: number): number {
+  const times = [s.celebrateUntil, s.sleepAfterMs + s.lastInputAt];
+  if (s.oneShot) times.push(s.oneShot.until);
+  if (s.lastActivity) times.push(s.lastInputAt + REACT_MS[s.lastActivity]);
+  return Math.min(Infinity, ...times.filter((t) => t > now));
+}
+
+/** Typing frame period: faster typing, faster paws. */
+export function typingFrameMs(kpm: number): number {
+  return Math.min(350, Math.max(70, Math.round(21000 / Math.max(kpm, 1))));
+}
+
+/** Total duration of a one-shot animation. */
+export function animDuration(anim: Anim): number {
+  return anim.frames.reduce((sum, f) => sum + f.ms, 0);
+}
+
+/**
+ * Frame index at `elapsed` ms and ms until the next frame change
+ * (Infinity once a one-shot animation rests on its last frame).
+ */
+export function frameAt(anim: Anim, elapsed: number, msOverride?: number): { index: number; nextIn: number } {
+  const durations = anim.frames.map((f) => msOverride ?? f.ms);
+  const total = durations.reduce((a, b) => a + b, 0);
+  if (!anim.loop && elapsed >= total) return { index: durations.length - 1, nextIn: Infinity };
+  let t = anim.loop ? elapsed % total : elapsed;
+  for (let i = 0; i < durations.length; i++) {
+    if (t < durations[i]) return { index: i, nextIn: durations[i] - t };
+    t -= durations[i];
+  }
+  return { index: durations.length - 1, nextIn: Infinity };
+}

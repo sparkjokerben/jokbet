@@ -6,3 +6,4 @@ dist
 !.env.example
 vite.config.ts.timestamp-*
 *.log
+sprites.png

@@ -1,0 +1,71 @@
+//! One menu shared by the tray icon and the pet's right-click menu.
+
+use crate::i18n::{t, Lang, Text};
+use crate::pet_window::PET_LABEL;
+use tauri::image::Image;
+use tauri::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
+use tauri::tray::TrayIconBuilder;
+use tauri::{AppHandle, Manager, Runtime};
+
+const ID_TOGGLE: &str = "toggle-pet";
+const ID_QUIT: &str = "quit";
+
+pub struct AppMenu<R: Runtime> {
+    pub menu: Menu<R>,
+    toggle: MenuItem<R>,
+    lang: Lang,
+}
+
+impl<R: Runtime> AppMenu<R> {
+    pub fn build(app: &AppHandle<R>) -> tauri::Result<Self> {
+        let lang = Lang::system();
+        let toggle = MenuItem::with_id(app, ID_TOGGLE, t(lang, Text::HidePet), true, None::<&str>)?;
+        let quit = MenuItem::with_id(app, ID_QUIT, t(lang, Text::Quit), true, None::<&str>)?;
+        let menu = Menu::with_items(app, &[&toggle, &PredefinedMenuItem::separator(app)?, &quit])?;
+        Ok(Self { menu, toggle, lang })
+    }
+
+    fn sync_toggle(&self, visible: bool) {
+        let text = if visible {
+            Text::HidePet
+        } else {
+            Text::ShowPet
+        };
+        let _ = self.toggle.set_text(t(self.lang, text));
+    }
+}
+
+pub fn create_tray<R: Runtime>(app: &AppHandle<R>, menu: &AppMenu<R>) -> tauri::Result<()> {
+    // macOS tints a black template image to match the menu bar; elsewhere use color.
+    #[cfg(target_os = "macos")]
+    let icon = Image::from_bytes(include_bytes!("../icons/source/tray-template.png"))?;
+    #[cfg(not(target_os = "macos"))]
+    let icon = Image::from_bytes(include_bytes!("../icons/source/tray-color.png"))?;
+
+    TrayIconBuilder::with_id("main")
+        .icon(icon)
+        .icon_as_template(cfg!(target_os = "macos"))
+        .tooltip("jokerben-desktop-pet")
+        .menu(&menu.menu)
+        .show_menu_on_left_click(true)
+        .build(app)?;
+    Ok(())
+}
+
+pub fn handle_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
+    match event.id().as_ref() {
+        ID_TOGGLE => {
+            if let Some(window) = app.get_webview_window(PET_LABEL) {
+                let visible = window.is_visible().unwrap_or(true);
+                let _ = if visible {
+                    window.hide()
+                } else {
+                    window.show()
+                };
+                app.state::<AppMenu<R>>().sync_toggle(!visible);
+            }
+        }
+        ID_QUIT => app.exit(0),
+        _ => {}
+    }
+}
