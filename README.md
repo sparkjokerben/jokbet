@@ -57,8 +57,9 @@ Use the AppImage (auto-updates) or the `.deb`. Only X11 sessions are supported: 
 ## Known limitations / 已知限制
 
 - macOS: keys typed while **Secure Keyboard Entry** is on (e.g. enabled in Terminal or iTerm, or in password fields) are hidden from every app, including this one. The pet puts on a blindfold while that happens.
-- Windows: input sent to windows running as administrator is not seen unless the pet also runs as administrator.
+- Windows: input sent to windows running as administrator is not seen unless the pet also runs as administrator. The pet stays on the virtual desktop it was started on.
 - Linux: X11 only.
+- The pet steps aside while a fullscreen app (video, game, presentation) is in front: on macOS because it never joins fullscreen Spaces, on Windows and X11 by hiding until the app leaves fullscreen.
 
 ## Where the data lives / 数据位置
 
@@ -81,6 +82,8 @@ cd src-tauri && cargo test
 npm run sprites       # render every animation frame to sprites.png
 npm run icons         # regenerate app and tray icons from the sprite
 ```
+
+With `npm run dev` running, `http://localhost:1420/preview.html?view=stats` (or `settings`, `onboarding`, `pet`) renders a window in a normal browser with fake data, which is handy for layout work.
 
 On macOS, `tauri dev` runs the app as a child of your terminal, so grant Input Monitoring to the terminal app. To test the real permission flow, build a bundle with `npm run tauri build -- --debug --bundles app`. Every rebuild changes an ad-hoc signature, so clear the stale grant with:
 
