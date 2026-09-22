@@ -3,9 +3,9 @@
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { onMount } from "svelte";
-  import { headValue } from "../lib/format";
+  import { celebrationText, headValue } from "../lib/format";
   import { blockedBy } from "./machine";
-  import { SCALE, type Settings, type Status, type Tick } from "../lib/types";
+  import { SCALE, type MilestoneHit, type Settings, type Status, type Tick } from "../lib/types";
   import { GRID_H, GRID_W } from "../sprites/clawd";
   import Bubble from "./Bubble.svelte";
   import { PetController } from "./controller";
@@ -17,6 +17,7 @@
   const DRAG_SETTLE_MS = 250;
   /** Typing animation speed when live typing speed is turned off. */
   const FIXED_KPM = 150;
+  const CELEBRATE_MS = 3500;
 
   let rows = $state<string[]>([]);
   let settings = $state<Settings | null>(null);
@@ -28,6 +29,8 @@
   });
   let paused = $state(false);
   let hovering = $state(false);
+  let banner = $state("");
+  let bannerTimer: ReturnType<typeof setTimeout> | undefined;
   let spriteEl: HTMLDivElement;
 
   const scale = $derived(settings ? SCALE[settings.petSize] : SCALE.medium);
@@ -60,6 +63,13 @@
     tick = t;
     if (settings?.typingSpeed !== false) pet.setKpm(t.kpm);
     if (t.activity) pet.input(t.activity);
+  }
+
+  function celebrate(hits: MilestoneHit[]) {
+    banner = celebrationText(hits);
+    pet.celebrate(CELEBRATE_MS);
+    clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(() => (banner = ""), CELEBRATE_MS);
   }
 
   $effect(() => {
@@ -96,6 +106,7 @@
       listen<Tick>("pet://tick", (e) => applyTick(e.payload)),
       listen<Status>("pet://status", (e) => applyStatus(e.payload)),
       listen<Settings>("settings://changed", (e) => applySettings(e.payload)),
+      listen<{ hits: MilestoneHit[] }>("pet://celebrate", (e) => celebrate(e.payload.hits)),
       win.onMoved(() => {
         if (settleTimer !== undefined) endDragSoon();
       }),
@@ -111,6 +122,7 @@
       detach();
       pet.destroy();
       clearTimeout(settleTimer);
+      clearTimeout(bannerTimer);
       unlisteners.forEach((u) => u.then((f) => f()));
     };
   });
@@ -121,7 +133,9 @@
     {#if hovering && settings?.bubble}
       <Bubble {tick} showSpeed={settings.typingSpeed} {paused} />
     {/if}
-    {#if showCounter && head}
+    {#if banner}
+      <div class="banner" role="status">{banner}</div>
+    {:else if showCounter && head}
       <Counter value={headValue(tick, head)} rate={head.kind === "rate"} dimmed={paused} />
     {/if}
   </div>
@@ -151,5 +165,22 @@
   }
   .sprite {
     cursor: grab;
+  }
+  .banner {
+    max-width: 210px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #b85a3a;
+    color: #fff;
+    font: 600 12px/16px -apple-system, "Segoe UI", system-ui, sans-serif;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    animation: pop 0.25s ease-out;
+  }
+  @keyframes pop {
+    from {
+      transform: scale(0.6);
+      opacity: 0;
+    }
   }
 </style>

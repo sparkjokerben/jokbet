@@ -72,6 +72,10 @@ const zh = {
   autostart: "开机自动启动",
   pauseCounting: "暂停计数",
   saveFailed: "保存失败：{error}",
+  celebrateDaily: "今天{metric} {n}！",
+  celebrateLifetime: "累计{metric} {n}！",
+  celebrateMore: "（还有 {n} 项）",
+  metricDistanceVerb: "移动",
 } as const;
 
 export type MessageKey = keyof typeof zh;
@@ -148,6 +152,10 @@ const en: Record<MessageKey, string> = {
   autostart: "Start at login",
   pauseCounting: "Pause counting",
   saveFailed: "Could not save: {error}",
+  celebrateDaily: "{n} {metric} today!",
+  celebrateLifetime: "{n} {metric} all time!",
+  celebrateMore: " (+{n} more)",
+  metricDistanceVerb: "of mouse travel",
 };
 
 export const messages = { zh, en } as const;

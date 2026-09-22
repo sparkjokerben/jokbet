@@ -3,10 +3,12 @@
 
 use super::aggregator::{Activity, Aggregator, Totals};
 use super::distance::DisplayMap;
+use super::milestones::{self, Celebrations, Hit, MilestoneDef, Reached};
 use crate::db::Db;
 use crate::input::{self, EventSink, InputHandle, Permission};
 use crate::pet_window::PET_LABEL;
 use crate::platform;
+use crate::settings::{Period, Settings};
 use chrono::{Local, NaiveDate};
 use crossbeam_channel::{bounded, select, tick, Receiver, Sender};
 use serde::Serialize;
@@ -24,7 +26,8 @@ const FLUSH_EVERY: u32 = 300; // ticks = 30 s
 pub enum Control {
     /// The pet window is listening; resend the current state.
     PetReady,
-    SetPaused(bool),
+    /// Settings changed: pause state and milestone definitions.
+    Settings(Box<Settings>),
     /// Saves pending counts, then answers with the last `days` days.
     Stats {
         days: u32,
@@ -107,6 +110,11 @@ pub struct Stats {
     pub lifetime: Totals,
 }
 
+#[derive(Clone, Debug, Serialize)]
+pub struct Celebrate {
+    pub hits: Vec<Hit>,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Status {
@@ -119,11 +127,12 @@ pub struct Status {
 }
 
 /// Starts the runtime thread; `db` is `None` if storage could not be opened.
-pub fn spawn<R: Runtime>(app: AppHandle<R>, db: Option<Db>, paused: bool) -> RuntimeHandle {
+pub fn spawn<R: Runtime>(app: AppHandle<R>, db: Option<Db>, settings: &Settings) -> RuntimeHandle {
     let (ctrl_tx, ctrl_rx) = bounded(64);
+    let settings = settings.clone();
     std::thread::Builder::new()
         .name("runtime".into())
-        .spawn(move || Worker::new(app, db, paused).run(ctrl_rx))
+        .spawn(move || Worker::new(app, db, &settings).run(ctrl_rx))
         .expect("spawn runtime thread");
     RuntimeHandle { ctrl: ctrl_tx }
 }
@@ -139,13 +148,17 @@ struct Worker<R: Runtime> {
     sink: EventSink,
     events: Receiver<input::TimedEvent>,
     hook: Option<Box<dyn InputHandle>>,
+    milestone_defs: Vec<MilestoneDef>,
+    milestones_on: bool,
+    reached: Reached,
+    celebrations: Celebrations,
     status: Option<Status>,
     last_tick: Option<Tick>,
     activity: Option<Activity>,
 }
 
 impl<R: Runtime> Worker<R> {
-    fn new(app: AppHandle<R>, db: Option<Db>, paused: bool) -> Self {
+    fn new(app: AppHandle<R>, db: Option<Db>, settings: &Settings) -> Self {
         let (tx, events) = bounded(EVENT_QUEUE);
         if input::permission() == Permission::Denied {
             input::request_permission();
@@ -159,8 +172,12 @@ impl<R: Runtime> Worker<R> {
             .as_ref()
             .and_then(|db| db.lifetime_totals().ok())
             .unwrap_or_default();
+        let reached = db
+            .as_ref()
+            .and_then(|db| db.load_reached(date).ok())
+            .unwrap_or_default();
         let mut agg = Aggregator::with_today(today);
-        agg.paused = paused;
+        agg.paused = settings.paused;
         Self {
             app,
             agg,
@@ -171,6 +188,10 @@ impl<R: Runtime> Worker<R> {
             sink: EventSink::new(tx),
             events,
             hook: None,
+            milestone_defs: milestones::definitions(&settings.custom_milestones),
+            milestones_on: settings.milestones,
+            reached,
+            celebrations: Celebrations::default(),
             status: None,
             last_tick: None,
             activity: None,
@@ -197,8 +218,10 @@ impl<R: Runtime> Worker<R> {
                         self.housekeeping();
                         self.emit_tick();
                     }
-                    Ok(Control::SetPaused(p)) => {
-                        self.agg.paused = p;
+                    Ok(Control::Settings(s)) => {
+                        self.agg.paused = s.paused;
+                        self.milestones_on = s.milestones;
+                        self.milestone_defs = milestones::definitions(&s.custom_milestones);
                         self.housekeeping();
                     }
                     Ok(Control::Stats { days, reply }) => {
@@ -235,6 +258,7 @@ impl<R: Runtime> Worker<R> {
                     if ticks.is_multiple_of(FLUSH_EVERY) {
                         self.flush();
                     }
+                    self.check_milestones();
                     self.emit_tick();
                 }
             }
@@ -265,6 +289,44 @@ impl<R: Runtime> Worker<R> {
             self.date = today;
             self.agg.roll_over();
             self.last_tick = None;
+            if let Some(db) = self.db.as_mut() {
+                let _ = db.prune_reached(today);
+            }
+        }
+    }
+
+    /// Records newly crossed milestones and celebrates them (at most once a minute).
+    fn check_milestones(&mut self) {
+        let mut lifetime = self.lifetime_saved.clone();
+        lifetime.add(&self.agg.pending.totals);
+        let date = self.date.format("%Y-%m-%d").to_string();
+        let hits = self.reached.check(
+            &self.milestone_defs,
+            &date,
+            &self.agg.today.totals,
+            &lifetime,
+        );
+        if !hits.is_empty() {
+            if let Some(db) = self.db.as_mut() {
+                let now = chrono::Utc::now().timestamp();
+                for h in &hits {
+                    let period = match h.period {
+                        Period::Daily => date.as_str(),
+                        Period::Lifetime => milestones::LIFETIME,
+                    };
+                    let _ = db.save_reached(&h.id, period, h.level, now);
+                }
+            }
+            // Disabled milestones are still recorded, so turning them on later
+            // does not replay everything already passed.
+            if self.milestones_on {
+                self.celebrations.push(hits);
+            }
+        }
+        if let Some(hits) = self.celebrations.poll(input::now_ms()) {
+            let _ = self
+                .app
+                .emit_to(PET_LABEL, "pet://celebrate", Celebrate { hits });
         }
     }
 
@@ -311,6 +373,8 @@ impl<R: Runtime> Worker<R> {
         self.agg = Aggregator::with_today(Default::default());
         self.agg.paused = paused;
         self.lifetime_saved = Totals::default();
+        self.reached = Reached::default();
+        self.celebrations.clear();
         Ok(())
     }
 

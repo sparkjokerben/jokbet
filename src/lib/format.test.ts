@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { formatCount, formatDistance, headValue } from "./format";
+import { celebrationText, formatCount, formatDistance, headValue } from "./format";
 import { detectLang, messages, t } from "./i18n";
-import type { HeadCounter, Tick } from "./types";
+import type { HeadCounter, MilestoneHit, Tick } from "./types";
 
 const tick: Tick = {
   today: { keys: 1000, clickLeft: 50, clickRight: 20, clickMiddle: 5, scrolls: 7, movePx: 0, moveMm: 0 },
@@ -58,5 +58,28 @@ describe("i18n", () => {
   });
   it("fills placeholders", () => {
     expect(t("clickSplit", { l: 1, r: 2, m: 3 }, "en")).toBe("L 1 · R 2 · M 3");
+  });
+});
+
+describe("celebrationText", () => {
+  const hit = (over: Partial<MilestoneHit>): MilestoneHit => ({
+    id: "x",
+    period: "daily",
+    metric: "keys",
+    level: 10_000,
+    ...over,
+  });
+  it("names the milestone", () => {
+    expect(celebrationText([hit({})], "zh")).toBe("🎉 今天按键 10,000！");
+    expect(celebrationText([hit({})], "en")).toBe("🎉 10,000 keys today!");
+    expect(celebrationText([hit({ period: "lifetime", level: 1_000_000 })], "zh")).toBe("🎉 累计按键 100万！");
+    expect(celebrationText([hit({ metric: "distance", level: 1000 })], "en")).toBe("🎉 1.00 km of mouse travel today!");
+  });
+  it("leads with lifetime and the highest level, counting the rest", () => {
+    const hits = [hit({ level: 1000 }), hit({ level: 5000 }), hit({ period: "lifetime", level: 100_000 })];
+    expect(celebrationText(hits, "en")).toBe("🎉 100K keys all time! (+2 more)");
+  });
+  it("is empty without hits", () => {
+    expect(celebrationText([], "en")).toBe("");
   });
 });

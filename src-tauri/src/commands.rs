@@ -17,9 +17,9 @@ pub fn apply_patch<R: Runtime>(
     let store = app.state::<SettingsStore>();
     let before = store.get();
     let next = store.patch(patch)?;
+    app.state::<RuntimeHandle>()
+        .send(Control::Settings(Box::new(next.clone())));
     if next.paused != before.paused {
-        app.state::<RuntimeHandle>()
-            .send(Control::SetPaused(next.paused));
         app.state::<AppMenu<R>>().sync_paused(next.paused);
     }
     if next.pet_size != before.pet_size {

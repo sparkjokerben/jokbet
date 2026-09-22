@@ -1,9 +1,11 @@
 // Dev-only harness: renders the app windows in a plain browser with fake IPC
 // data, so layout can be reviewed without the Tauri shell. Not bundled.
 
+import { emit } from "@tauri-apps/api/event";
 import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 import { mount } from "svelte";
 import App from "../app/App.svelte";
+import Pet from "../pet/Pet.svelte";
 import "../app/theme.css";
 import type { Settings } from "../lib/types";
 
@@ -47,8 +49,11 @@ let settings: Settings = {
   onboarded: true,
 };
 
-mockWindows("stats");
-mockIPC((cmd, args) => {
+const view = new URLSearchParams(location.search).get("view");
+
+mockWindows(view === "pet-frame" ? "pet" : "stats");
+mockIPC(
+  (cmd, args) => {
   const a = args as Record<string, unknown>;
   switch (cmd) {
     case "get_stats":
@@ -58,11 +63,34 @@ mockIPC((cmd, args) => {
     case "update_settings":
       settings = { ...settings, ...(a.patch as object) } as Settings;
       return settings;
-    case "plugin:event|listen":
-      return 1;
     default:
       return null;
   }
-});
+  },
+  { shouldMockEvents: true },
+);
 
-mount(App, { target: document.getElementById("root")! });
+if (view === "pet") {
+  // A frame the size of the real pet window, over a mid-gray "desktop".
+  document.body.style.cssText = "margin:0;background:#8a8d93";
+  const frame = document.createElement("iframe");
+  frame.src = "/preview.html?view=pet-frame";
+  frame.style.cssText = "width:220px;height:266px;border:1px dashed #555;margin:20px";
+  document.body.append(frame);
+} else if (view === "pet-frame") {
+  // pet.html has no theme; undo the one imported for the app views.
+  document.documentElement.style.background = "transparent";
+  document.body.style.background = "transparent";
+  mount(Pet, { target: document.getElementById("root")! });
+  setTimeout(async () => {
+    const today = fakeStats(1).days[0];
+    await emit("pet://status", { permission: "granted", listening: true, secureInput: false, paused: false });
+    await emit("pet://tick", { today, kpm: 186, cpm: 12, activity: null });
+    await emit("pet://hover", true);
+    await emit("pet://celebrate", {
+      hits: [{ id: "a", period: "daily", metric: "keys", level: 10000 }],
+    });
+  }, 300);
+} else {
+  mount(App, { target: document.getElementById("root")! });
+}

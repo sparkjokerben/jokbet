@@ -43,7 +43,7 @@ pub fn run() {
 
             let config_dir = app.path().app_config_dir()?;
             let settings = SettingsStore::load(config_dir.join("settings.json"));
-            let paused = settings.get().paused;
+            let initial = settings.get();
             app.manage(settings);
             app.manage(HoverState::default());
 
@@ -51,7 +51,7 @@ pub fn run() {
             let db = db::Db::open(&db_path)
                 .inspect_err(|e| eprintln!("opening {} failed: {e}", db_path.display()))
                 .ok();
-            app.manage(engine::runtime::spawn(app.handle().clone(), db, paused));
+            app.manage(engine::runtime::spawn(app.handle().clone(), db, &initial));
 
             let menu = AppMenu::build(app.handle())?;
             menu::create_tray(app.handle(), &menu)?;

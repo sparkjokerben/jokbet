@@ -60,3 +60,10 @@ export interface Status {
 }
 
 export const SCALE: Record<PetSize, number> = { small: 4, medium: 6, large: 8 };
+
+export interface MilestoneHit {
+  id: string;
+  period: Period;
+  metric: Metric;
+  level: number;
+}

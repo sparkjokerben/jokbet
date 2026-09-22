@@ -3,6 +3,7 @@
 //! flush interval and never double counts.
 
 use crate::engine::aggregator::{DayCounters, Totals};
+use crate::engine::milestones::{Reached, LIFETIME};
 use chrono::NaiveDate;
 use rusqlite::{params, Connection, OptionalExtension};
 use std::collections::HashMap;
@@ -225,6 +226,44 @@ impl Db {
         )
     }
 
+    /// Milestones already celebrated (lifetime ones, and daily ones for `today`).
+    pub fn load_reached(&self, today: NaiveDate) -> rusqlite::Result<Reached> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, period, last_value FROM milestone_state WHERE period IN (?1, ?2)",
+        )?;
+        let rows = stmt.query_map([LIFETIME.to_string(), day_key(today)], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                (row.get::<_, String>(1)?, row.get::<_, f64>(2)?),
+            ))
+        })?;
+        Ok(Reached(rows.collect::<rusqlite::Result<_>>()?))
+    }
+
+    pub fn save_reached(
+        &mut self,
+        id: &str,
+        period: &str,
+        level: f64,
+        fired_at: i64,
+    ) -> rusqlite::Result<()> {
+        self.conn.execute(
+            "INSERT INTO milestone_state(id, period, last_value, fired_at) VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(id, period) DO UPDATE SET last_value = excluded.last_value, fired_at = excluded.fired_at",
+            params![id, period, level, fired_at],
+        )?;
+        Ok(())
+    }
+
+    /// Drops daily milestone rows from before `today`.
+    pub fn prune_reached(&mut self, today: NaiveDate) -> rusqlite::Result<()> {
+        self.conn.execute(
+            "DELETE FROM milestone_state WHERE period <> ?1 AND period < ?2",
+            [LIFETIME.to_string(), day_key(today)],
+        )?;
+        Ok(())
+    }
+
     pub fn lifetime_totals(&self) -> rusqlite::Result<Totals> {
         self.conn.query_row(
             "SELECT COALESCE(SUM(keys), 0), COALESCE(SUM(click_left), 0), COALESCE(SUM(click_right), 0),
@@ -341,6 +380,26 @@ mod tests {
         db.clear().unwrap();
         assert_eq!(db.lifetime_totals().unwrap(), Totals::default());
         assert_eq!(db.keys_csv().unwrap(), "date,key,count\n");
+    }
+
+    #[test]
+    fn reached_milestones_round_trip_and_prune() {
+        let mut db = Db::open_in_memory().unwrap();
+        db.save_reached("life-100k", LIFETIME, 100_000.0, 1)
+            .unwrap();
+        db.save_reached("daily-1k", "2026-09-22", 1000.0, 1)
+            .unwrap();
+        db.save_reached("daily-5k", "2026-09-23", 5000.0, 2)
+            .unwrap();
+        let r = db.load_reached(day(2026, 9, 23)).unwrap();
+        assert_eq!(r.0.len(), 2);
+        assert_eq!(r.0["daily-5k"], ("2026-09-23".to_string(), 5000.0));
+        db.prune_reached(day(2026, 9, 23)).unwrap();
+        let count: i64 = db
+            .conn
+            .query_row("SELECT COUNT(*) FROM milestone_state", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 2);
     }
 
     #[test]
