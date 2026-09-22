@@ -24,12 +24,97 @@ impl PetSize {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum CounterKind {
+    /// Today's total.
+    #[default]
+    Today,
+    /// Per-minute rate over the last few seconds.
+    Rate,
+}
+
+/// The single number above the pet's head.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(default, rename_all = "camelCase")]
+pub struct HeadCounter {
+    pub enabled: bool,
+    pub kind: CounterKind,
+    /// Include key presses.
+    pub keyboard: bool,
+    /// Include mouse clicks; with `keyboard` too, the two are summed.
+    pub mouse: bool,
+}
+
+impl Default for HeadCounter {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            kind: CounterKind::Today,
+            keyboard: true,
+            mouse: false,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum Period {
+    Daily,
+    Lifetime,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum Metric {
+    Keys,
+    Clicks,
+    Scrolls,
+    /// Metres of mouse travel.
+    Distance,
+}
+
+impl Metric {
+    /// Smallest allowed step for a repeating milestone.
+    pub fn min_repeat_step(self) -> f64 {
+        match self {
+            Metric::Keys | Metric::Clicks => 500.0,
+            Metric::Scrolls => 200.0,
+            Metric::Distance => 50.0,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomMilestone {
+    pub id: String,
+    pub period: Period,
+    pub metric: Metric,
+    pub threshold: f64,
+    /// Celebrate every `threshold` instead of once.
+    pub repeat: bool,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Settings {
     pub pet_size: PetSize,
     /// Top-left of the pet window in physical pixels; `None` means default placement.
     pub pet_position: Option<[i32; 2]>,
+    pub head_counter: HeadCounter,
+    /// Show today's stats in a bubble while hovering the pet.
+    pub bubble: bool,
+    /// Live typing speed: shown in the bubble and drives the typing animation.
+    pub typing_speed: bool,
+    pub milestones: bool,
+    pub custom_milestones: Vec<CustomMilestone>,
+    /// Minutes without input before the pet falls asleep.
+    pub sleep_after_min: u32,
+    /// Counting is paused (the pet still reacts).
+    pub paused: bool,
+    /// The first-run onboarding has been completed.
+    pub onboarded: bool,
 }
 
 impl Default for Settings {
@@ -37,7 +122,55 @@ impl Default for Settings {
         Self {
             pet_size: PetSize::Medium,
             pet_position: None,
+            head_counter: HeadCounter::default(),
+            bubble: true,
+            typing_speed: true,
+            milestones: true,
+            custom_milestones: Vec::new(),
+            sleep_after_min: 5,
+            paused: false,
+            onboarded: false,
         }
+    }
+}
+
+impl Settings {
+    /// Rejects values the UI should never produce.
+    pub fn validate(&self) -> Result<(), String> {
+        if !(1..=120).contains(&self.sleep_after_min) {
+            return Err("sleepAfterMin must be between 1 and 120".into());
+        }
+        for m in &self.custom_milestones {
+            if !(m.threshold.is_finite() && m.threshold > 0.0) {
+                return Err(format!("milestone {}: threshold must be positive", m.id));
+            }
+            if m.repeat && m.threshold < m.metric.min_repeat_step() {
+                return Err(format!(
+                    "milestone {}: repeating step must be at least {}",
+                    m.id,
+                    m.metric.min_repeat_step()
+                ));
+            }
+        }
+        Ok(())
+    }
+}
+
+/// RFC 7396 JSON merge patch: objects merge recursively, `null` resets a
+/// field to its default, anything else replaces.
+pub fn merge_patch(target: &mut serde_json::Value, patch: &serde_json::Value) {
+    use serde_json::Value;
+    match (target, patch) {
+        (Value::Object(t), Value::Object(p)) => {
+            for (k, v) in p {
+                if v.is_null() {
+                    t.remove(k);
+                } else {
+                    merge_patch(t.entry(k.clone()).or_insert(Value::Null), v);
+                }
+            }
+        }
+        (t, p) => *t = p.clone(),
     }
 }
 
@@ -69,6 +202,19 @@ impl SettingsStore {
         f(&mut guard);
         write_atomic(&self.path, &serde_json::to_vec_pretty(&*guard)?)?;
         Ok(guard.clone())
+    }
+
+    /// Applies a JSON merge patch from the UI after validating the result.
+    pub fn patch(&self, patch: &serde_json::Value) -> Result<Settings, String> {
+        let mut guard = self.inner.lock().unwrap();
+        let mut value = serde_json::to_value(&*guard).map_err(|e| e.to_string())?;
+        merge_patch(&mut value, patch);
+        let next: Settings = serde_json::from_value(value).map_err(|e| e.to_string())?;
+        next.validate()?;
+        let bytes = serde_json::to_vec_pretty(&next).map_err(|e| e.to_string())?;
+        write_atomic(&self.path, &bytes).map_err(|e| e.to_string())?;
+        *guard = next.clone();
+        Ok(next)
     }
 }
 
@@ -110,6 +256,56 @@ mod tests {
         let reloaded = SettingsStore::load(path);
         assert_eq!(reloaded.get().pet_size, PetSize::Large);
         assert_eq!(reloaded.get().pet_position, Some([10, -20]));
+    }
+
+    #[test]
+    fn patch_merges_nested_fields_and_validates() {
+        let store = SettingsStore::load(temp_path("patch"));
+        let next = store
+            .patch(&serde_json::json!({"headCounter": {"mouse": true, "kind": "rate"}, "sleepAfterMin": 10}))
+            .unwrap();
+        assert!(next.head_counter.keyboard && next.head_counter.mouse);
+        assert_eq!(next.head_counter.kind, CounterKind::Rate);
+        assert_eq!(next.sleep_after_min, 10);
+
+        assert!(store
+            .patch(&serde_json::json!({"sleepAfterMin": 0}))
+            .is_err());
+        assert_eq!(
+            store.get().sleep_after_min,
+            10,
+            "rejected patch leaves settings untouched"
+        );
+    }
+
+    #[test]
+    fn null_resets_a_field() {
+        let store = SettingsStore::load(temp_path("null"));
+        store
+            .patch(&serde_json::json!({"petPosition": [5, 6]}))
+            .unwrap();
+        let next = store
+            .patch(&serde_json::json!({"petPosition": null}))
+            .unwrap();
+        assert_eq!(next.pet_position, None);
+    }
+
+    #[test]
+    fn repeating_milestones_need_a_minimum_step() {
+        let mut s = Settings::default();
+        s.custom_milestones.push(CustomMilestone {
+            id: "m1".into(),
+            period: Period::Daily,
+            metric: Metric::Keys,
+            threshold: 100.0,
+            repeat: true,
+        });
+        assert!(s.validate().is_err());
+        s.custom_milestones[0].threshold = 500.0;
+        assert!(s.validate().is_ok());
+        s.custom_milestones[0].repeat = false;
+        s.custom_milestones[0].threshold = 100.0;
+        assert!(s.validate().is_ok());
     }
 
     #[test]

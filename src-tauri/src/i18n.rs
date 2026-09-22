@@ -23,6 +23,7 @@ impl Lang {
 pub enum Text {
     ShowPet,
     HidePet,
+    PauseCounting,
     Quit,
 }
 
@@ -30,9 +31,11 @@ pub fn t(lang: Lang, text: Text) -> &'static str {
     match (lang, text) {
         (Lang::Zh, Text::ShowPet) => "显示桌宠",
         (Lang::Zh, Text::HidePet) => "隐藏桌宠",
+        (Lang::Zh, Text::PauseCounting) => "暂停计数",
         (Lang::Zh, Text::Quit) => "退出",
         (Lang::En, Text::ShowPet) => "Show Pet",
         (Lang::En, Text::HidePet) => "Hide Pet",
+        (Lang::En, Text::PauseCounting) => "Pause Counting",
         (Lang::En, Text::Quit) => "Quit",
     }
 }

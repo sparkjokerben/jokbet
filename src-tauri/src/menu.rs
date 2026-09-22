@@ -2,27 +2,51 @@
 
 use crate::i18n::{t, Lang, Text};
 use crate::pet_window::PET_LABEL;
+use crate::settings::SettingsStore;
 use tauri::image::Image;
-use tauri::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
+use tauri::menu::{CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Manager, Runtime};
 
 const ID_TOGGLE: &str = "toggle-pet";
+const ID_PAUSE: &str = "pause";
 const ID_QUIT: &str = "quit";
 
 pub struct AppMenu<R: Runtime> {
     pub menu: Menu<R>,
     toggle: MenuItem<R>,
+    pause: CheckMenuItem<R>,
     lang: Lang,
 }
 
 impl<R: Runtime> AppMenu<R> {
     pub fn build(app: &AppHandle<R>) -> tauri::Result<Self> {
         let lang = Lang::system();
+        let paused = app.state::<SettingsStore>().get().paused;
         let toggle = MenuItem::with_id(app, ID_TOGGLE, t(lang, Text::HidePet), true, None::<&str>)?;
+        let pause = CheckMenuItem::with_id(
+            app,
+            ID_PAUSE,
+            t(lang, Text::PauseCounting),
+            true,
+            paused,
+            None::<&str>,
+        )?;
         let quit = MenuItem::with_id(app, ID_QUIT, t(lang, Text::Quit), true, None::<&str>)?;
-        let menu = Menu::with_items(app, &[&toggle, &PredefinedMenuItem::separator(app)?, &quit])?;
-        Ok(Self { menu, toggle, lang })
+        let menu = Menu::with_items(
+            app,
+            &[&toggle, &pause, &PredefinedMenuItem::separator(app)?, &quit],
+        )?;
+        Ok(Self {
+            menu,
+            toggle,
+            pause,
+            lang,
+        })
+    }
+
+    pub fn sync_paused(&self, paused: bool) {
+        let _ = self.pause.set_checked(paused);
     }
 
     fn sync_toggle(&self, visible: bool) {
@@ -64,6 +88,10 @@ pub fn handle_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
                 };
                 app.state::<AppMenu<R>>().sync_toggle(!visible);
             }
+        }
+        ID_PAUSE => {
+            let paused = !app.state::<SettingsStore>().get().paused;
+            let _ = crate::commands::apply_patch(app, &serde_json::json!({ "paused": paused }));
         }
         ID_QUIT => app.exit(0),
         _ => {}

@@ -1,0 +1,62 @@
+import { describe, expect, it } from "vitest";
+import { formatCount, formatDistance, headValue } from "./format";
+import { detectLang, messages, t } from "./i18n";
+import type { HeadCounter, Tick } from "./types";
+
+const tick: Tick = {
+  today: { keys: 1000, clickLeft: 50, clickRight: 20, clickMiddle: 5, scrolls: 7, movePx: 0, moveMm: 0 },
+  kpm: 180,
+  cpm: 12,
+  activity: null,
+};
+const head = (over: Partial<HeadCounter>): HeadCounter => ({
+  enabled: true,
+  kind: "today",
+  keyboard: true,
+  mouse: false,
+  ...over,
+});
+
+describe("headValue", () => {
+  it("counts keys, clicks or both for today", () => {
+    expect(headValue(tick, head({}))).toBe(1000);
+    expect(headValue(tick, head({ keyboard: false, mouse: true }))).toBe(75);
+    expect(headValue(tick, head({ mouse: true }))).toBe(1075);
+  });
+  it("sums per-minute rates", () => {
+    expect(headValue(tick, head({ kind: "rate" }))).toBe(180);
+    expect(headValue(tick, head({ kind: "rate", mouse: true }))).toBe(192);
+  });
+});
+
+describe("formatCount", () => {
+  it("keeps full digits below 100k and compacts above", () => {
+    expect(formatCount(12345, "en")).toBe("12,345");
+    expect(formatCount(123456, "en")).toBe("123.5K");
+    expect(formatCount(123456, "zh")).toBe("12.3万");
+  });
+});
+
+describe("formatDistance", () => {
+  it("uses metres then kilometres", () => {
+    expect(formatDistance(5300, "en")).toBe("5.3 m");
+    expect(formatDistance(123_400, "en")).toBe("123 m");
+    expect(formatDistance(1_234_000, "en")).toBe("1.23 km");
+    expect(formatDistance(1_234_000, "zh")).toBe("1.23 公里");
+  });
+});
+
+describe("i18n", () => {
+  it("zh and en define the same keys", () => {
+    expect(Object.keys(messages.en).sort()).toEqual(Object.keys(messages.zh).sort());
+  });
+  it("detects Chinese locales", () => {
+    expect(detectLang("zh-CN")).toBe("zh");
+    expect(detectLang("zh-Hant-TW")).toBe("zh");
+    expect(detectLang("en-US")).toBe("en");
+    expect(detectLang(undefined)).toBe("en");
+  });
+  it("fills placeholders", () => {
+    expect(t("clickSplit", { l: 1, r: 2, m: 3 }, "en")).toBe("L 1 · R 2 · M 3");
+  });
+});

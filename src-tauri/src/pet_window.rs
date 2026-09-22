@@ -3,7 +3,8 @@
 use crate::settings::{PetSize, SettingsStore};
 use serde::{Deserialize, Serialize};
 use tauri::{
-    AppHandle, Manager, PhysicalPosition, Runtime, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
+    AppHandle, LogicalSize, Manager, PhysicalPosition, Runtime, WebviewUrl, WebviewWindow,
+    WebviewWindowBuilder,
 };
 
 pub const PET_LABEL: &str = "pet";
@@ -12,7 +13,7 @@ pub const PET_LABEL: &str = "pet";
 const GRID_W: f64 = 24.0;
 const GRID_H: f64 = 16.0;
 /// Room above the sprite for the head counter and the hover bubble.
-const TOP_PAD: f64 = 150.0;
+const TOP_PAD: f64 = 170.0;
 const MIN_WIDTH: f64 = 220.0;
 const EDGE_MARGIN: f64 = 16.0;
 
@@ -131,6 +132,23 @@ pub fn place<R: Runtime>(window: &WebviewWindow<R>) -> tauri::Result<()> {
     window.set_position(PhysicalPosition::new(pos.0, pos.1))
 }
 
+/// Resizes the window for a new pet size, keeping the pet's feet in place.
+pub fn apply_size<R: Runtime>(
+    window: &WebviewWindow<R>,
+    from: PetSize,
+    to: PetSize,
+) -> tauri::Result<()> {
+    let sf = window.scale_factor()?;
+    let pos = window.outer_position()?;
+    let (w0, h0) = window_size(from);
+    let (w1, h1) = window_size(to);
+    let x = pos.x + ((w0 - w1) / 2.0 * sf).round() as i32;
+    let y = pos.y + ((h0 - h1) * sf).round() as i32;
+    window.set_size(LogicalSize::new(w1, h1))?;
+    window.set_position(PhysicalPosition::new(x, y))?;
+    save_position(window)
+}
+
 /// Clamps the window after a drag and remembers where it ended up.
 pub fn save_position<R: Runtime>(window: &WebviewWindow<R>) -> tauri::Result<()> {
     let app = window.app_handle();
@@ -174,9 +192,9 @@ mod tests {
 
     #[test]
     fn window_size_leaves_room_for_bubble() {
-        assert_eq!(window_size(PetSize::Small), (220.0, 214.0));
-        assert_eq!(window_size(PetSize::Medium), (220.0, 246.0));
-        assert_eq!(window_size(PetSize::Large), (220.0, 278.0));
+        assert_eq!(window_size(PetSize::Small), (220.0, 234.0));
+        assert_eq!(window_size(PetSize::Medium), (220.0, 266.0));
+        assert_eq!(window_size(PetSize::Large), (220.0, 298.0));
     }
 
     #[test]
