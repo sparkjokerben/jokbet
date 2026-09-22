@@ -15,3 +15,15 @@ pub fn displays() -> Vec<Display> {
 pub fn displays() -> Vec<Display> {
     Vec::new()
 }
+
+/// Whether keyboard input is currently hidden from listeners (macOS Secure Input).
+/// Must be called on the main thread.
+#[cfg(target_os = "macos")]
+pub fn secure_input_enabled() -> bool {
+    macos::secure_input_enabled()
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn secure_input_enabled() -> bool {
+    false
+}

@@ -10,6 +10,8 @@ use crate::platform;
 use chrono::{Local, NaiveDate};
 use crossbeam_channel::{bounded, select, tick, Receiver, Sender};
 use serde::Serialize;
+use std::collections::HashMap;
+use std::path::PathBuf;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Runtime};
 
@@ -23,6 +25,18 @@ pub enum Control {
     /// The pet window is listening; resend the current state.
     PetReady,
     SetPaused(bool),
+    /// Saves pending counts, then answers with the last `days` days.
+    Stats {
+        days: u32,
+        reply: Sender<Result<Stats, String>>,
+    },
+    /// Writes daily.csv and keys.csv into `dir`.
+    ExportCsv {
+        dir: PathBuf,
+        reply: Sender<Result<(), String>>,
+    },
+    /// Deletes all counts, including today's.
+    Clear(Sender<Result<(), String>>),
     /// Stop the hook and acknowledge once everything is saved.
     Shutdown(Sender<()>),
 }
@@ -35,6 +49,25 @@ pub struct RuntimeHandle {
 impl RuntimeHandle {
     pub fn send(&self, c: Control) {
         let _ = self.ctrl.send(c);
+    }
+
+    fn ask<T>(&self, make: impl FnOnce(Sender<Result<T, String>>) -> Control) -> Result<T, String> {
+        let (tx, rx) = bounded(1);
+        self.ctrl.send(make(tx)).map_err(|e| e.to_string())?;
+        rx.recv_timeout(Duration::from_secs(10))
+            .map_err(|e| e.to_string())?
+    }
+
+    pub fn stats(&self, days: u32) -> Result<Stats, String> {
+        self.ask(|reply| Control::Stats { days, reply })
+    }
+
+    pub fn export_csv(&self, dir: PathBuf) -> Result<(), String> {
+        self.ask(|reply| Control::ExportCsv { dir, reply })
+    }
+
+    pub fn clear(&self) -> Result<(), String> {
+        self.ask(Control::Clear)
     }
 
     pub fn shutdown(&self, timeout: Duration) {
@@ -56,12 +89,32 @@ pub struct Tick {
     pub activity: Option<Activity>,
 }
 
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DayStat {
+    pub date: String,
+    #[serde(flatten)]
+    pub totals: Totals,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Stats {
+    /// Oldest first, ending today; days without data are zero.
+    pub days: Vec<DayStat>,
+    /// Per-key counts over the same range.
+    pub keys: HashMap<String, u64>,
+    pub lifetime: Totals,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Status {
     pub permission: Permission,
     /// The hook is installed and delivering events.
     pub listening: bool,
+    /// Keyboard input is hidden from every listener right now (macOS Secure Input).
+    pub secure_input: bool,
     pub paused: bool,
 }
 
@@ -148,6 +201,16 @@ impl<R: Runtime> Worker<R> {
                         self.agg.paused = p;
                         self.housekeeping();
                     }
+                    Ok(Control::Stats { days, reply }) => {
+                        let _ = reply.send(self.stats(days));
+                    }
+                    Ok(Control::ExportCsv { dir, reply }) => {
+                        let _ = reply.send(self.export_csv(&dir));
+                    }
+                    Ok(Control::Clear(reply)) => {
+                        let _ = reply.send(self.clear());
+                        self.last_tick = None;
+                    }
                     Ok(Control::Shutdown(ack)) => {
                         if let Some(h) = self.hook.take() {
                             h.stop();
@@ -188,6 +251,7 @@ impl<R: Runtime> Worker<R> {
         let status = Status {
             permission,
             listening,
+            secure_input: self.secure_input(),
             paused: self.agg.paused,
         };
         if self.status != Some(status) {
@@ -202,6 +266,62 @@ impl<R: Runtime> Worker<R> {
             self.agg.roll_over();
             self.last_tick = None;
         }
+    }
+
+    fn db(&mut self) -> Result<&mut Db, String> {
+        self.db
+            .as_mut()
+            .ok_or_else(|| "storage is unavailable".to_string())
+    }
+
+    fn stats(&mut self, days: u32) -> Result<Stats, String> {
+        self.flush();
+        let to = self.date;
+        let from = to - chrono::Days::new(u64::from(days.clamp(1, 3660)) - 1);
+        let db = self.db()?;
+        let err = |e: rusqlite::Error| e.to_string();
+        Ok(Stats {
+            days: db
+                .range(from, to)
+                .map_err(err)?
+                .into_iter()
+                .map(|(d, totals)| DayStat {
+                    date: d.format("%Y-%m-%d").to_string(),
+                    totals,
+                })
+                .collect(),
+            keys: db.key_counts(from, to).map_err(err)?,
+            lifetime: db.lifetime_totals().map_err(err)?,
+        })
+    }
+
+    fn export_csv(&mut self, dir: &std::path::Path) -> Result<(), String> {
+        self.flush();
+        let db = self.db()?;
+        let daily = db.daily_csv().map_err(|e| e.to_string())?;
+        let keys = db.keys_csv().map_err(|e| e.to_string())?;
+        std::fs::write(dir.join("jokerben-desktop-pet-daily.csv"), daily)
+            .map_err(|e| e.to_string())?;
+        std::fs::write(dir.join("jokerben-desktop-pet-keys.csv"), keys).map_err(|e| e.to_string())
+    }
+
+    fn clear(&mut self) -> Result<(), String> {
+        self.db()?.clear().map_err(|e| e.to_string())?;
+        let paused = self.agg.paused;
+        self.agg = Aggregator::with_today(Default::default());
+        self.agg.paused = paused;
+        self.lifetime_saved = Totals::default();
+        Ok(())
+    }
+
+    /// Queries Secure Input on the main thread (the HIToolbox call is not
+    /// documented as thread-safe); assumes off if the main thread is busy.
+    fn secure_input(&self) -> bool {
+        let (tx, rx) = bounded(1);
+        let asked = self.app.run_on_main_thread(move || {
+            let _ = tx.send(platform::secure_input_enabled());
+        });
+        asked.is_ok() && rx.recv_timeout(Duration::from_millis(200)).unwrap_or(false)
     }
 
     /// Adds pending counts to the database; keeps them pending if that fails.

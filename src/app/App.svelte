@@ -1,8 +1,15 @@
 <script lang="ts">
-  // Routes the on-demand windows by ?view= (stats / settings / onboarding).
+  import { t } from "../lib/i18n";
+  import Settings from "./settings/Settings.svelte";
+  import Stats from "./stats/Stats.svelte";
+
+  // Each on-demand window loads app.html?view=<name>.
   const view = new URLSearchParams(location.search).get("view") ?? "stats";
+  document.title = view === "settings" ? t("settings") : t("stats");
 </script>
 
-<main>
-  <p>{view}</p>
-</main>
+{#if view === "settings"}
+  <Settings />
+{:else}
+  <Stats />
+{/if}

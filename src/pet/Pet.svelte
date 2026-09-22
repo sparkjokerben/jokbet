@@ -4,6 +4,7 @@
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { onMount } from "svelte";
   import { headValue } from "../lib/format";
+  import { blockedBy } from "./machine";
   import { SCALE, type Settings, type Status, type Tick } from "../lib/types";
   import { GRID_H, GRID_W } from "../sprites/clawd";
   import Bubble from "./Bubble.svelte";
@@ -52,7 +53,7 @@
   function applyStatus(s: Status) {
     paused = s.paused;
     pet.setPaused(s.paused);
-    pet.setBlocked(s.permission === "denied" || !s.listening ? "noperm" : null);
+    pet.setBlocked(blockedBy(s));
   }
 
   function applyTick(t: Tick) {

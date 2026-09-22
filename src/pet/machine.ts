@@ -16,6 +16,13 @@ export interface Signals {
   sleepAfterMs: number;
 }
 
+/** Why the pet cannot see input: no hook, or keys hidden by Secure Input. */
+export function blockedBy(s: { permission: string; listening: boolean; secureInput: boolean }): Blocked | null {
+  if (s.permission === "denied" || !s.listening) return "noperm";
+  if (s.secureInput) return "secure";
+  return null;
+}
+
 /** How long a reaction lasts after the last input of that kind. */
 export const REACT_MS: Record<Activity, number> = { typing: 800, scroll: 500, click: 300 };
 

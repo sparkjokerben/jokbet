@@ -55,6 +55,7 @@ export interface Tick {
 export interface Status {
   permission: Permission;
   listening: boolean;
+  secureInput: boolean;
   paused: boolean;
 }
 

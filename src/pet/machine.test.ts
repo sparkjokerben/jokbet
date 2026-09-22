@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ANIMS } from "../sprites/clawd";
-import { frameAt, nextDeadline, pickAnim, typingFrameMs, type Signals } from "./machine";
+import { blockedBy, frameAt, nextDeadline, pickAnim, typingFrameMs, type Signals } from "./machine";
 
 const base = (over: Partial<Signals> = {}): Signals => ({
   blocked: null,
@@ -73,5 +73,18 @@ describe("typingFrameMs", () => {
     expect(typingFrameMs(0)).toBe(350);
     expect(typingFrameMs(150)).toBe(140);
     expect(typingFrameMs(1000)).toBe(70);
+  });
+});
+
+describe("blockedBy", () => {
+  it("missing permission or a dead hook means noperm", () => {
+    expect(blockedBy({ permission: "denied", listening: false, secureInput: false })).toBe("noperm");
+    expect(blockedBy({ permission: "granted", listening: false, secureInput: true })).toBe("noperm");
+  });
+  it("secure input blindfolds the pet", () => {
+    expect(blockedBy({ permission: "granted", listening: true, secureInput: true })).toBe("secure");
+  });
+  it("otherwise nothing blocks", () => {
+    expect(blockedBy({ permission: "notRequired", listening: true, secureInput: false })).toBeNull();
   });
 });

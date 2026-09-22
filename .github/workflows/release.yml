@@ -1,0 +1,112 @@
+name: Release
+
+# Push a tag like v0.1.0 (matching package.json) to build every platform into
+# a draft GitHub release. Publish the draft to ship it to the auto-updater.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            args: --target aarch64-apple-darwin
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            args: --target x86_64-apple-darwin
+          - os: windows-latest
+            target: ""
+            args: ""
+          - os: ubuntu-22.04
+            target: ""
+            args: --bundles appimage,deb
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag matches package.json
+        shell: bash
+        run: |
+          version="v$(node -p 'require("./package.json").version')"
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json $version"
+            exit 1
+          fi
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.target }}
+
+      - run: npm ci
+
+      - name: Import macOS signing certificate
+        if: runner.os == 'macOS'
+        env:
+          P12: ${{ secrets.MACOS_SELFSIGN_P12 }}
+          P12_PASSWORD: ${{ secrets.MACOS_SELFSIGN_P12_PASSWORD }}
+        run: |
+          # Signing every release with the same self-signed identity keeps the
+          # app's designated requirement stable, so macOS keeps the Input
+          # Monitoring grant across updates. Falls back to ad-hoc signing.
+          identity="-"
+          name="jokerben-desktop-pet Self-Signed"
+          if [ -n "$P12" ]; then
+            kc="$RUNNER_TEMP/signing.keychain-db"
+            kcp="$(openssl rand -hex 16)"
+            security create-keychain -p "$kcp" "$kc"
+            security set-keychain-settings -lut 21600 "$kc"
+            security unlock-keychain -p "$kcp" "$kc"
+            echo "$P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+            security import "$RUNNER_TEMP/cert.p12" -P "$P12_PASSWORD" -A -f pkcs12 -k "$kc"
+            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kcp" "$kc" > /dev/null
+            security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+            security find-certificate -c "$name" -p "$kc" > "$RUNNER_TEMP/cert.pem"
+            sudo security add-trusted-cert -d -r trustRoot -p codeSign \
+              -k /Library/Keychains/System.keychain "$RUNNER_TEMP/cert.pem" || true
+            if security find-identity -v -p codesigning "$kc" | grep -q "$name"; then
+              identity="$name"
+            else
+              echo "::warning::self-signed identity is not usable; falling back to ad-hoc signing"
+            fi
+          fi
+          echo "APPLE_SIGNING_IDENTITY=$identity" >> "$GITHUB_ENV"
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: jokerben-desktop-pet ${{ github.ref_name }}
+          releaseBody: |
+            Unofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.
+            非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见 README。
+
+            See the [README](https://github.com/sparkjokerben/jokerben-desktop-pet#install) for install steps.
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

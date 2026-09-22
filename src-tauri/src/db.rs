@@ -141,6 +141,90 @@ impl Db {
         Ok(DayCounters { totals, per_key })
     }
 
+    /// One entry per day from `from` to `to` inclusive; days without data are zero.
+    pub fn range(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+    ) -> rusqlite::Result<Vec<(NaiveDate, Totals)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT date, keys, click_left, click_right, click_middle, scrolls, move_px, move_mm
+             FROM daily WHERE date BETWEEN ?1 AND ?2",
+        )?;
+        let stored = stmt
+            .query_map([day_key(from), day_key(to)], |row| {
+                Ok((row.get::<_, String>(0)?, totals_from_row(row, 1)?))
+            })?
+            .collect::<rusqlite::Result<HashMap<String, Totals>>>()?;
+        Ok(from
+            .iter_days()
+            .take_while(|d| *d <= to)
+            .map(|d| (d, stored.get(&day_key(d)).cloned().unwrap_or_default()))
+            .collect())
+    }
+
+    /// Per-key counts summed over a date range.
+    pub fn key_counts(
+        &self,
+        from: NaiveDate,
+        to: NaiveDate,
+    ) -> rusqlite::Result<HashMap<String, u64>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT key, SUM(count) FROM daily_keys WHERE date BETWEEN ?1 AND ?2 GROUP BY key",
+        )?;
+        let rows = stmt.query_map([day_key(from), day_key(to)], |row| {
+            Ok((row.get(0)?, row.get::<_, i64>(1)? as u64))
+        })?;
+        rows.collect()
+    }
+
+    /// All days as CSV: date, totals.
+    pub fn daily_csv(&self) -> rusqlite::Result<String> {
+        let mut out =
+            String::from("date,keys,click_left,click_right,click_middle,scrolls,move_px,move_m\n");
+        let mut stmt = self.conn.prepare(
+            "SELECT date, keys, click_left, click_right, click_middle, scrolls, move_px, move_mm
+             FROM daily ORDER BY date",
+        )?;
+        let mut rows = stmt.query([])?;
+        while let Some(row) = rows.next()? {
+            let d: String = row.get(0)?;
+            let t = totals_from_row(row, 1)?;
+            out.push_str(&format!(
+                "{d},{},{},{},{},{},{:.0},{:.2}\n",
+                t.keys,
+                t.click_left,
+                t.click_right,
+                t.click_middle,
+                t.scrolls,
+                t.move_px,
+                t.move_mm / 1000.0
+            ));
+        }
+        Ok(out)
+    }
+
+    /// All per-key counts as CSV: date, key, count.
+    pub fn keys_csv(&self) -> rusqlite::Result<String> {
+        let mut out = String::from("date,key,count\n");
+        let mut stmt = self
+            .conn
+            .prepare("SELECT date, key, count FROM daily_keys ORDER BY date, key")?;
+        let mut rows = stmt.query([])?;
+        while let Some(row) = rows.next()? {
+            let (d, k, n): (String, String, i64) = (row.get(0)?, row.get(1)?, row.get(2)?);
+            out.push_str(&format!("{d},{k},{n}\n"));
+        }
+        Ok(out)
+    }
+
+    /// Deletes every count (settings are kept).
+    pub fn clear(&mut self) -> rusqlite::Result<()> {
+        self.conn.execute_batch(
+            "DELETE FROM daily; DELETE FROM daily_keys; DELETE FROM milestone_state;",
+        )
+    }
+
     pub fn lifetime_totals(&self) -> rusqlite::Result<Totals> {
         self.conn.query_row(
             "SELECT COALESCE(SUM(keys), 0), COALESCE(SUM(click_left), 0), COALESCE(SUM(click_right), 0),
@@ -203,6 +287,60 @@ mod tests {
         let life = db.lifetime_totals().unwrap();
         assert_eq!(life.keys, 15);
         assert_eq!(life.click_left, 2);
+    }
+
+    #[test]
+    fn range_fills_missing_days_with_zero() {
+        let mut db = Db::open_in_memory().unwrap();
+        db.add_day(day(2026, 9, 21), &delta(4, &[])).unwrap();
+        db.add_day(day(2026, 9, 23), &delta(6, &[])).unwrap();
+        let r = db.range(day(2026, 9, 20), day(2026, 9, 23)).unwrap();
+        let keys: Vec<_> = r
+            .iter()
+            .map(|(d, t)| (d.format("%d").to_string(), t.keys))
+            .collect();
+        assert_eq!(
+            keys,
+            [
+                ("20".into(), 0),
+                ("21".into(), 4),
+                ("22".into(), 0),
+                ("23".into(), 6)
+            ]
+        );
+    }
+
+    #[test]
+    fn key_counts_sum_over_the_range_only() {
+        let mut db = Db::open_in_memory().unwrap();
+        db.add_day(day(2026, 9, 1), &delta(1, &[("KeyA", 5)]))
+            .unwrap();
+        db.add_day(day(2026, 9, 22), &delta(1, &[("KeyA", 2), ("Space", 1)]))
+            .unwrap();
+        db.add_day(day(2026, 9, 23), &delta(1, &[("KeyA", 3)]))
+            .unwrap();
+        let k = db.key_counts(day(2026, 9, 22), day(2026, 9, 23)).unwrap();
+        assert_eq!(k["KeyA"], 5);
+        assert_eq!(k["Space"], 1);
+        assert_eq!(k.len(), 2);
+    }
+
+    #[test]
+    fn csv_exports_and_clear() {
+        let mut db = Db::open_in_memory().unwrap();
+        db.add_day(day(2026, 9, 23), &delta(3, &[("KeyA", 3)]))
+            .unwrap();
+        assert_eq!(
+            db.daily_csv().unwrap(),
+            "date,keys,click_left,click_right,click_middle,scrolls,move_px,move_m\n2026-09-23,3,1,0,0,0,0,0.00\n"
+        );
+        assert_eq!(
+            db.keys_csv().unwrap(),
+            "date,key,count\n2026-09-23,KeyA,3\n"
+        );
+        db.clear().unwrap();
+        assert_eq!(db.lifetime_totals().unwrap(), Totals::default());
+        assert_eq!(db.keys_csv().unwrap(), "date,key,count\n");
     }
 
     #[test]

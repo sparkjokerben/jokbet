@@ -5,9 +5,11 @@ mod hover;
 mod i18n;
 mod input;
 mod menu;
+mod panels;
 mod pet_window;
 mod platform;
 mod settings;
+mod updater;
 
 use engine::runtime::RuntimeHandle;
 use hover::HoverState;
@@ -19,6 +21,9 @@ use tauri::{Manager, RunEvent};
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_dialog::init())
+        .manage(updater::PendingUpdate::default())
         .on_menu_event(menu::handle_event)
         .invoke_handler(tauri::generate_handler![
             commands::get_settings,
@@ -27,6 +32,10 @@ pub fn run() {
             commands::pet_drag_end,
             commands::show_context_menu,
             commands::pet_ready,
+            commands::get_stats,
+            commands::export_csv,
+            commands::clear_data,
+            commands::open_panel,
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
@@ -50,6 +59,7 @@ pub fn run() {
 
             pet_window::create(app.handle())?;
             hover::spawn(app.handle().clone());
+            updater::spawn(app.handle().clone());
             Ok(())
         })
         .build(tauri::generate_context!())
