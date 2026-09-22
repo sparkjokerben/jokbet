@@ -4,6 +4,7 @@
 pub const UNIDENTIFIED: &str = "Unidentified";
 
 /// macOS virtual key code (`kVK_*`, layout independent) to W3C code.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub fn mac(keycode: u16) -> &'static str {
     match keycode {
         0x00 => "KeyA",

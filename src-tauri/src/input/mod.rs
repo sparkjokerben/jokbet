@@ -6,6 +6,10 @@
 pub mod keymap;
 #[cfg(target_os = "macos")]
 mod macos;
+#[cfg(windows)]
+mod windows;
+#[cfg(target_os = "linux")]
+mod x11;
 
 use crossbeam_channel::Sender;
 use serde::Serialize;
@@ -60,10 +64,15 @@ pub fn now_ms() -> u64 {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Permission {
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     Granted,
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     Denied,
     #[cfg_attr(target_os = "macos", allow(dead_code))]
     NotRequired,
+    /// Global input cannot be observed here at all (Wayland).
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    Unsupported,
 }
 
 /// Where hooks deliver events; counts what had to be dropped when full.
@@ -97,11 +106,15 @@ pub trait InputHandle: Send {
 
 #[cfg(target_os = "macos")]
 pub use macos::{permission, request_permission, start};
+#[cfg(windows)]
+pub use windows::{permission, request_permission, start};
+#[cfg(target_os = "linux")]
+pub use x11::{permission, request_permission, start};
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", windows, target_os = "linux")))]
 pub use null::{permission, request_permission, start};
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", windows, target_os = "linux")))]
 mod null {
     //! Placeholder until the Windows and X11 hooks land.
     use super::{EventSink, InputHandle, Permission};
