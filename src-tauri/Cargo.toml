@@ -1,0 +1,28 @@
+[package]
+name = "jokerben-desktop-pet"
+version = "0.0.1"
+description = "A lightweight desktop pet that counts your keyboard and mouse activity"
+authors = ["sparkjokerben"]
+license = "GPL-3.0-only"
+repository = "https://github.com/sparkjokerben/jokerben-desktop-pet"
+edition = "2021"
+
+[lib]
+# The `_lib` suffix keeps the lib name distinct from the bin name (cargo#8519 on Windows).
+name = "jokerben_desktop_pet_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["macos-private-api"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

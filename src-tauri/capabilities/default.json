@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissions for the pet window and the on-demand app windows",
+  "windows": ["pet", "stats", "settings", "onboarding"],
+  "permissions": [
+    "core:default"
+  ]
+}
