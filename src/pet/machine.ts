@@ -18,7 +18,7 @@ export interface Signals {
 
 /** Why the pet cannot see input: no hook, or keys hidden by Secure Input. */
 export function blockedBy(s: { permission: string; listening: boolean; secureInput: boolean }): Blocked | null {
-  if (s.permission === "denied" || !s.listening) return "noperm";
+  if (s.permission === "denied" || s.permission === "unsupported" || !s.listening) return "noperm";
   if (s.secureInput) return "secure";
   return null;
 }

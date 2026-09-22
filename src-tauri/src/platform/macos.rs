@@ -62,3 +62,22 @@ pub fn displays() -> Vec<Display> {
         })
         .collect()
 }
+
+/// NSWindowCollectionBehavior bits.
+const CAN_JOIN_ALL_SPACES: usize = 1 << 0;
+const STATIONARY: usize = 1 << 4;
+const IGNORES_CYCLE: usize = 1 << 6;
+
+pub fn pin_to_all_spaces(ns_window: *mut std::ffi::c_void) {
+    use objc2::msg_send;
+    use objc2::runtime::AnyObject;
+    // SAFETY: `ns_window` is the live NSWindow of a Tauri window, used on the main thread.
+    unsafe {
+        let window = &*(ns_window as *const AnyObject);
+        let behavior: usize = msg_send![window, collectionBehavior];
+        let _: () = msg_send![
+            window,
+            setCollectionBehavior: behavior | CAN_JOIN_ALL_SPACES | STATIONARY | IGNORES_CYCLE
+        ];
+    }
+}

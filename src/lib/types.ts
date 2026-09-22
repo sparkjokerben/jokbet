@@ -5,7 +5,7 @@ export type CounterKind = "today" | "rate";
 export type Period = "daily" | "lifetime";
 export type Metric = "keys" | "clicks" | "scrolls" | "distance";
 export type Activity = "typing" | "click" | "scroll";
-export type Permission = "granted" | "denied" | "notRequired";
+export type Permission = "granted" | "denied" | "notRequired" | "unsupported";
 
 export interface HeadCounter {
   enabled: boolean;

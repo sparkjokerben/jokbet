@@ -40,10 +40,7 @@ struct Decoder {
 }
 
 impl Decoder {
-    fn feed(&mut self, ev: &[u8], out: &mut impl FnMut(RawEvent)) {
-        if ev.len() < 32 {
-            return;
-        }
+    fn feed(&mut self, ev: &[u8; 32], out: &mut impl FnMut(RawEvent)) {
         let kind = ev[0] & 0x7f;
         let detail = ev[1];
         let time = u32::from_ne_bytes([ev[4], ev[5], ev[6], ev[7]]);
@@ -166,7 +163,7 @@ pub fn start(sink: EventSink) -> Result<Box<dyn InputHandle>, String> {
                 if reply.category != FROM_SERVER {
                     continue;
                 }
-                for ev in reply.data.chunks_exact(32) {
+                for ev in reply.data.as_chunks::<32>().0 {
                     decoder.feed(ev, &mut emit);
                 }
             }

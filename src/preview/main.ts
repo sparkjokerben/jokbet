@@ -60,6 +60,10 @@ mockIPC(
       return fakeStats(a.days as number);
     case "get_settings":
       return settings;
+    case "get_status":
+      return { permission: "denied", listening: false, secureInput: false, paused: false };
+    case "plugin:autostart|is_enabled":
+      return true;
     case "update_settings":
       settings = { ...settings, ...(a.patch as object) } as Settings;
       return settings;
@@ -84,7 +88,7 @@ if (view === "pet") {
   mount(Pet, { target: document.getElementById("root")! });
   setTimeout(async () => {
     const today = fakeStats(1).days[0];
-    await emit("pet://status", { permission: "granted", listening: true, secureInput: false, paused: false });
+    await emit("app://status", { permission: "granted", listening: true, secureInput: false, paused: false });
     await emit("pet://tick", { today, kpm: 186, cpm: 12, activity: null });
     await emit("pet://hover", true);
     await emit("pet://celebrate", {

@@ -5,6 +5,9 @@ use windows::Win32::Graphics::Gdi::{
     EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITORINFO,
 };
 use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_RAW_DPI};
+use windows::Win32::UI::Shell::{
+    SHQueryUserNotificationState, QUNS_BUSY, QUNS_PRESENTATION_MODE, QUNS_RUNNING_D3D_FULL_SCREEN,
+};
 
 unsafe extern "system" fn collect(monitor: HMONITOR, _: HDC, _: *mut RECT, data: LPARAM) -> BOOL {
     let out = &mut *(data.0 as *mut Vec<Display>);
@@ -47,4 +50,12 @@ pub fn displays() -> Vec<Display> {
         );
     }
     out
+}
+
+/// A fullscreen app, a D3D game or presentation mode is in front.
+pub fn fullscreen_active() -> bool {
+    matches!(
+        unsafe { SHQueryUserNotificationState() },
+        Ok(state) if state == QUNS_BUSY || state == QUNS_RUNNING_D3D_FULL_SCREEN || state == QUNS_PRESENTATION_MODE
+    )
 }

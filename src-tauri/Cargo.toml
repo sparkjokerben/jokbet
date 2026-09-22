@@ -25,6 +25,7 @@ serde_json = "1"
 rusqlite = { version = "0.40.2", features = ["bundled"] }
 tauri-plugin-updater = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-autostart = "2"
 
 [profile.release]
 codegen-units = 1
@@ -46,3 +47,6 @@ windows = { version = "0.61", features = [
 
 [target.'cfg(target_os = "linux")'.dependencies]
 x11rb = { version = "0.13", features = ["record", "randr"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
+  import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
   import { onMount } from "svelte";
   import { t } from "../../lib/i18n";
   import type { PetSize, Settings } from "../../lib/types";
@@ -10,6 +11,17 @@
 
   let s = $state<Settings | null>(null);
   let error = $state("");
+  let autostart = $state<boolean | null>(null);
+  const isMac = navigator.userAgent.includes("Mac");
+
+  async function setAutostart(on: boolean) {
+    try {
+      await (on ? enable() : disable());
+      autostart = await isEnabled();
+    } catch (e) {
+      error = t("saveFailed", { error: String(e) });
+    }
+  }
 
   async function update(patch: Record<string, unknown>) {
     try {
@@ -22,6 +34,7 @@
 
   onMount(() => {
     invoke<Settings>("get_settings").then((v) => (s = v));
+    isEnabled().then((v) => (autostart = v), () => {});
     const un = listen<Settings>("settings://changed", (e) => (s = e.payload));
     return () => un.then((f) => f());
   });
@@ -121,7 +134,13 @@
 
     <section class="card">
       <h2>{t("sectionGeneral")}</h2>
+      {#if autostart !== null}
+        <Toggle label={t("autostart")} checked={autostart} onchange={setAutostart} />
+      {/if}
       <Toggle label={t("pauseCounting")} checked={s.paused} onchange={(v) => update({ paused: v })} />
+      {#if isMac}
+        <button class="btn fix" onclick={() => invoke("open_panel", { view: "onboarding" })}>{t("fixPermission")}</button>
+      {/if}
     </section>
 
     {#if error}
@@ -174,5 +193,8 @@
   }
   .error {
     color: var(--danger);
+  }
+  .fix {
+    margin-top: 6px;
   }
 </style>

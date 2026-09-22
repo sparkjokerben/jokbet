@@ -28,6 +28,7 @@
     activity: null,
   });
   let paused = $state(false);
+  let blocked = $state<ReturnType<typeof blockedBy>>(null);
   let hovering = $state(false);
   let banner = $state("");
   let bannerTimer: ReturnType<typeof setTimeout> | undefined;
@@ -56,7 +57,8 @@
   function applyStatus(s: Status) {
     paused = s.paused;
     pet.setPaused(s.paused);
-    pet.setBlocked(blockedBy(s));
+    blocked = blockedBy(s);
+    pet.setBlocked(blocked);
   }
 
   function applyTick(t: Tick) {
@@ -90,7 +92,8 @@
     };
 
     const detach = attachGestures(spriteEl, {
-      poke: () => pet.oneShot("poke"),
+      // A pet that cannot see input leads straight to the fix.
+      poke: () => (blocked === "noperm" ? invoke("open_panel", { view: "onboarding" }) : pet.oneShot("poke")),
       special: () => pet.oneShot("special"),
       dragStart: () => {
         pet.setDragging(true);
@@ -104,7 +107,7 @@
       listen<[number, number]>("pet://gaze", (e) => pet.setGaze(e.payload)),
       listen<boolean>("pet://hover", (e) => (hovering = e.payload)),
       listen<Tick>("pet://tick", (e) => applyTick(e.payload)),
-      listen<Status>("pet://status", (e) => applyStatus(e.payload)),
+      listen<Status>("app://status", (e) => applyStatus(e.payload)),
       listen<Settings>("settings://changed", (e) => applySettings(e.payload)),
       listen<{ hits: MilestoneHit[] }>("pet://celebrate", (e) => celebrate(e.payload.hits)),
       win.onMoved(() => {

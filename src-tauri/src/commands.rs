@@ -1,6 +1,6 @@
 //! Tauri commands invoked from the webviews.
 
-use crate::engine::runtime::{Control, RuntimeHandle, Stats};
+use crate::engine::runtime::{Control, RuntimeHandle, Stats, Status};
 use crate::hover::{HitRect, HoverState};
 use crate::menu::AppMenu;
 use crate::panels::Panel;
@@ -103,4 +103,30 @@ pub fn open_panel(app: AppHandle, view: String) -> Result<(), String> {
     };
     crate::menu::open_panel(&app, panel);
     Ok(())
+}
+
+#[tauri::command]
+pub async fn get_status(runtime: State<'_, RuntimeHandle>) -> Result<Status, String> {
+    let rt = runtime.inner().clone();
+    off_main(move || rt.status()).await
+}
+
+/// Registers the app for Input Monitoring and opens that settings pane.
+#[tauri::command]
+pub fn open_input_monitoring_settings() -> Result<(), String> {
+    // The system prompt only appears once; requesting again still adds the
+    // app to the list (switched off) so the user can find it.
+    crate::input::request_permission();
+    #[cfg(target_os = "macos")]
+    std::process::Command::new("open")
+        .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Some macOS versions only honour a new Input Monitoring grant after a relaunch.
+#[tauri::command]
+pub fn restart_app(app: AppHandle) {
+    app.restart();
 }

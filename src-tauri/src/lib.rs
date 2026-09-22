@@ -23,6 +23,10 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .manage(updater::PendingUpdate::default())
         .on_menu_event(menu::handle_event)
         .invoke_handler(tauri::generate_handler![
@@ -36,6 +40,9 @@ pub fn run() {
             commands::export_csv,
             commands::clear_data,
             commands::open_panel,
+            commands::get_status,
+            commands::open_input_monitoring_settings,
+            commands::restart_app,
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
@@ -57,7 +64,14 @@ pub fn run() {
             menu::create_tray(app.handle(), &menu)?;
             app.manage(menu);
 
-            pet_window::create(app.handle())?;
+            let pet = pet_window::create(app.handle())?;
+            #[cfg(target_os = "macos")]
+            platform::pin_to_all_spaces(&pet);
+            #[cfg(not(target_os = "macos"))]
+            let _ = pet;
+            if !initial.onboarded {
+                menu::open_panel(app.handle(), panels::Panel::Onboarding);
+            }
             hover::spawn(app.handle().clone());
             updater::spawn(app.handle().clone());
             Ok(())
