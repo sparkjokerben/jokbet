@@ -3,7 +3,7 @@
 import type { Anim, AnimName } from "../sprites/jokbet";
 
 export type Blocked = "noperm" | "secure";
-export type Activity = "typing" | "click" | "scroll";
+export type Activity = "typing" | "click";
 export type OneShot = "poke" | "hearts" | "soccer" | "wave" | "wake" | "typingEnd";
 
 export interface Signals {
@@ -27,18 +27,18 @@ export function blockedBy(s: { permission: string; listening: boolean; secureInp
 
 /** How long a reaction lasts after the last input of that kind. Keystrokes
  * are special: see typingReactMs. */
-export const REACT_MS: Record<Activity, number> = { typing: 1500, scroll: 500, click: 300 };
+export const REACT_MS: Record<Activity, number> = { typing: 1500, click: 300 };
 
 /** The longest the pet stays in typing after the last keystroke. */
-export const TYPING_HOLD_MAX_MS = 12_000;
+export const TYPING_HOLD_MAX_MS = 6000;
 /** Extra hold per sqrt(second) of the current spell of typing. */
-const TYPING_HOLD_GROWTH = 800;
+const TYPING_HOLD_GROWTH = 400;
 
 /**
  * How long keystrokes keep the pet in typing: the base time plus a term that
  * grows with the square root of how long this spell of typing has lasted. A
- * few keys tapped now and then end at once; a long session earns a longer
- * pause before the laptop goes away.
+ * few keys tapped now and then end at once; a long session earns a slightly
+ * longer pause before the laptop goes away.
  */
 export function typingReactMs(sessionMs: number): number {
   const seconds = Math.max(0, sessionMs) / 1000;

@@ -15,8 +15,10 @@ const GRID_W: f64 = 40.0;
 const GRID_H: f64 = 26.0;
 /// The middle of the pet's box, in canvas columns (the box starts at column 6).
 const PET_CENTER_X: f64 = 18.0;
-/// Room above the canvas for the head counter and the hover bubble.
-const TOP_PAD: f64 = 130.0;
+/// Room above the canvas for the head counter and the hover bubble. The
+/// bubble is a fixed-size card, so this covers all scales; the canvas above
+/// the pet's head adds to it.
+const TOP_PAD: f64 = 180.0;
 const MIN_WIDTH: f64 = 220.0;
 const EDGE_MARGIN: f64 = 16.0;
 
@@ -204,9 +206,9 @@ mod tests {
     #[test]
     fn window_size_leaves_room_for_bubble() {
         // Small enough that the window keeps its minimum width.
-        assert_eq!(window_size(4.0), (220.0, 234.0));
-        assert_eq!(window_size(5.0), (220.0, 260.0));
-        assert_eq!(window_size(7.0), (280.0, 312.0));
+        assert_eq!(window_size(4.0), (220.0, 284.0));
+        assert_eq!(window_size(5.0), (220.0, 310.0));
+        assert_eq!(window_size(7.0), (280.0, 362.0));
     }
 
     #[test]

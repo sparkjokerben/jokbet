@@ -92,14 +92,4 @@ describe("PetController", () => {
     pet.input("typing");
     expect(last()).toEqual(ANIMS.typing.frames[0].rows);
   });
-
-  it("keeps its eyes on the cursor while scrolling", () => {
-    pet.setGaze([0, 1]);
-    pet.input("scroll");
-    expect(last()).toEqual(compose({ gaze: [0, 1] }));
-    advance(300);
-    pet.input("scroll");
-    advance(300);
-    expect(last()).toEqual(compose({ gaze: [0, 1] }));
-  });
 });

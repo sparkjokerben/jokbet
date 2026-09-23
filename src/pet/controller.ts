@@ -190,9 +190,9 @@ export class PetController {
 
     let wakeAt = Math.min(t + nextIn, nextDeadline(this.signals, t));
     if (showing) wakeAt = Math.min(wakeAt, t < this.idleShowUntil ? this.idleShowUntil : this.idleShowAt);
-    if (pose && (this.anim === "idle" || this.anim === "scroll" || this.anim === "click")) {
-      // Whatever the idle animation does, and on clicks and scrolling too, the
-      // eyes stay on the cursor.
+    if (pose && (this.anim === "idle" || this.anim === "click")) {
+      // Whatever the idle animation does, and on clicks too, the eyes stay on
+      // the cursor.
       pose.gaze = this.gaze;
       if (t >= this.blinkAt + BLINK_MS) this.blinkAt = t + blinkGap();
       if (t >= this.blinkAt) pose.eyes = "closed";

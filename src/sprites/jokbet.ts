@@ -108,8 +108,8 @@ const GLYPHS: Record<Effect, { x: number; y: number; rows: readonly string[] }> 
   sparkleA: { x: 1, y: 9, rows: [".Y.", "YYY", ".Y."] },
   sparkleB: { x: 32, y: 8, rows: [".Y.", "YYY", ".Y."] },
   heart: { x: 26, y: 2, rows: [".R.R.", "RRRRR", ".RRR.", "..R.."] },
-  // A drop on the head's top right corner.
-  sweat: { x: 24, y: 9, rows: [".S.", "SSS"] },
+  // A drop perched on the head's top right corner.
+  sweat: { x: 24, y: 9, rows: [".S", "SS", "SS"] },
   exclaim: { x: 30, y: 4, rows: ["R", "R", "R", ".", "R"] },
   question: { x: 29, y: 3, rows: ["ZZ.", "..Z", ".Z.", "...", ".Z."] },
   pause: { x: 29, y: 4, rows: ["Z.Z", "Z.Z", "Z.Z"] },
@@ -186,7 +186,6 @@ export type AnimName =
   | "typing"
   | "typingEnd"
   | "click"
-  | "scroll"
   | "sleep"
   | "wake"
   | "celebrate"
@@ -225,9 +224,6 @@ export const ANIMS: Record<AnimName, Anim> = {
       { ms: 160, pose: { squash: 1 } },
     ],
   },
-  // Holds still while you scroll; the controller keeps its eyes on the cursor,
-  // on whatever you are reading.
-  scroll: { loop: true, frames: [{ ms: 1000, pose: {} }] },
   sleep: {
     loop: true,
     frames: [
@@ -292,8 +288,10 @@ export const ANIMS: Record<AnimName, Anim> = {
   dragged: {
     loop: true,
     frames: [
+      // The drop stays for the whole struggle; blinking it on and off read as
+      // a glitch.
       { ms: 160, pose: { ...UP, legs: [2, 4, 2, 4], eyes: "wide", fx: ["sweat"] } },
-      { ms: 160, pose: { ...UP, legs: [4, 2, 4, 2], eyes: "wide" } },
+      { ms: 160, pose: { ...UP, legs: [4, 2, 4, 2], eyes: "wide", fx: ["sweat"] } },
     ],
   },
   noperm: {

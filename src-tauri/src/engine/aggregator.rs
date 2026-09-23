@@ -73,7 +73,6 @@ impl DayCounters {
 pub enum Activity {
     Typing,
     Click,
-    Scroll,
 }
 
 #[derive(Default)]
@@ -136,12 +135,13 @@ impl Aggregator {
             }
             RawEvent::Button { down: false, .. } => None,
             RawEvent::Scroll { momentum: true } => None,
+            // Scrolls are counted but do not change what the pet is doing.
             RawEvent::Scroll { momentum: false } => {
                 if self.scroll.feed(e.t_ms) && !self.paused {
                     self.today.apply(|t| t.scrolls += 1);
                     self.pending.apply(|t| t.scrolls += 1);
                 }
-                Some(Activity::Scroll)
+                None
             }
             RawEvent::Move { x, y } => {
                 let (px, mm) = self.distance.feed(x, y, displays);
