@@ -105,7 +105,7 @@ function renderSheet(out: string) {
   console.log(`sheet: ${entries.map(([n]) => n).join(", ")} -> ${out}`);
 }
 
-/** Jokbet's own box inside the canvas (a 24x16 sprite at the canvas centre). */
+/** Jokbet's own box inside the canvas (a 24x16 sprite at PET_X, PET_Y). */
 const BODY = { x: PET_X, y: PET_Y, w: PET_W, h: PET_H };
 const bodyRows = () =>
   compose()

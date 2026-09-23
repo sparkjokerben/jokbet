@@ -1,7 +1,7 @@
 // One character per pixel. "." is transparent.
 export const PALETTE: Readonly<Record<string, string>> = {
   O: "#D97757", // body (Claude orange)
-  D: "#B86245", // body turned away (shaded edge)
+  D: "#C16A4D", // body in shade (turned away, the far side in profile)
   E: "#1F1E1D", // eyes, the ball's dark checks
   B: "#3A3836", // blindfold
   W: "#FFFFFF", // the ball's white checks

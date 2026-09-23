@@ -22,7 +22,7 @@
   import { attachGestures } from "./gestures";
   import Sprite from "./Sprite.svelte";
 
-  const IDLE: Record<IdleAnim, AnimName> = { breathe: "idle", soccer: "soccerIdle", lookAround: "lookAround" };
+  const IDLE: Record<IdleAnim, AnimName> = { breathe: "idle", soccer: "soccer", lookAround: "lookAround" };
   /** Typing animation speed (keys per second) when live typing speed is turned off. */
   const FIXED_KPS = 2.5;
   const CELEBRATE_MS = 3500;
@@ -43,6 +43,8 @@
   let spriteEl: HTMLDivElement;
 
   const scale = $derived(settings ? SCALE[settings.petSize] : SCALE.medium);
+  /** How far the pet's middle sits from the canvas's (the laptop side is wider). */
+  const petOffset = $derived((PET_X + PET_W / 2 - GRID_W / 2) * scale);
   const head = $derived(settings?.headCounter);
   const showCounter = $derived(!!head?.enabled && (head.keyboard || head.mouse));
 
@@ -101,6 +103,9 @@
 
   onMount(() => {
     const win = getCurrentWindow();
+    // A new pet size resizes the window after the new scale is drawn; measure
+    // the hit rect again once the page has the window's new size.
+    window.addEventListener("resize", reportHitRect);
 
     const detach = attachGestures(spriteEl, {
       click: () => react(settings?.clickAnim),
@@ -132,6 +137,7 @@
     });
 
     return () => {
+      window.removeEventListener("resize", reportHitRect);
       detach();
       pet.destroy();
       clearTimeout(bannerTimer);
@@ -141,7 +147,7 @@
 </script>
 
 <div class="stage">
-  <div class="above" style:bottom="{(GRID_H - PET_Y) * scale}px">
+  <div class="above" style:bottom="{(GRID_H - PET_Y) * scale}px" style:translate="{petOffset}px 0">
     {#if hovering && settings?.bubble}
       <Bubble {tick} showSpeed={settings.typingSpeed} {paused} />
     {/if}

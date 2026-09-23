@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
-"""Rebuild src/sprites/frames/{soccer,typing}.ts from the reference videos.
+"""Rebuild src/sprites/frames/soccer.ts from the soccer reference video.
 
 Usage (from the repository root):
     swift tools/extract-reference-frames/extract-frames.swift <video> <dir> <fps>
-    python3 tools/extract-reference-frames/build-frames.py <soccer-dir> <typing-dir>
+    python3 tools/extract-reference-frames/build-frames.py <soccer-dir>
 
-The reference videos are not part of the repository; drop them in references/
-and pass their frame directories. The calibration below was measured from the
-videos: the pet is a 24x16 cell sprite, K is the cell size in pixels and
-(OX, OY) is the top-left corner of the pet's box in the video frame.
+The reference video is not part of the repository; drop it in references/ and
+pass its frame directory. The calibration below was measured from the video:
+the pet is a 24x16 cell sprite, K is the cell size in pixels and (OX, OY) is
+the top-left corner of the pet's box in the video frame.
 
-The decoder samples the video onto a 36x26 canvas that covers everything the
-pet and the ball ever draw: columns -6..29 and rows -10..15 relative to the
-pet's box.
+The decoder samples the video onto the app's 40x26 canvas: columns -6..33 and
+rows -10..15 relative to the pet's box.
 """
 
 import sys
@@ -22,15 +21,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from png import readpng  # noqa: E402
 
-COLS = list(range(-6, 30))
+COLS = list(range(-6, 34))
 ROWS = list(range(-10, 16))
 INK = set("OWEG")
 
-# video -> (cell size, pet box origin, animation rows)
-CALIBRATION = {
-    "soccer": (148 / 24.0, 72.0, 63.0),
-    "typing": (3.85, 61.5, 37.5),
-}
+# cell size, pet box origin
+CALIBRATION = (148 / 24.0, 72.0, 63.0)
 
 
 def classify(r, g, b):
@@ -136,18 +132,6 @@ def group(frames, tolerance=4):
     return poses, [int(d * 100 / 3) for d in durations]  # 30 fps frames -> ms
 
 
-def consensus(grids):
-    height, width = len(grids[0]), len(grids[0][0])
-    out = []
-    for j in range(height):
-        row = ""
-        for i in range(width):
-            counts = Counter(g[j][i] for g in grids)
-            row += sorted(counts.items(), key=lambda kv: (kv[1], kv[0] in INK), reverse=True)[0][0]
-        out.append(row)
-    return out
-
-
 def load_frames(directory, calibration):
     k, ox, oy = calibration
     paths = sorted(Path(directory).glob("*.png"))
@@ -169,13 +153,9 @@ import type {{ RawFrame }} from "./types.ts";
 """
 
 
-def main(soccer_dir, typing_dir, out_dir="src/sprites/frames"):
-    poses, durations = load_frames(soccer_dir, CALIBRATION["soccer"])
-    soccer = [
-        {"ms": durations[0], "rows": poses[0]},
-        *[{"ms": d, "rows": g} for g, d in zip(poses[1:-1], durations[1:-1])],
-        {"ms": durations[-1], "rows": poses[-1]},
-    ]
+def main(soccer_dir, out_dir="src/sprites/frames"):
+    poses, durations = load_frames(soccer_dir, CALIBRATION)
+    soccer = [{"ms": d, "rows": g} for g, d in zip(poses, durations)]
     Path(out_dir, "soccer.ts").write_text(
         HEADER.format(src="踢足球.mp4")
         + ts_array("SOCCER_IDLE_BEFORE", soccer[:1])
@@ -184,24 +164,10 @@ def main(soccer_dir, typing_dir, out_dir="src/sprites/frames"):
         + "\n"
         + ts_array("SOCCER_IDLE_AFTER", soccer[-1:])
     )
-
-    poses, durations = load_frames(typing_dir, CALIBRATION["typing"])
-    # intro (idle -> sitting at the laptop), a 3-frame typing cycle, then the outro
-    intro = [{"ms": d, "rows": g} for g, d in zip(poses[1:12], durations[1:12])]
-    loop = [{"ms": 100, "rows": consensus(poses[i : i + 6])} for i in range(12, 30, 6)]
-    outro = [{"ms": d, "rows": g} for g, d in zip(poses[30:], durations[30:])]
-    Path(out_dir, "typing.ts").write_text(
-        HEADER.format(src="敲键盘.mp4")
-        + ts_array("TYPING_INTRO", intro)
-        + "\n"
-        + ts_array("TYPING_LOOP", loop)
-        + "\n"
-        + ts_array("TYPING_OUTRO", outro)
-    )
-    print(f"soccer: {len(soccer)} poses, typing: {len(intro)}+{len(loop)}+{len(outro)} frames")
+    print(f"soccer: {len(soccer)} poses")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         raise SystemExit(__doc__)
     main(*sys.argv[1:])

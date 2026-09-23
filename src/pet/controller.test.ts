@@ -3,6 +3,9 @@ import { ANIMS, compose } from "../sprites/jokbet";
 import { PetController } from "./controller";
 import { REACT_MS, animDuration, introDuration } from "./machine";
 
+/** The gap between idle animations with Math.random() at 0.5. */
+const IDLE_GAP = 40_000;
+
 describe("PetController", () => {
   let frames: string[][] = [];
   let pet: PetController;
@@ -11,6 +14,8 @@ describe("PetController", () => {
   const advance = (ms: number) => vi.advanceTimersByTime(ms);
 
   beforeEach(() => {
+    // Fixed blink and idle-animation gaps.
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
     vi.useFakeTimers();
     vi.setSystemTime(0);
     frames = [];
@@ -19,14 +24,26 @@ describe("PetController", () => {
   afterEach(() => {
     pet.destroy();
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("keeps looking at the cursor whatever the idle animation", () => {
-    pet.setIdleAnim("lookAround");
     pet.setGaze([1, 0]);
     expect(last()).toEqual(compose({ gaze: [1, 0] }));
-    advance(1900); // turns left, eyes still on the cursor
+    pet.setIdleAnim("lookAround");
+    // Picking it shows it right away: turned left, eyes still on the cursor.
     expect(last()).toEqual(compose({ turn: -1, gaze: [1, 0] }));
+  });
+
+  it("plays the idle animation only once in a long while", () => {
+    pet.setIdleAnim("lookAround");
+    advance(animDuration(ANIMS.lookAround));
+    const turned = compose({ turn: -1 });
+    const from = frames.length;
+    advance(IDLE_GAP - 100);
+    expect(frames.slice(from)).not.toContainEqual(turned);
+    advance(200);
+    expect(frames.slice(from)).toContainEqual(turned);
   });
 
   it("puts the laptop away when typing stops, and resumes without getting it out again", () => {

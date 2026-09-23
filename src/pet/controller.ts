@@ -17,12 +17,16 @@ import {
 
 const BLINK_MS = 140;
 const blinkGap = () => 3000 + Math.random() * 3000;
+/** Idle time before the idle animation plays, and again between plays. */
+const idleShowGap = () => 20_000 + Math.random() * 40_000;
 
 export class PetController {
   private signals: Signals;
   private anim: AnimName = "idle";
-  /** What the idle state plays: breathing, soccer or looking around. */
+  /** What the idle state plays now and then between breaths: soccer or looking around. */
   private idleAnim: AnimName = "idle";
+  private idleShowAt = Infinity;
+  private idleShowUntil = 0;
   private animStart = 0;
   private gaze: readonly [number, number] = [0, 0];
   private blinkAt: number;
@@ -101,10 +105,12 @@ export class PetController {
     this.keysPerSecond = kps;
   }
 
+  /** Picks the idle animation, and shows it once right away if idling. */
   setIdleAnim(anim: AnimName) {
     if (anim === this.idleAnim) return;
     this.idleAnim = anim;
-    if (this.anim === "idle") this.animStart = this.now();
+    this.idleShowUntil = 0;
+    this.idleShowAt = this.now();
     this.update();
   }
 
@@ -127,11 +133,23 @@ export class PetController {
       next = "typingEnd";
     }
     if (next !== this.anim) {
+      if (this.anim === "idle") this.idleShowUntil = 0;
+      if (next === "idle" && this.idleShowAt < t) this.idleShowAt = t + idleShowGap();
       this.anim = next;
       this.animStart = next === "typing" && this.resumeTyping ? t - introDuration(ANIMS.typing) : t;
     }
     this.resumeTyping = false;
-    const anim = ANIMS[this.anim === "idle" ? this.idleAnim : this.anim];
+
+    // Idling is breathing, with the idle animation once in a long while.
+    let name = this.anim;
+    const showing = this.anim === "idle" && this.idleAnim !== "idle";
+    if (showing && t >= this.idleShowAt) {
+      this.idleShowUntil = t + animDuration(ANIMS[this.idleAnim]);
+      this.idleShowAt = this.idleShowUntil + idleShowGap();
+      this.animStart = t;
+    }
+    if (showing && t < this.idleShowUntil) name = this.idleAnim;
+    const anim = ANIMS[name];
     const { index, nextIn } = frameAt(
       anim,
       t - this.animStart,
@@ -143,6 +161,7 @@ export class PetController {
     const pose: Pose | null = frame.rows ? null : { ...frame.pose };
 
     let wakeAt = Math.min(t + nextIn, nextDeadline(this.signals, t));
+    if (showing) wakeAt = Math.min(wakeAt, t < this.idleShowUntil ? this.idleShowUntil : this.idleShowAt);
     if (pose && (this.anim === "idle" || this.anim === "scroll")) {
       // Whatever the idle animation does, the eyes stay on the cursor.
       if (this.anim === "idle") pose.gaze = this.gaze;

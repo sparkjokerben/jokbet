@@ -10,9 +10,11 @@ use tauri::{
 pub const PET_LABEL: &str = "pet";
 
 /// Sprite canvas in cells (see src/sprites/jokbet.ts); the pet's own box is
-/// 24x16 inside it, leaving room for the ball it juggles.
-const GRID_W: f64 = 36.0;
+/// 24x16 inside it, leaving room for the ball it juggles and its laptop.
+const GRID_W: f64 = 40.0;
 const GRID_H: f64 = 26.0;
+/// The middle of the pet's box, in canvas columns (the box starts at column 6).
+const PET_CENTER_X: f64 = 18.0;
 /// Room above the canvas for the head counter and the hover bubble.
 const TOP_PAD: f64 = 130.0;
 const MIN_WIDTH: f64 = 220.0;
@@ -22,6 +24,11 @@ const EDGE_MARGIN: f64 = 16.0;
 pub fn window_size(size: PetSize) -> (f64, f64) {
     let s = size.scale();
     ((GRID_W * s).max(MIN_WIDTH), GRID_H * s + TOP_PAD)
+}
+
+/// Logical x of the pet's middle in the window (the canvas is centered in it).
+fn pet_center_x(size: PetSize) -> f64 {
+    window_size(size).0 / 2.0 + (PET_CENTER_X - GRID_W / 2.0) * size.scale()
 }
 
 /// Axis-aligned rectangle in physical pixels.
@@ -141,34 +148,41 @@ pub fn apply_size<R: Runtime>(
 ) -> tauri::Result<()> {
     let sf = window.scale_factor()?;
     let pos = window.outer_position()?;
-    let (w0, h0) = window_size(from);
     let (w1, h1) = window_size(to);
-    let x = pos.x + ((w0 - w1) / 2.0 * sf).round() as i32;
-    let y = pos.y + ((h0 - h1) * sf).round() as i32;
+    let x = pos.x + ((pet_center_x(from) - pet_center_x(to)) * sf).round() as i32;
+    let y = pos.y + ((window_size(from).1 - h1) * sf).round() as i32;
     window.set_size(LogicalSize::new(w1, h1))?;
     window.set_position(PhysicalPosition::new(x, y))?;
-    save_position(window)
+    // The window may move asynchronously: remember where it is going, not
+    // where it still is.
+    remember_position(window, (x, y), to)
 }
 
 /// Clamps the window after a drag and remembers where it ended up.
 pub fn save_position<R: Runtime>(window: &WebviewWindow<R>) -> tauri::Result<()> {
-    let app = window.app_handle();
-    let settings = app.state::<SettingsStore>();
     let pos = window.outer_position()?;
-    let size = window.outer_size()?;
+    let pet_size = window.app_handle().state::<SettingsStore>().get().pet_size;
+    remember_position(window, (pos.x, pos.y), pet_size)
+}
+
+/// Clamps a window position for a pet size, moves the window if that changed
+/// it, and saves it.
+fn remember_position<R: Runtime>(
+    window: &WebviewWindow<R>,
+    pos: (i32, i32),
+    pet_size: PetSize,
+) -> tauri::Result<()> {
     let sf = window.scale_factor()?;
-    let pet_size = settings.get().pet_size;
-    let top_pad = ((window_size(pet_size).1 - GRID_H * pet_size.scale()) * sf).round() as i32;
-    let win = (size.width as i32, size.height as i32);
-    let clamped = clamp_position((pos.x, pos.y), win, top_pad, &monitor_rects(window)?);
-    let (x, y) = match clamped {
-        Some(p) => p,
-        None => (pos.x, pos.y),
-    };
-    if (x, y) != (pos.x, pos.y) {
+    let (w, h) = window_size(pet_size);
+    let win = ((w * sf).round() as i32, (h * sf).round() as i32);
+    let top_pad = ((h - GRID_H * pet_size.scale()) * sf).round() as i32;
+    let (x, y) = clamp_position(pos, win, top_pad, &monitor_rects(window)?).unwrap_or(pos);
+    if (x, y) != pos {
         window.set_position(PhysicalPosition::new(x, y))?;
     }
-    settings
+    window
+        .app_handle()
+        .state::<SettingsStore>()
         .update(|s| s.pet_position = Some([x, y]))
         .map_err(tauri::Error::Io)?;
     Ok(())
@@ -194,8 +208,16 @@ mod tests {
     #[test]
     fn window_size_leaves_room_for_bubble() {
         assert_eq!(window_size(PetSize::Small), (220.0, 234.0));
-        assert_eq!(window_size(PetSize::Medium), (220.0, 286.0));
-        assert_eq!(window_size(PetSize::Large), (288.0, 338.0));
+        assert_eq!(window_size(PetSize::Medium), (240.0, 286.0));
+        assert_eq!(window_size(PetSize::Large), (320.0, 338.0));
+    }
+
+    #[test]
+    fn pet_sits_left_of_the_window_middle() {
+        // The canvas is centered; the pet's box is 2 cells left of its middle.
+        assert_eq!(pet_center_x(PetSize::Small), 110.0 - 8.0);
+        assert_eq!(pet_center_x(PetSize::Medium), 120.0 - 12.0);
+        assert_eq!(pet_center_x(PetSize::Large), 160.0 - 16.0);
     }
 
     #[test]

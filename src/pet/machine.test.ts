@@ -66,9 +66,9 @@ describe("frameAt", () => {
   it("plays the intro once, then loops at the typing override", () => {
     const intro = introDuration(ANIMS.typing);
     const loop = ANIMS.typing.frames.length - (ANIMS.typing.loopFrom ?? 0);
-    expect(intro).toBe(1028);
+    expect(intro).toBe(1036);
     expect(loop).toBe(3);
-    expect(frameAt(ANIMS.typing, 100, 70)).toEqual({ index: 1, nextIn: 32 });
+    expect(frameAt(ANIMS.typing, 100, 70)).toEqual({ index: 1, nextIn: 34 });
     expect(frameAt(ANIMS.typing, intro, 70)).toEqual({ index: ANIMS.typing.loopFrom, nextIn: 70 });
     expect(frameAt(ANIMS.typing, intro + 100, 70).index).toBe((ANIMS.typing.loopFrom ?? 0) + 1);
     expect(intro).toBeLessThan(REACT_MS.typing);

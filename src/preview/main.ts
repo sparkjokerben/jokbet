@@ -82,7 +82,7 @@ if (view === "pet") {
   document.body.style.cssText = "margin:0;background:#8a8d93";
   const frame = document.createElement("iframe");
   frame.src = "/preview.html?view=pet-frame";
-  frame.style.cssText = "width:220px;height:286px;border:1px dashed #555;margin:20px";
+  frame.style.cssText = "width:240px;height:286px;border:1px dashed #555;margin:20px";
   document.body.append(frame);
 } else if (view === "pet-frame") {
   // pet.html has no theme; undo the one imported for the app views.

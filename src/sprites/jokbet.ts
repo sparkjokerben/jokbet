@@ -7,18 +7,18 @@
 //    OOOOOOOOOOOOOOOOOOOOOOOO     arms    4x4 at x 0..3 / 20..23, y 4..7
 //    ....OO..OO....OO..OO....     legs    2x4 at x 4, 8, 14, 18, y 12..15
 //
-// The canvas is larger than the pet so the ball can be juggled outside it;
-// the pet's own box sits at (OX, OY) inside the canvas.
+// The canvas is larger than the pet so the ball can be juggled above it and
+// the laptop can sit beside it; the pet's own box sits at (OX, OY) inside it.
 
 import { TRANSPARENT } from "./palette.ts";
-import { SOCCER, SOCCER_IDLE_AFTER, SOCCER_IDLE_BEFORE } from "./frames/soccer.ts";
+import { SOCCER, SOCCER_IDLE_AFTER } from "./frames/soccer.ts";
 import { TYPING_INTRO, TYPING_LOOP, TYPING_OUTRO } from "./frames/typing.ts";
 import type { RawFrame } from "./frames/types.ts";
 
-export const GRID_W = 36;
+export const GRID_W = 40;
 export const GRID_H = 26;
 /** The pet's 24x16 box inside the canvas: room above for the ball it juggles,
-/// and the feet on the canvas's bottom row. */
+ * room on the right for the laptop, and the feet on the canvas's bottom row. */
 const OX = 6;
 const OY = 10;
 export const PET_X = OX;
@@ -196,7 +196,6 @@ export type AnimName =
   | "dragged"
   | "noperm"
   | "secure"
-  | "soccerIdle"
   | "lookAround";
 
 const UP = { armL: "up", armR: "up" } as const;
@@ -210,8 +209,8 @@ const BREATHE: readonly Frame[] = [{ ms: 1400, pose: {} }, { ms: 500, pose: { sq
 
 export const ANIMS: Record<AnimName, Anim> = {
   idle: { loop: true, frames: BREATHE },
-  // Recovered from the reference video: get the laptop out, sit down, type,
-  // then put it away. The typed period follows the typing speed at runtime.
+  // Drawn after the reference video: get the laptop out, sit down, type, then
+  // put it away. The typing cycle's pace follows the typing speed at runtime.
   typing: {
     loop: true,
     loopFrom: TYPING_INTRO.length,
@@ -283,18 +282,14 @@ export const ANIMS: Record<AnimName, Anim> = {
       { ms: 250, pose: {} },
     ],
   },
-  // Idle variants. The eyes keep following the cursor over these.
-  soccerIdle: {
-    loop: true,
-    frames: [...SOCCER_IDLE_BEFORE.map(raw), ...SOCCER.map(raw), ...SOCCER_IDLE_AFTER.map(raw)],
-  },
+  // Also played now and then while idle, when picked as the idle animation.
   lookAround: {
-    loop: true,
+    loop: false,
     frames: [
-      ...BREATHE,
       { ms: 1100, pose: { turn: -1 } },
       { ms: 400, pose: {} },
       { ms: 1100, pose: { turn: 1 } },
+      { ms: 400, pose: {} },
     ],
   },
   dragged: {

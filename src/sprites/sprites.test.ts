@@ -9,22 +9,22 @@ const valid = new Set([TRANSPARENT, ...Object.keys(PALETTE)]);
 
 /** The pet's box in the canvas, as recovered from the reference videos. */
 const IDLE = [
-  "..........OOOOOOOOOOOOOOOO..........",
-  "..........OOOOOOOOOOOOOOOO..........",
-  "..........OOEEOOOOOOOOEEOO..........",
-  "..........OOEEOOOOOOOOEEOO..........",
-  "......OOOOOOOOOOOOOOOOOOOOOOOO......",
-  "......OOOOOOOOOOOOOOOOOOOOOOOO......",
-  "......OOOOOOOOOOOOOOOOOOOOOOOO......",
-  "......OOOOOOOOOOOOOOOOOOOOOOOO......",
-  "..........OOOOOOOOOOOOOOOO..........",
-  "..........OOOOOOOOOOOOOOOO..........",
-  "..........OOOOOOOOOOOOOOOO..........",
-  "..........OOOOOOOOOOOOOOOO..........",
-  "..........OO..OO....OO..OO..........",
-  "..........OO..OO....OO..OO..........",
-  "..........OO..OO....OO..OO..........",
-  "..........OO..OO....OO..OO..........",
+  "..........OOOOOOOOOOOOOOOO..............",
+  "..........OOOOOOOOOOOOOOOO..............",
+  "..........OOEEOOOOOOOOEEOO..............",
+  "..........OOEEOOOOOOOOEEOO..............",
+  "......OOOOOOOOOOOOOOOOOOOOOOOO..........",
+  "......OOOOOOOOOOOOOOOOOOOOOOOO..........",
+  "......OOOOOOOOOOOOOOOOOOOOOOOO..........",
+  "......OOOOOOOOOOOOOOOOOOOOOOOO..........",
+  "..........OOOOOOOOOOOOOOOO..............",
+  "..........OOOOOOOOOOOOOOOO..............",
+  "..........OOOOOOOOOOOOOOOO..............",
+  "..........OOOOOOOOOOOOOOOO..............",
+  "..........OO..OO....OO..OO..............",
+  "..........OO..OO....OO..OO..............",
+  "..........OO..OO....OO..OO..............",
+  "..........OO..OO....OO..OO..............",
 ];
 
 describe("jokbet sprite", () => {

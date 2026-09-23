@@ -14,8 +14,8 @@ Jokbet 是一个轻量级桌宠，画风取自 Claude Code 的像素吉祥物。
 - A number above the pet's head: today's count or live per-second speed, from the keyboard, the mouse, or both combined
 - Hover the pet for today's stats; right-click (or use the tray icon) for the menu
 - Jokbet gets out a laptop and types along with you, reacts to clicks and scrolling, follows your cursor with its eyes, falls asleep when you're away, and likes being poked
-- Pick what it does when idle (breathe, juggle a soccer ball, look around; its eyes keep following the cursor) and when you click or double-click it (flinch, hearts, soccer, wave)
-- The soccer and typing animations are recovered frame by frame from recordings of Anthropic's own mascot, so they move the way Clawd does; see `tools/extract-reference-frames`
+- Pick what it does now and then while idle (juggle a soccer ball or look around; otherwise it just breathes, eyes on your cursor) and when you click or double-click it (flinch, hearts, soccer, wave)
+- The soccer and typing animations follow recordings of Anthropic's own mascot, so they move the way Clawd does: soccer is decoded from its recording frame by frame, and typing is drawn pose by pose after its recording; see `tools/extract-reference-frames`
 - 中英双语，跟随系统语言
 
 ## Privacy / 隐私
