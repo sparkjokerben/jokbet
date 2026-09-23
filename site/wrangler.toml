@@ -7,7 +7,8 @@
 # The file is the source of truth: these fields are read-only in the dashboard.
 
 name = "jokerben-desktop-pet-site"
-compatibility_date = "2026-09-24"
+# Bump this to a newer date when convenient; it only pins runtime defaults.
+compatibility_date = "2026-01-01"
 pages_build_output_dir = "."
 
 # The installers live here; the /dl function is the only way to reach them.

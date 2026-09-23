@@ -55,10 +55,16 @@ python3 -m http.server -d /tmp/site-preview 8099     # then open http://127.0.0.
 ```
 
 `/latest` is a function, so a plain file server needs that `latest` file (the
-page fetches `/latest` first and treats it as the mirror's answer). For the real
-thing, `npm run site:dev` runs `wrangler pages dev site`, which executes the
-functions against a local R2; put objects in it with
-`npx wrangler r2 object put <bucket>/<key> --file <path> --local`.
+page fetches `/latest` first and treats it as the mirror's answer).
+
+`npm run site:dev` runs the functions for real, under `wrangler pages dev`
+(`--r2=DOWNLOADS`, since the dev server takes the binding from the flag rather
+than from `wrangler.toml`). The bucket starts empty, so `/latest` answers from
+`latest.baked.json` and every `/dl/` link redirects to GitHub — the fallback
+path, end to end. Seeding an object into the local bucket is fiddly (the CLI's
+`r2 object put --local` and the dev server have to agree on
+`--persist-to`); `npm test` covers the R2 path instead, and the deployed site
+is the real check.
 
 The mascot, the favicons and the Open Graph card are generated from the same
 sprite code the app draws, so the site can never drift from the pet: change a

@@ -9,3 +9,4 @@ vite.config.ts.timestamp-*
 sprites.png
 
 references/
+.wrangler
