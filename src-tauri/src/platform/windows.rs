@@ -50,6 +50,7 @@ pub fn set_glass(hwnd: HWND, rect: Option<(i32, i32, i32, i32)>) {
     use windows::Win32::Graphics::Dwm::{
         DwmEnableBlurBehindWindow, DWM_BB_BLURREGION, DWM_BB_ENABLE, DWM_BLURBEHIND,
     };
+    use windows::Win32::Graphics::Gdi::HGDIOBJ;
     let (enabled, region) = match rect {
         Some((x, y, w, h)) => {
             let region = unsafe { CreateRectRgn(x, y, x + w, y + h) };
@@ -66,7 +67,7 @@ pub fn set_glass(hwnd: HWND, rect: Option<(i32, i32, i32, i32)>) {
     unsafe {
         let _ = DwmEnableBlurBehindWindow(hwnd, &blur);
         if !region.is_invalid() {
-            let _ = DeleteObject(region);
+            let _ = DeleteObject(HGDIOBJ(region.0));
         }
     }
 }
