@@ -17,5 +17,8 @@
     "noEmit": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["src/**/*.ts", "src/**/*.svelte", "scripts/**/*.ts", "site/**/*.js", "vite.config.ts"]
+  "include": ["src/**/*.ts", "src/**/*.svelte", "scripts/**/*.ts", "site/**/*.js", "vite.config.ts"],
+  // the pet bundle is generated for the browser and minified: site:check
+  // is what keeps it in step with src/pet/web.ts
+  "exclude": ["node_modules", "site/assets"]
 }

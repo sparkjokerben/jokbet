@@ -4,7 +4,7 @@
   "description": "A lightweight desktop pet that counts your keyboard and mouse activity",
   "private": true,
   "type": "module",
-  "license": "GPL-3.0-only",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -14,10 +14,11 @@
     "tauri": "tauri",
     "icons": "node scripts/render-sprites.ts icons src-tauri/icons/source && tauri icon src-tauri/icons/source/icon-source.png && rm -rf src-tauri/icons/android src-tauri/icons/ios",
     "sprites": "node scripts/render-sprites.ts sheet sprites.png",
-    "site:assets": "node scripts/render-site-assets.ts gen site/assets",
-    "site:check": "node scripts/render-site-assets.ts check site/assets && node scripts/make-manifest.ts check site/latest.baked.json",
+    "site:assets": "node scripts/render-site-assets.ts gen site/assets && node scripts/build-site-pet.ts gen site/assets",
+    "site:check": "node scripts/render-site-assets.ts check site/assets && node scripts/build-site-pet.ts check site/assets && node scripts/make-manifest.ts check site/latest.baked.json site/releases.baked.json",
     "site:manifest": "node scripts/make-manifest.ts baked --out site/latest.baked.json",
-    "site:dev": "wrangler pages dev site --r2=DOWNLOADS"
+    "site:releases": "gh api 'repos/sparkjokerben/jokbet/releases?per_page=100' | node scripts/make-manifest.ts changelog --stdin --out site/releases.baked.json",
+    "site:dev": "cd site && npx --yes wrangler pages dev . --r2=DOWNLOADS"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",

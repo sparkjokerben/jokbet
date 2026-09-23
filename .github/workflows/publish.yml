@@ -63,6 +63,15 @@ jobs:
             --release-json release.json \
             --out site-manifest.json
 
+      - name: Build the changelog the site reads
+        # Every published release, so the changelog page needs no third-party
+        # API (and no rate limit) when someone opens it.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            | node scripts/make-manifest.ts changelog --stdin --out changelog.json
+
       - name: Upload the installers
         run: |
           set -euo pipefail
@@ -79,9 +88,13 @@ jobs:
             fi
           done
 
-      - name: Publish the manifest last
-        # Last, so it never describes a file that has not arrived yet.
+      - name: Publish the manifest and the changelog, last
+        # Last, so they never describe a file that has not arrived yet. The
+        # changelog is what the changelog page lists; latest.json is the one the
+        # download page reads, and /latest falls back to the copy in the repo.
         run: |
           aws s3 cp site-manifest.json "s3://$BUCKET/latest.json" --endpoint-url "$ENDPOINT" \
+            --content-type application/json --cache-control "public, max-age=300" --no-progress
+          aws s3 cp changelog.json "s3://$BUCKET/changelog.json" --endpoint-url "$ENDPOINT" \
             --content-type application/json --cache-control "public, max-age=300" --no-progress
           echo "published ${{ steps.tag.outputs.name }} to s3://$BUCKET"

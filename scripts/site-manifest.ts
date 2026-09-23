@@ -62,6 +62,120 @@ export function emptyManifest(version: string | null = null): Manifest {
   };
 }
 
+// --- the changelog ----------------------------------------------------------
+
+/** One installer of one release, as the changelog page offers it. */
+export interface ReleaseFile {
+  platform: string;
+  name: string;
+  size: number | null;
+  sha256: string | null;
+}
+
+/** One published release. */
+export interface ReleaseRecord {
+  version: string;
+  tag: string;
+  name: string | null;
+  pubDate: string | null;
+  prerelease: boolean;
+  notes: string | null;
+  url: string | null;
+  files: ReleaseFile[];
+}
+
+/** Every release the changelog page lists, newest first. */
+export interface Changelog {
+  schema: 1;
+  generatedAt: string | null;
+  releases: ReleaseRecord[];
+}
+
+export const emptyChangelog = (): Changelog => ({ schema: 1, generatedAt: null, releases: [] });
+
+/** The GitHub releases API's shape, as much of it as this site uses. */
+export interface GithubRelease {
+  tag_name?: string;
+  name?: string | null;
+  draft?: boolean;
+  prerelease?: boolean;
+  published_at?: string | null;
+  created_at?: string | null;
+  body?: string | null;
+  html_url?: string | null;
+  /** `digest` is GitHub's own sha256 of the asset, when it has one. */
+  assets?: { name?: string; size?: number; digest?: string | null }[];
+}
+
+/**
+ * The changelog the page reads, from the releases API's answer. Drafts are
+ * left out: their assets are not reachable yet, so nothing may link to them.
+ */
+export function changelogFrom(releases: GithubRelease[], generatedAt = new Date().toISOString()): Changelog {
+  const records: ReleaseRecord[] = [];
+  for (const release of releases) {
+    const tag = release.tag_name ?? "";
+    if (!tag || release.draft) continue;
+    const version = tag.replace(/^v/, "");
+    const files: ReleaseFile[] = [];
+    for (const platform of PLATFORMS) {
+      const name = platform.file(version);
+      const asset = release.assets?.find((a) => a.name === name);
+      if (!asset) continue;
+      files.push({
+        platform: platform.id,
+        name,
+        size: typeof asset.size === "number" ? asset.size : null,
+        sha256: asset.digest?.replace(/^sha256:/, "") ?? null,
+      });
+    }
+    records.push({
+      version,
+      tag,
+      name: release.name ?? null,
+      pubDate: release.published_at ?? release.created_at ?? null,
+      prerelease: !!release.prerelease,
+      notes: (release.body ?? "").trim() || null,
+      url: release.html_url ?? releaseUrl(tag),
+      files,
+    });
+  }
+  records.sort((a, b) => (b.pubDate ?? "").localeCompare(a.pubDate ?? ""));
+  return { schema: 1, generatedAt, releases: records };
+}
+
+/** Everything wrong with a changelog, as messages; empty means it is usable. */
+export function validateChangelog(c: unknown): string[] {
+  const bad: string[] = [];
+  const log = c as Partial<Changelog>;
+  if (log?.schema !== 1) bad.push(`schema must be 1, got ${JSON.stringify(log?.schema)}`);
+  if (!Array.isArray(log.releases)) return [...bad, "releases must be an array"];
+  for (const release of log.releases) {
+    const where = `releases[${release?.tag ?? "?"}]`;
+    if (typeof release?.version !== "string" || !release.version) bad.push(`${where}: version must be a string`);
+    if (typeof release.tag !== "string" || !release.tag) bad.push(`${where}: tag must be a string`);
+    if (!Array.isArray(release.files)) {
+      bad.push(`${where}: files must be an array`);
+      continue;
+    }
+    for (const file of release.files) {
+      const platform = PLATFORMS.find((p) => p.id === file.platform);
+      if (!platform) {
+        bad.push(`${where}: ${file.platform} is not a known platform`);
+        continue;
+      }
+      if (file.name !== platform.file(release.version)) {
+        bad.push(`${where}: ${file.name} is not the ${file.platform} of ${release.version}`);
+      }
+      if (file.size !== null && typeof file.size !== "number") bad.push(`${where}: ${file.name} has no size`);
+      if (file.sha256 !== null && !/^[0-9a-f]{64}$/.test(String(file.sha256))) {
+        bad.push(`${where}: ${file.name} has no sha256`);
+      }
+    }
+  }
+  return bad;
+}
+
 /** Everything wrong with a manifest, as messages; empty means it is usable. */
 export function validateManifest(m: unknown): string[] {
   const bad: string[] = [];

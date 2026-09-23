@@ -52,11 +52,13 @@ type Handler = (context: TestContext) => Promise<Response>;
 
 let dl: Handler;
 let latest: Handler;
+let changelog: Handler;
 
 beforeEach(async () => {
   vi.resetModules();
   dl = (await import("../functions/dl/[[path]].ts")).onRequest as unknown as Handler;
   latest = (await import("../functions/latest.ts")).onRequest as unknown as Handler;
+  changelog = (await import("../functions/changelog.json.ts")).onRequest as unknown as Handler;
 });
 
 const call = (handler: Handler, request: Request, env: TestContext["env"], path: string[] = []) =>
@@ -189,5 +191,40 @@ describe("the manifest", () => {
     });
 
     expect(await response.json()).toMatchObject({ version: null, source: "unavailable" });
+  });
+});
+
+describe("the changelog", () => {
+  const page = () => new Request("https://jokbet.jokerben.top/changelog.json");
+  const list = { schema: 1, generatedAt: "2026-09-24T00:00:00Z", releases: [{ version: "0.1.0", tag: "v0.1.0" }] };
+
+  it("comes from R2 when the bucket has it", async () => {
+    const response = await call(changelog, page(), {
+      DOWNLOADS: bucket({ "changelog.json": new TextEncoder().encode(JSON.stringify(list)) }),
+      ASSETS: assets({}, false),
+    });
+
+    expect(await response.json()).toMatchObject({ source: "r2", releases: [{ tag: "v0.1.0" }] });
+  });
+
+  it("falls back to the baked copy", async () => {
+    const response = await call(changelog, page(), {
+      DOWNLOADS: bucket({}, true),
+      ASSETS: assets(list),
+    });
+
+    expect(await response.json()).toMatchObject({ source: "baked", releases: [{ tag: "v0.1.0" }] });
+  });
+
+  it("answers with an empty list rather than inventing a version", async () => {
+    const response = await call(changelog, page(), { DOWNLOADS: bucket({}, true), ASSETS: assets({}, false) });
+
+    expect(await response.json()).toMatchObject({ releases: [], source: "unavailable" });
+  });
+
+  it("is a JSON endpoint, not a page", async () => {
+    const response = await call(changelog, page(), { DOWNLOADS: bucket({}), ASSETS: assets({}, false) });
+
+    expect(response.headers.get("content-type")).toContain("application/json");
   });
 });

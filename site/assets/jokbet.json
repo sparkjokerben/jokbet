@@ -1,108 +1,18 @@
 {
- "cell": [
-  240,
-  156
- ],
  "grid": [
   40,
   26
  ],
- "animations": {
-  "idle": {
-   "file": "jokbet-idle.png",
-   "frames": 2,
-   "ms": [
-    1400,
-    500
-   ],
-   "loop": true
-  },
-  "wave": {
-   "file": "jokbet-wave.png",
-   "frames": 6,
-   "ms": [
-    180,
-    180,
-    180,
-    180,
-    180,
-    250
-   ],
-   "loop": false
-  },
-  "hearts": {
-   "file": "jokbet-hearts.png",
-   "frames": 5,
-   "ms": [
-    120,
-    220,
-    220,
-    150,
-    400
-   ],
-   "loop": false
-  },
-  "soccer": {
-   "file": "jokbet-soccer.png",
-   "frames": 49,
-   "ms": [
-    166,
-    166,
-    100,
-    66,
-    100,
-    66,
-    66,
-    100,
-    100,
-    66,
-    100,
-    66,
-    100,
-    66,
-    100,
-    66,
-    100,
-    66,
-    100,
-    66,
-    100,
-    66,
-    100,
-    66,
-    100,
-    66,
-    100,
-    66,
-    100,
-    66,
-    100,
-    100,
-    66,
-    66,
-    100,
-    66,
-    100,
-    66,
-    100,
-    66,
-    100,
-    66,
-    100,
-    100,
-    66,
-    100,
-    66,
-    166,
-    600
-   ],
-   "loop": false
-  }
- },
+ "cell": [
+  240,
+  156
+ ],
  "digests": {
-  "jokbet-idle.png": "b0e2bcdfa40db6f35e8d07f323dff0a56f4eaab48532eb8ec02e29b8e8766252",
-  "jokbet-wave.png": "f2bac64ab50227b18568fcbfbaa546b2ddb19a471bfe3d490158d33e033e79ae",
-  "jokbet-hearts.png": "afce15a9fcad671195dafb56d591f04b3b7c22986ac00caeee1b9431b4c0b856",
-  "jokbet-soccer.png": "b05cce30d6834b795643c2e6378bcf81b033c3d23fe5c66f04f81230f5a783de"
+  "jokbet-poster.png": "2847719ac8271f7f7771a210decac420662a000665acc2d333b7081a0d39c3d7",
+  "og.png": "4ed9cb4b38aff758405c4fe21af2b0450097f17915a8f27966c91565769ca4a1",
+  "favicon-32.png": "56050bcda4e5fa10d02ffde225e8c2bb090917b5ca0a857ff43a9da95fcfcc29",
+  "apple-touch-icon.png": "b6de84304324cce6befdddf5883db4b2ee8d06921c6de0865030a93d68bab090",
+  "favicon-192.png": "572f3691b24d801e32673a606a4cd4d6d4dc5f27f4bb01770fb4fe133fa1b282",
+  "icon-512.png": "a1bfecce1e6e2c687ed351c258985dc51cc05890da0451f89a78a0d7a514132a"
  }
 }

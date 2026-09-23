@@ -1,18 +1,33 @@
-// Builds and validates the download manifest that the site reads.
+// Builds and validates the JSON the site reads.
 //
 //   node scripts/make-manifest.ts full --tag v0.1.0 --dir release-assets \
 //     --release-json release.json [--out latest.json]
 //   node scripts/make-manifest.ts baked [--version 0.1.0] --out site/latest.baked.json
-//   node scripts/make-manifest.ts check [path]          (default site/latest.baked.json)
+//   node scripts/make-manifest.ts changelog [--releases-json file | --stdin] \
+//     [--out changelog.json]
+//   node scripts/make-manifest.ts check [path…]   (default site/latest.baked.json)
 //
 // `full` runs in the release job: every platform must be there, or it fails —
 // that is how a change in Tauri's asset names shows up as a red job instead of
-// a silently missing download.
+// a silently missing download. `changelog` runs there too, from the releases
+// API's answer (`gh api "repos/:owner/:repo/releases?per_page=100"`), so the
+// changelog page has every published version and not just the newest.
 
 import { createHash } from "node:crypto";
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { PLATFORMS, downloadBase, emptyManifest, releaseUrl, validateManifest, type Manifest } from "./site-manifest.ts";
+import {
+  PLATFORMS,
+  changelogFrom,
+  downloadBase,
+  emptyManifest,
+  releaseUrl,
+  validateChangelog,
+  validateManifest,
+  type Changelog,
+  type GithubRelease,
+  type Manifest,
+} from "./site-manifest.ts";
 
 function flag(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -67,45 +82,80 @@ function baked(): Manifest {
   return { ...m, notes: flag("notes") ?? null };
 }
 
+function changelog(): Changelog {
+  const from = flag("releases-json");
+  // `--stdin` is how the release job pipes `gh api … |` straight in.
+  const raw = from ? readFileSync(from, "utf8") : readFileSync(0, "utf8");
+  const releases = JSON.parse(raw) as GithubRelease[];
+  if (!Array.isArray(releases)) throw new Error("expected the releases API's array of releases");
+  return changelogFrom(releases, flag("generated-at") ?? new Date().toISOString());
+}
+
 const argv = process.argv.slice(2);
 const positional: string[] = [];
-const flags: Record<string, string> = {};
 for (let i = 0; i < argv.length; i++) {
-  if (argv[i].startsWith("--")) flags[argv[i].slice(2)] = argv[++i] ?? "";
-  else positional.push(argv[i]);
+  // Flags are read with flag(); this only has to know which words are paths.
+  // A value-less flag (--stdin) must not swallow the flag after it.
+  if (argv[i].startsWith("--")) {
+    if (argv[i + 1] && !argv[i + 1].startsWith("--")) i++;
+  } else {
+    positional.push(argv[i]);
+  }
 }
 
 const mode = positional[0] ?? "";
-const out = flag("out") ?? (mode === "full" ? "latest.json" : "site/latest.baked.json");
+const out =
+  flag("out") ?? (mode === "full" ? "latest.json" : mode === "changelog" ? "changelog.json" : "site/latest.baked.json");
 
-let manifest: Manifest;
 switch (mode) {
-  case "full":
-    manifest = full();
+  case "full": {
+    const manifest = full();
+    write(manifest, validateManifest(manifest));
     break;
-  case "baked":
-    manifest = baked();
+  }
+  case "baked": {
+    const manifest = baked();
+    write(manifest, validateManifest(manifest));
     break;
+  }
+  case "changelog": {
+    const log = changelog();
+    write(log, validateChangelog(log));
+    const files = log.releases.reduce((n, r) => n + r.files.length, 0);
+    console.log(`${out}: ${log.releases.length} releases, ${files} installers`);
+    break;
+  }
   case "check": {
-    const file = positional[1] ?? "site/latest.baked.json";
-    const problems = validateManifest(JSON.parse(readFileSync(file, "utf8")));
-    if (problems.length) {
-      console.error(`${file} is not usable:\n  ${problems.join("\n  ")}`);
-      process.exit(1);
+    let bad = 0;
+    for (const file of positional.slice(1).length ? positional.slice(1) : ["site/latest.baked.json"]) {
+      const body = JSON.parse(readFileSync(file, "utf8")) as { releases?: unknown };
+      const problems = Array.isArray(body.releases) ? validateChangelog(body) : validateManifest(body);
+      if (problems.length) {
+        console.error(`${file} is not usable:\n  ${problems.join("\n  ")}`);
+        bad = problems.length;
+        continue;
+      }
+      console.log(`${file} is valid`);
     }
-    console.log(`${file} is valid`);
-    process.exit(0);
+    process.exit(bad ? 1 : 0);
+    break;
   }
   default:
-    console.error("usage: node scripts/make-manifest.ts full|baked|check [--tag vX.Y.Z] [--dir dir] [--out file]");
+    console.error(
+      "usage: node scripts/make-manifest.ts full|baked|changelog|check [--tag vX.Y.Z] [--dir dir] [--out file]",
+    );
     process.exit(1);
 }
 
-const problems = validateManifest(manifest);
-if (problems.length) {
-  console.error(`refusing to write a manifest that is not usable:\n  ${problems.join("\n  ")}`);
-  process.exit(1);
+function write(value: unknown, problems: string[]) {
+  if (problems.length) {
+    console.error(`refusing to write a manifest that is not usable:\n  ${problems.join("\n  ")}`);
+    process.exit(1);
+  }
+  writeFileSync(out, JSON.stringify(value, null, 1) + "\n");
+  const manifest = value as Manifest;
+  const sizes = Object.values(manifest.files ?? {})
+    .map((f) => `${f.name} ${f.size}`)
+    .join("\n  ");
+  if (sizes) console.log(`${out}: ${manifest.version} (${Object.keys(manifest.files).length} files)\n  ${sizes}`);
 }
-writeFileSync(out, JSON.stringify(manifest, null, 1) + "\n");
-const sizes = Object.values(manifest.files).map((f) => `${f.name} ${f.size}`).join("\n  ");
-console.log(`${out}: ${manifest.version} (${Object.keys(manifest.files).length} files)\n  ${sizes}`);

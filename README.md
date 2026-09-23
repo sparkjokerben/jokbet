@@ -89,7 +89,7 @@ python3 tools/extract-reference-frames/build-frames.py --help  # re-derive the v
 
 With `npm run dev` running, `http://localhost:1420/preview.html?view=stats` (or `settings`, `onboarding`, `pet`) renders a window in a normal browser with fake data, which is handy for layout work.
 
-The website in [`site/`](site/README.md) is plain static files served by Cloudflare Pages, with the installers in an R2 bucket and a Pages Function in front of them. `npm run site:assets` regenerates its pixel art from the sprites; `npm test` covers the two functions; `site/README.md` has the Cloudflare setup and the release flow.
+The website in [`site/`](site/README.md) is plain static files served by Cloudflare Pages, with the installers in an R2 bucket and Pages Functions in front of them. The pet on the home page is not a copy: it runs the app's own controller and sprites, bundled for the browser by `scripts/build-site-pet.ts`. `npm run site:assets` regenerates that bundle and the page's pixel art; `npm run site:check` fails if they drift from `src/`; `npm test` covers the functions; `site/README.md` has the Cloudflare setup and the release flow.
 
 On macOS, `tauri dev` runs the app as a child of your terminal, so grant Input Monitoring to the terminal app. To test the real permission flow, build a bundle with `npm run tauri build -- --debug --bundles app`. Every rebuild changes an ad-hoc signature, so clear the stale grant with:
 
@@ -102,10 +102,13 @@ tccutil reset ListenEvent io.github.sparkjokerben.jokbet
 1. Bump `version` in `package.json` (the app reads it from there) and commit.
 2. Tag and push: `git tag v0.1.0 && git push origin v0.1.0`.
 3. The Release workflow builds macOS (arm64 and x64), Windows and Linux into a draft release with the updater manifest (`latest.json`).
-4. Check the draft and publish it. Installed apps pick the update up within six hours and install it on restart, and publishing also runs the *Publish to R2* workflow that puts the installers and the site's manifest on the download mirror (see `site/README.md`).
+4. Check the draft and publish it. Installed apps pick the update up within six hours and install it on restart, and publishing also runs the *Publish to R2* workflow that puts the installers, the download manifest and the changelog on the site's mirror (see `site/README.md`).
 
 The updater signing key lives in the `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secrets. Keep a backup: without it, installed copies can never be updated again.
 
 ## License
 
-[GPL-3.0](LICENSE)
+[MIT](LICENSE) — use it, change it, ship it, sell it. The one thing the licence
+does not cover is the pet's likeness: Jokbet is drawn in the pixel style of
+Claude Code's mascot, which belongs to Anthropic, and this remains an unofficial
+fan project (see the notice at the top).

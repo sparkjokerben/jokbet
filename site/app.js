@@ -1,151 +1,180 @@
-// The page's behaviour: the mascot's flipbooks, the download list built from
-// the manifest (with its source shown honestly), the platform guess behind the
-// main button, and the language switch. Everything else is in the HTML.
+// The page's behaviour: the pet (which runs the app's own code, see
+// src/pet/web.ts), the language switch, the download list built from the
+// mirror's manifest, and the changelog built from the release list. Everything
+// else is in the HTML.
 
 /** @typedef {{ name: string, size: number | null, sha256: string | null }} ManifestFile */
 /** @typedef {{ schema: number, version: string | null, tag: string | null, pubDate: string | null,
  *   draft: boolean | null, notes: string | null, releaseUrl: string | null, downloadBase: string | null,
  *   source?: string, files: Record<string, ManifestFile> }} Manifest */
-/** @typedef {{ file: string, frames: number, ms: number[], loop: boolean }} SpriteAnim */
-/** @typedef {{ cell: number[], animations: Record<string, SpriteAnim> }} SpriteData */
+/** @typedef {{ platform: string, name: string, size: number | null }} ReleaseFile */
+/** @typedef {{ version: string, tag: string, name: string | null, pubDate: string | null,
+ *   prerelease: boolean, notes: string | null, url: string | null, files: ReleaseFile[] }} Release */
+/** @typedef {{ schema: number, generatedAt: string | null, releases: Release[], source?: string }} Changelog */
+/** @typedef {"zh" | "en"} Lang */
+/** @typedef {{ input: (a: "typing" | "click") => void, setKeysPerSecond: (n: number) => void,
+ *   point: (x: number, y: number) => void, setCounter: (n: number) => void, setLang: (l: Lang) => void,
+ *   setBlocked: (b: string | null) => void, demo: (d: string) => void }} Pet */
 
 const html = document.documentElement;
+const RELEASES = "https://github.com/sparkjokerben/jokbet/releases";
+const isChangelog = !!document.getElementById("releases");
 
-/** The languages the page carries; the JS-built parts live here. */
+/** @param {string} id */
+const $ = (id) => document.getElementById(id);
+/** @template {keyof HTMLElementTagNameMap} K
+ * @param {K} tag @param {string} [text] @returns {HTMLElementTagNameMap[K]} */
+const el = (tag, text) => {
+  const node = document.createElement(tag);
+  if (text !== undefined) node.textContent = text;
+  return node;
+};
+
+/** The page's own words: everything the JS builds, in both languages. */
 const T = {
   zh: {
+    title: isChangelog ? "更新日志 — Jokbet" : "Jokbet — 屏幕角落的像素桌宠",
+    platforms: "macOS 11+ · Windows · Linux（X11）",
+    unreleased: "还没有正式发布的版本",
     primary: { "macos-aarch64": "下载 macOS 版", "windows-x64": "下载 Windows 版", "linux-appimage": "下载 Linux 版" },
     altMac: "Intel 版",
-    all: "所有平台",
-    pick: "选择你的平台",
+    releases: "去 GitHub 下载",
     version: "版本",
-    date: "发布于",
+    released: "发布于",
     sourceR2: "下载由本站镜像提供",
-    sourceGithub: "镜像暂时不可用，已切换到 GitHub 下载源",
-    sourceNone: "还没有正式发布的版本，可以先到 GitHub Releases 看看。",
-    notes: "本次更新",
-    releases: "GitHub Releases",
+    sourceGithub: "镜像暂时不可用，已改用 GitHub",
+    sourceNone: "还没有正式发布的版本，安装包都在 GitHub Releases。",
+    empty: "还没有正式发布的版本",
+    emptyHome: "第一个版本发布后，这里会列出各平台的安装包。",
+    emptyHint: "第一个版本发布后，这里会自动列出每个版本的改动和安装包。",
     github: "GitHub 下载",
     checksum: "SHA-256 校验值",
-    macos: { "macos-aarch64": "macOS · Apple 芯片 (aarch64)", "macos-x64": "macOS · Intel 芯片 (x64)" },
-    windows: { "windows-x64": "Windows · 安装程序", "windows-x64-msi": "Windows · MSI 安装包" },
-    linux: { "linux-appimage": "Linux · AppImage（自动更新）", "linux-deb": "Linux · deb 包" },
-    poke: "戳它试试",
+    prerelease: "预发布",
+    notes: "更新内容",
+    macos: { "macos-aarch64": "macOS · Apple 芯片（aarch64）", "macos-x64": "macOS · Intel（x64）" },
+    windows: { "windows-x64": "Windows · 安装程序", "windows-x64-msi": "Windows · MSI" },
+    linux: { "linux-appimage": "Linux · AppImage", "linux-deb": "Linux · deb" },
   },
   en: {
+    title: isChangelog ? "Changelog — Jokbet" : "Jokbet — a pixel pet in the corner of your screen",
+    platforms: "macOS 11+ · Windows · Linux (X11)",
+    unreleased: "no release yet",
     primary: { "macos-aarch64": "Download for macOS", "windows-x64": "Download for Windows", "linux-appimage": "Download for Linux" },
     altMac: "Intel build",
-    all: "All platforms",
-    pick: "Pick your platform",
+    releases: "Downloads on GitHub",
     version: "Version",
-    date: "Released",
+    released: "Released",
     sourceR2: "Downloads come from this site's own mirror",
-    sourceGithub: "The mirror is unavailable — downloads go straight to GitHub",
-    sourceNone: "Nothing is published yet; the GitHub releases page is the place to look.",
-    notes: "What changed",
-    releases: "GitHub Releases",
-    github: "Download from GitHub",
+    sourceGithub: "The mirror is unavailable — downloads go to GitHub",
+    sourceNone: "Nothing is published yet; the installers live on GitHub Releases.",
+    empty: "No releases yet",
+    emptyHome: "The first release will list its installers here.",
+    emptyHint: "The first release will list itself here, with its notes and its installers.",
+    github: "On GitHub",
     checksum: "SHA-256",
+    prerelease: "prerelease",
+    notes: "What changed",
     macos: { "macos-aarch64": "macOS · Apple silicon (aarch64)", "macos-x64": "macOS · Intel (x64)" },
-    windows: { "windows-x64": "Windows · installer", "windows-x64-msi": "Windows · MSI package" },
-    linux: { "linux-appimage": "Linux · AppImage (self-updating)", "linux-deb": "Linux · .deb" },
-    poke: "Poke it",
+    windows: { "windows-x64": "Windows · installer", "windows-x64-msi": "Windows · MSI" },
+    linux: { "linux-appimage": "Linux · AppImage", "linux-deb": "Linux · .deb" },
   },
 };
 
 const lang = () => (html.dataset.lang === "zh" ? "zh" : "en");
+/** @param {Lang} l @param {string} id */
+const platformLabel = (l, id) => {
+  const t = T[l];
+  for (const group of [t.macos, t.windows, t.linux]) {
+    if (id in group) return /** @type {Record<string, string>} */ (group)[id];
+  }
+  return id;
+};
 
-/** The platforms, in the order they are listed, with the label each one gets. */
-/** @type {{ key: "macos" | "windows" | "linux", ids: string[] }[]} */
-const GROUPS = [
+/** The platforms, in the order they are listed. */
+const GROUPS = /** @type {{ key: "macos" | "windows" | "linux", ids: string[] }[]} */ ([
   { key: "macos", ids: ["macos-aarch64", "macos-x64"] },
   { key: "windows", ids: ["windows-x64", "windows-x64-msi"] },
   { key: "linux", ids: ["linux-appimage", "linux-deb"] },
-];
-
-/** @param {number | null} n */
-/** Where a visitor ends up when this site has nothing to offer yet. */
-const RELEASES = "https://github.com/sparkjokerben/jokbet/releases";
+]);
 
 /** @param {number | null} n */
 const bytes = (n) => (n === null ? "" : n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.ceil(n / 1024)} KB`);
+/** @param {string | null} iso */
+const day = (iso) => (iso ? iso.slice(0, 10) : "");
 
-// --- the mascot -------------------------------------------------------------
+// --- the release notes ------------------------------------------------------
 
-/** @type {SpriteData | null} */
-let sprites = null;
-/** @type {Map<Element, number>} */
-const timers = new Map();
-
-const still = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-
-/** Plays one animation in an element, once, or looping. */
-/**
- * @param {HTMLElement} element
- * @param {string} name
- * @param {boolean} [loop]
- */
-function play(element, name, loop = false) {
-  const anim = sprites?.animations[name];
-  if (!anim) return;
-  clearTimeout(timers.get(element));
-  const [width, height] = sprites ? sprites.cell : [160, 104];
-  element.style.backgroundImage = `url(/assets/${anim.file})`;
-  element.style.width = `${width}px`;
-  element.style.height = `${height}px`;
-  element.setAttribute("data-playing", name);
-  if (still()) {
-    element.style.backgroundPosition = "0 0";
-    return;
+/** Just enough Markdown for a release body: headings, bullets, bold, code and
+ * links. Built out of DOM nodes, so nothing in the notes can become markup. */
+/** @param {string} text */
+function inline(text) {
+  const frag = document.createDocumentFragment();
+  const pattern = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\(https?:\/\/[^)\s]+\))/g;
+  let last = 0;
+  for (const match of text.matchAll(pattern)) {
+    if (match.index > last) frag.append(text.slice(last, match.index));
+    const token = match[0];
+    const link = token.match(/^\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)$/);
+    if (link) {
+      const a = el("a", link[1]);
+      a.href = link[2];
+      frag.append(a);
+    } else if (token.startsWith("**")) {
+      frag.append(el("strong", token.slice(2, -2)));
+    } else {
+      frag.append(el("code", token.slice(1, -1)));
+    }
+    last = match.index + token.length;
   }
-  let frame = 0;
-  const step = () => {
-    element.style.backgroundPosition = `${-frame * width}px 0`;
-    const next = frame + 1 < anim.frames ? frame + 1 : loop ? 0 : -1;
-    timers.set(
-      element,
-      window.setTimeout(() => {
-        if (next < 0) {
-          play(element, "idle", true);
-          return;
-        }
-        frame = next;
-        step();
-      }, anim.ms[frame]),
-    );
-  };
-  step();
+  if (last < text.length) frag.append(text.slice(last));
+  return frag;
 }
 
-/** One reaction at a time: a poke while the wave is running is dropped.
- * @param {HTMLElement} element
- * @param {string} name
- */
-function react(element, name) {
-  if (element.getAttribute("data-playing") === name) return;
-  play(element, name);
-}
-
-function wirePet() {
-  for (const element of /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll("[data-flipbook]"))) {
-    const name = element.getAttribute("data-flipbook") ?? "idle";
-    play(element, name, element.hasAttribute("data-flipbook-loop") || name === "idle");
-    element.addEventListener("pointerenter", () => {
-      if (element.getAttribute("data-playing") === "idle") react(element, "wave");
-    });
-    element.addEventListener("click", () => react(element, "hearts"));
+/** @param {string} text */
+function notesToDom(text) {
+  const root = el("div");
+  /** @type {HTMLElement | null} */
+  let list = null;
+  for (const line of text.split("\n")) {
+    const bullet = line.match(/^\s*[-*]\s+(.*)$/);
+    if (bullet) {
+      if (!list) {
+        list = el("ul");
+        root.append(list);
+      }
+      const item = el("li");
+      item.append(inline(bullet[1]));
+      list.append(item);
+      continue;
+    }
+    list = null;
+    const heading = line.match(/^#{1,6}\s+(.*)$/);
+    if (heading) {
+      const h = el("h4");
+      h.append(inline(heading[1]));
+      root.append(h);
+      continue;
+    }
+    if (!line.trim()) continue;
+    const p = el("p");
+    p.append(inline(line));
+    root.append(p);
   }
+  return root;
 }
 
 // --- downloads --------------------------------------------------------------
 
 /** @type {Manifest | null} */
 let manifest = null;
+/** @type {Changelog | null} */
+let changelog = null;
 
 /** Which build the visitor most likely wants; Apple silicon unless we know better. */
 function guess() {
   const ua = navigator.userAgent;
-  const platform = /** @type {{ platform?: string, userAgentData?: { platform?: string } }} */ (navigator).userAgentData?.platform ?? navigator.platform ?? "";
+  const platform =
+    /** @type {{ userAgentData?: { platform?: string } }} */ (navigator).userAgentData?.platform ?? navigator.platform ?? "";
   if (/mac|iphone|ipad/i.test(platform) || /Mac OS X/.test(ua)) return "macos-aarch64";
   if (/win/i.test(platform) || /Windows/.test(ua)) return "windows-x64";
   if (/linux|x11/i.test(platform) || /Linux/.test(ua)) return "linux-appimage";
@@ -153,150 +182,310 @@ function guess() {
 }
 
 /** The URL a download should use: our mirror, or GitHub when the mirror is out.
- * @param {ManifestFile} file
+ * @param {ManifestFile | ReleaseFile} file
+ * @param {string} [version]
  */
-function hrefFor(file) {
-  const version = manifest?.tag?.replace(/^v/, "") ?? "";
-  if (manifest?.source === "r2") return `/dl/${file.name}?v=${version}`;
-  return `${manifest?.downloadBase ?? ""}/${file.name}`;
+function hrefFor(file, version) {
+  const v = version ?? manifest?.tag?.replace(/^v/, "") ?? "";
+  if (version === undefined && manifest && manifest.source !== "r2") return `${manifest.downloadBase ?? ""}/${file.name}`;
+  return `/dl/${file.name}?v=${v}`;
+}
+
+/** One row of an installer list.
+ * @param {string} platform @param {{ name: string, size: number | null, sha256?: string | null }} file
+ * @param {string} href @param {string} mirror
+ */
+function fileRow(platform, file, href, mirror) {
+  const item = el("li");
+  item.className = "file";
+  const link = el("a");
+  link.className = "file-main";
+  link.href = href;
+  link.setAttribute("download", "");
+  link.dataset.platform = platform;
+  const label = el("span", platformLabel(lang(), platform));
+  label.className = "file-label";
+  const meta = el("span", [file.name.slice(file.name.lastIndexOf(".") + 1), bytes(file.size)].filter(Boolean).join(" · "));
+  meta.className = "file-meta";
+  link.append(label, meta);
+  const from = el("a", T[lang()].github);
+  from.className = "file-mirror";
+  from.href = mirror;
+  item.append(link, from);
+  if (file.sha256) {
+    const sha = el("details");
+    sha.className = "file-sha";
+    sha.append(el("summary", T[lang()].checksum), el("code", file.sha256));
+    item.append(sha);
+  }
+  return item;
 }
 
 function renderDownloads() {
-  const list = document.getElementById("files");
-  const status = document.getElementById("download-status");
-  const details = document.getElementById("notes-details");
-  const cta = document.getElementById("cta-alt");
-  if (!list || !status || !cta) return;
   const t = T[lang()];
+  const list = $("files");
+  const empty = $("release-empty");
+  const head = $("release-head");
+  // Until the manifest arrives the markup's own "reading…" line stands.
+  if (!list || !empty || !head || !manifest) return;
   list.replaceChildren();
 
-  if (!manifest?.version || !Object.keys(manifest.files).length) {
-    status.textContent = t.sourceNone;
-    status.dataset.state = "none";
-    if (details) details.hidden = true;
-    cta.hidden = true;
+  const version = manifest.version ?? null;
+  const hasFiles = !!version && Object.keys(manifest.files ?? {}).length > 0;
+
+  head.hidden = !hasFiles;
+  empty.hidden = hasFiles;
+  list.hidden = !hasFiles;
+  if (!hasFiles) {
+    empty.replaceChildren(el("span", t.empty));
+    const hint = el("p", t.emptyHome);
+    hint.className = "note";
+    const link = el("a", t.releases);
+    link.href = RELEASES;
+    const p = el("p");
+    p.className = "note";
+    p.append(link);
+    empty.append(hint, p);
+    renderCta();
+    renderReleaseLine();
     return;
   }
 
-  const version = manifest.version;
-  status.replaceChildren();
-  const head = document.createElement("span");
-  head.className = "status-version";
-  const when = manifest.pubDate ? `${t.date} ${manifest.pubDate.slice(0, 10)}` : "";
-  head.textContent = when
-    ? lang() === "zh"
-      ? `${t.version} ${version}（${when}）`
-      : `${t.version} ${version} (${when})`
-    : `${t.version} ${version}`;
-  const source = document.createElement("span");
-  source.className = "status-source";
-  source.textContent = manifest.source === "r2" ? t.sourceR2 : t.sourceGithub;
-  // A space between them for screen readers; flexbox ignores the text node.
-  status.append(head, document.createTextNode(" "), source);
-  status.dataset.state = manifest.source === "r2" ? "mirror" : "github";
-  if (details) {
-    details.hidden = !manifest.notes;
-    const body = document.getElementById("notes-body");
-    if (body) body.textContent = manifest.notes ?? "";
+  const when = day(manifest.pubDate);
+  $("release-version")?.replaceChildren(el("span", `v${version}`));
+  $("release-when")?.replaceChildren(el("span", when ? `${t.released} ${when}` : ""));
+  const source = $("release-source");
+  if (source) {
+    source.replaceChildren(el("span", manifest.source === "r2" ? t.sourceR2 : t.sourceGithub));
+    source.className = manifest.source === "r2" ? "" : "warn";
+  }
+
+  const notes = $("notes-details");
+  const body = $("notes");
+  if (notes && body) {
+    notes.hidden = !manifest.notes;
+    body.replaceChildren(manifest.notes ? notesToDom(manifest.notes) : "");
   }
 
   for (const group of GROUPS) {
     for (const id of group.ids) {
-      const file = manifest.files[id];
+      const file = manifest.files?.[id];
       if (!file) continue;
-      const labels = /** @type {Record<string, string>} */ (t[group.key]);
-      const label = labels[id] ?? id;
-      const item = document.createElement("li");
-      item.className = "file";
-
-      const link = document.createElement("a");
-      link.className = "file-main";
-      link.href = hrefFor(file);
-      link.setAttribute("download", "");
-      link.dataset.platform = id;
-      const name = document.createElement("span");
-      name.className = "file-label";
-      name.textContent = label;
-      const meta = document.createElement("span");
-      meta.className = "file-meta";
-      const kind = file.name.slice(file.name.lastIndexOf("."));
-      meta.textContent = [kind, bytes(file.size)].filter(Boolean).join(lang() === "zh" ? "，" : ", ");
-      link.append(name, meta);
-      item.append(link);
-
-      const mirror = document.createElement("a");
-      mirror.className = "file-mirror";
-      mirror.href = `${manifest.downloadBase}/${file.name}`;
-      mirror.textContent = t.github;
-      item.append(mirror);
-
-      if (file.sha256) {
-        const sha = document.createElement("details");
-        sha.className = "file-sha";
-        const summary = document.createElement("summary");
-        summary.textContent = t.checksum;
-        const value = document.createElement("code");
-        value.textContent = file.sha256;
-        sha.append(summary, value);
-        item.append(sha);
-      }
-      list.append(item);
+      list.append(fileRow(id, file, hrefFor(file), `${manifest.downloadBase ?? ""}/${file.name}`));
     }
   }
+  renderCta();
+  renderReleaseLine();
 }
 
-/** The hero button, which offers what this visitor probably needs. */
+/** The hero button: what this visitor probably needs, and a way to everything. */
 function renderCta() {
-  const cta = document.getElementById("cta-alt");
+  const cta = $("cta");
   if (!cta) return;
   const t = T[lang()];
-  const pick = guess();
   cta.replaceChildren();
-  const primary = pick && manifest?.files[pick] ? pick : null;
-  const ids = primary === "macos-aarch64" ? ["macos-aarch64", "macos-x64"] : primary ? [primary] : [];
-  if (!ids.length) {
-    const link = document.createElement("a");
+  const pick = guess();
+  const file = pick ? manifest?.files?.[pick] : undefined;
+  if (!pick || !file) {
+    const link = el("a", t.releases);
     link.className = "btn btn-primary";
-    // Nothing on the mirror to point at (no release yet, or none for this
-    // platform): GitHub always has the answer.
     link.href = RELEASES;
-    link.textContent = t.releases;
     cta.append(link);
     return;
   }
+  const ids = pick === "macos-aarch64" && manifest?.files?.["macos-x64"] ? ["macos-aarch64", "macos-x64"] : [pick];
   ids.forEach((id, index) => {
-    const file = manifest?.files[id];
-    if (!file) return;
-    const link = document.createElement("a");
+    const f = manifest?.files?.[id];
+    if (!f) return;
+    const link = el("a", index === 0 ? /** @type {Record<string, string>} */ (t.primary)[id] ?? id : t.altMac);
     link.className = index === 0 ? "btn btn-primary" : "btn";
-    link.href = hrefFor(file);
+    link.href = hrefFor(f);
     link.setAttribute("download", "");
     link.dataset.platform = id;
-    link.textContent = index === 0 ? /** @type {Record<string, string>} */ (t.primary)[id] ?? t.all : t.altMac;
+    const size = el("span", bytes(f.size));
+    size.className = "sub";
+    if (f.size) link.append(size);
     cta.append(link);
   });
 }
 
-async function loadManifest() {
-  for (const url of ["/latest", "/latest.baked.json"]) {
+/** The line under the buttons: what this build runs on, and which version. */
+function renderReleaseLine() {
+  const line = $("release-line");
+  if (!line) return;
+  const t = T[lang()];
+  const version = manifest?.version ? `v${manifest.version}` : t.unreleased;
+  line.replaceChildren(el("span", `${version} · ${t.platforms}`));
+}
+
+// --- the changelog ----------------------------------------------------------
+
+function renderChangelog() {
+  const host = $("releases");
+  const empty = $("releases-empty");
+  // Until the list arrives the markup's own "reading…" line stands.
+  if (!host || !empty || !changelog) return;
+  const t = T[lang()];
+  const releases = changelog.releases;
+  host.replaceChildren();
+  empty.hidden = releases.length > 0;
+
+  if (!releases.length) {
+    empty.replaceChildren(el("span", t.empty));
+    const hint = el("p", t.emptyHint);
+    hint.className = "note";
+    const link = el("a", t.releases);
+    link.href = RELEASES;
+    const p = el("p");
+    p.className = "note";
+    p.append(link);
+    empty.append(hint, p);
+    return;
+  }
+
+  for (const release of releases) {
+    const section = el("section");
+    section.className = "release";
+    const head = el("div");
+    head.className = "release-head";
+    const h2 = el("h2", `v${release.version}`);
+    if (release.name) h2.title = release.name;
+    head.append(h2);
+    const when = day(release.pubDate);
+    if (when) {
+      const w = el("span", when);
+      w.className = "when";
+      head.append(w);
+    }
+    if (release.prerelease) {
+      const badge = el("span", t.prerelease);
+      badge.className = "badge";
+      head.append(badge);
+    }
+    const from = el("a", "GitHub");
+    from.className = "all";
+    from.href = release.url ?? RELEASES;
+    head.append(from);
+    section.append(head);
+
+    if (release.notes) {
+      const notes = el("div");
+      notes.className = "notes";
+      notes.append(notesToDom(release.notes));
+      section.append(notes);
+    }
+
+    if (release.files.length) {
+      const list = el("ul");
+      list.className = "files";
+      for (const file of release.files) {
+        list.append(fileRow(file.platform, file, hrefFor(file, release.version), `${RELEASES}/download/${release.tag}/${file.name}`));
+      }
+      section.append(list);
+    }
+    host.append(section);
+  }
+}
+
+/** @param {string[]} urls */
+async function loadJson(urls) {
+  for (const url of urls) {
     try {
       const response = await fetch(url, { cache: "no-store" });
       if (!response.ok) continue;
-      const body = /** @type {Manifest} */ (await response.json());
-      return { ...body, source: body.source ?? (url === "/latest" ? "r2" : "baked") };
+      return await response.json();
     } catch {
       // try the next one
     }
   }
-  return { schema: 1, version: null, tag: null, pubDate: null, draft: null, notes: null, releaseUrl: null, downloadBase: null, files: {}, source: "unavailable" };
+  return null;
+}
+
+// --- the pet ----------------------------------------------------------------
+
+/** @type {Pet | null} */
+let pet = null;
+
+async function wirePet() {
+  const host = $("pet");
+  if (!host) return;
+  const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  /** @type {{ createPet: (h: HTMLElement, o: Record<string, unknown>) => Pet }} */
+  let bundled;
+  try {
+    // The app's own pet code, bundled for the browser by scripts/build-site-pet.ts.
+    const source = "/assets/pet.js";
+    bundled = await import(/* @vite-ignore */ source);
+  } catch {
+    // No bundle (offline, or a very old browser): the poster stays, and the
+    // page is the same page without the pet moving.
+    return;
+  }
+  // Take the poster out before the live pet arrives, so the two never overlap.
+  host.replaceChildren();
+  pet = bundled.createPet(host, {
+    scale: 6,
+    still,
+    lang: lang(),
+    idleAnim: "soccer",
+    clickAnim: "wave",
+    doubleClickAnim: "hearts",
+    sleepAfterMs: 60_000,
+    bounds: () => document.querySelector(".rail")?.getBoundingClientRect() ?? null,
+  });
+
+  let keys = 0;
+  let clicks = 0;
+  /** @type {number[]} */
+  let recent = [];
+
+  function counted() {
+    pet?.setCounter(keys + clicks);
+  }
+
+  window.addEventListener("keydown", () => {
+    keys++;
+    const now = performance.now();
+    recent = recent.filter((t) => now - t < 1000);
+    recent.push(now);
+    pet?.setKeysPerSecond(recent.length);
+    pet?.input("typing");
+    counted();
+  });
+  document.addEventListener("pointerdown", () => {
+    clicks++;
+    pet?.input("click");
+    counted();
+  });
+
+  // Its eyes follow the pointer, one look per frame at most.
+  let where = /** @type {[number, number] | null} */ (null);
+  let queued = false;
+  document.addEventListener("pointermove", (e) => {
+    where = [e.clientX, e.clientY];
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      if (where) pet?.point(where[0], where[1]);
+    });
+  });
+
+  for (const chip of document.querySelectorAll("[data-demo]")) {
+    chip.addEventListener("click", () => pet?.demo(/** @type {HTMLElement} */ (chip).dataset.demo ?? "wave"));
+  }
+  for (const button of document.querySelectorAll("[data-block]")) {
+    button.addEventListener("click", () => pet?.setBlocked(/** @type {HTMLElement} */ (button).dataset.block ?? null));
+  }
 }
 
 // --- language ---------------------------------------------------------------
 
-/** @param {string} next */
+/** @param {Lang} next */
 function setLang(next) {
   html.dataset.lang = next;
   html.lang = next === "zh" ? "zh-Hans" : "en";
+  document.title = T[next].title;
   try {
     localStorage.setItem("jokbet.lang", next);
   } catch {
@@ -305,27 +494,28 @@ function setLang(next) {
   for (const button of document.querySelectorAll("[data-set-lang]")) {
     button.setAttribute("aria-pressed", String(button.getAttribute("data-set-lang") === next));
   }
-  renderCta();
+  pet?.setLang(next);
   renderDownloads();
+  renderChangelog();
 }
 
 // --- start ------------------------------------------------------------------
 
 async function main() {
   for (const button of document.querySelectorAll("[data-set-lang]")) {
-    button.addEventListener("click", () => setLang(button.getAttribute("data-set-lang") ?? "en"));
+    button.addEventListener("click", () => setLang(/** @type {Lang} */ (button.getAttribute("data-set-lang"))));
   }
   setLang(lang());
-  try {
-    const response = await fetch("/assets/jokbet.json");
-    if (response.ok) sprites = /** @type {SpriteData} */ (await response.json());
-  } catch {
-    // the mascot just stays on its first frame
+  // The pet and the list are fetched together; neither waits for the other.
+  const petting = wirePet();
+  if (isChangelog) {
+    changelog = /** @type {Changelog | null} */ (await loadJson(["/changelog.json", "/releases.baked.json"]));
+    renderChangelog();
+  } else {
+    manifest = /** @type {Manifest | null} */ (await loadJson(["/latest", "/latest.baked.json"]));
+    renderDownloads();
   }
-  wirePet();
-  manifest = await loadManifest();
-  renderCta();
-  renderDownloads();
+  await petting;
 }
 
 void main();
