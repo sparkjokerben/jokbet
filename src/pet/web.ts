@@ -261,64 +261,66 @@ export function createPet(host: HTMLElement, options: WebPetOptions = {}): WebPe
 
   // --- dragging -------------------------------------------------------------
 
-  let detach: (() => void) | undefined;
-  if (options.draggable ?? !still) {
-    const bounds = options.bounds ?? (() => host.getBoundingClientRect());
-    // Where the pointer went down. The gesture code reports the start of a drag
-    // without the event, so this listener keeps the position for it.
-    let pressedAt = { x: 0, y: 0 };
-    stage.addEventListener("pointerdown", (e) => {
-      pressedAt = { x: e.clientX, y: e.clientY };
-    });
-    let drag: {
-      pointer: { x: number; y: number };
-      home: DOMRect;
-      box: { left: number; top: number };
-      w: number;
-      h: number;
-    } | null = null;
-    const onMove = (e: PointerEvent) => {
-      if (!drag) return;
-      const range = clampBox(bounds() ?? drag.home, drag.w, drag.h);
-      const x = Math.min(Math.max(drag.box.left + (e.clientX - drag.pointer.x), range.minX), range.maxX);
-      const y = Math.min(Math.max(drag.box.top + (e.clientY - drag.pointer.y), range.minY), range.maxY);
-      stage.style.translate = `${x - drag.home.left}px ${y - drag.home.top}px`;
-    };
-    const onUp = () => {
-      if (!drag) return;
-      drag = null;
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
-      controller.setDragging(false);
-      stage.classList.add("pet-home");
-      stage.style.translate = "0px 0px";
-      setTimeout(() => stage.classList.remove("pet-home"), HOME_MS);
-    };
-    detach = attachGestures(stage, {
-      press: () => controller.pressed(),
-      click: () => run(clickAnim),
-      doubleClick: () => run(doubleClickAnim),
-      dragStart: () => {
-        // Drop the easing first: a drag that starts while the last one is still
-        // easing home would otherwise measure a rect that is still moving.
-        stage.classList.remove("pet-home");
-        const home = stage.getBoundingClientRect();
-        drag = {
-          pointer: { ...pressedAt },
-          home,
-          box: { left: home.left, top: home.top },
-          w: home.width,
-          h: home.height,
-        };
-        controller.setDragging(true);
-        window.addEventListener("pointermove", onMove);
-        window.addEventListener("pointerup", onUp);
-        window.addEventListener("pointercancel", onUp);
-      },
-      context: () => run("poke"),
-    });
-  }
+  const draggable = options.draggable ?? !still;
+  const bounds = options.bounds ?? (() => host.getBoundingClientRect());
+  // Where the pointer went down. The gesture code reports the start of a drag
+  // without the event, so this listener keeps the position for it.
+  let pressedAt = { x: 0, y: 0 };
+  let drag: {
+    pointer: { x: number; y: number };
+    home: DOMRect;
+    box: { left: number; top: number };
+    w: number;
+    h: number;
+  } | null = null;
+  stage.addEventListener("pointerdown", (e) => {
+    pressedAt = { x: e.clientX, y: e.clientY };
+  });
+  const onMove = (e: PointerEvent) => {
+    if (!drag) return;
+    const range = clampBox(bounds() ?? drag.home, drag.w, drag.h);
+    const x = Math.min(Math.max(drag.box.left + (e.clientX - drag.pointer.x), range.minX), range.maxX);
+    const y = Math.min(Math.max(drag.box.top + (e.clientY - drag.pointer.y), range.minY), range.maxY);
+    stage.style.translate = `${x - drag.home.left}px ${y - drag.home.top}px`;
+  };
+  const onUp = () => {
+    if (!drag) return;
+    drag = null;
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+    window.removeEventListener("pointercancel", onUp);
+    controller.setDragging(false);
+    stage.classList.add("pet-home");
+    stage.style.translate = "0px 0px";
+    setTimeout(() => stage.classList.remove("pet-home"), HOME_MS);
+  };
+
+  // The gestures are always attached — with motion off, a click still shows the
+  // pose it would have played — but only a drag that is allowed moves it.
+  const detach = attachGestures(stage, {
+    press: () => controller.pressed(),
+    click: () => run(clickAnim),
+    doubleClick: () => run(doubleClickAnim),
+    dragStart: () => {
+      if (!draggable) return;
+      // Drop the easing first: a drag that starts while the last one is still
+      // easing home would otherwise measure a rect that is still moving.
+      stage.classList.remove("pet-home");
+      const home = stage.getBoundingClientRect();
+      drag = {
+        pointer: { ...pressedAt },
+        home,
+        box: { left: home.left, top: home.top },
+        w: home.width,
+        h: home.height,
+      };
+      controller.setDragging(true);
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
+    },
+    context: () => run("poke"),
+  });
 
   drawCounter();
   if (still) render(stillFrame("idle"));
