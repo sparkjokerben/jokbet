@@ -1,15 +1,15 @@
 [package]
-name = "jokerben-desktop-pet"
+name = "jokbet"
 version = "0.0.1"
 description = "A lightweight desktop pet that counts your keyboard and mouse activity"
 authors = ["sparkjokerben"]
 license = "GPL-3.0-only"
-repository = "https://github.com/sparkjokerben/jokerben-desktop-pet"
+repository = "https://github.com/sparkjokerben/jokbet"
 edition = "2021"
 
 [lib]
 # The `_lib` suffix keeps the lib name distinct from the bin name (cargo#8519 on Windows).
-name = "jokerben_desktop_pet_lib"
+name = "jokbet_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

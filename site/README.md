@@ -72,7 +72,7 @@ sprite, run `npm run site:assets`, and commit what it writes.
 
 ## Setting it up (once, in the Cloudflare dashboard)
 
-1. **R2** → *Create bucket* → `jokerben-desktop-pet-downloads`. Leave it private:
+1. **R2** → *Create bucket* → `jokbet-downloads`. Leave it private:
    the download function is the only way in.
 2. **R2** → *Account details* → *Manage* API tokens → **Create Account API
    token** → permissions **Object Read & Write**, scoped to that bucket → copy
@@ -99,6 +99,8 @@ sprite, run `npm run site:assets`, and commit what it writes.
    | `R2_ACCOUNT_ID` | the Cloudflare account id from step 2 |
    | `R2_ACCESS_KEY_ID` | the R2 token's access key id |
    | `R2_SECRET_ACCESS_KEY` | the R2 token's secret access key |
+
+If you already created the bucket or the Pages project under the old name (`jokerben-desktop-pet-downloads`, `jokerben-desktop-pet-site`), either rename them in the dashboard or put the old names back in `wrangler.toml` and the publish workflow — the names are just strings on both sides.
 
 The bucket name is written into `wrangler.toml` and the publish workflow, so it
 is not a secret; only the three values above are.

@@ -1829,7 +1829,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "jokerben-desktop-pet"
+name = "jokbet"
 version = "0.0.1"
 dependencies = [
  "chrono",

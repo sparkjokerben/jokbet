@@ -77,7 +77,7 @@ pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>>
     let scale = app.state::<SettingsStore>().get().pet_scale;
     let (w, h) = window_size(scale);
     let window = WebviewWindowBuilder::new(app, PET_LABEL, WebviewUrl::App("pet.html".into()))
-        .title("jokerben-desktop-pet")
+        .title("Jokbet")
         .inner_size(w, h)
         .transparent(true)
         .decorations(false)

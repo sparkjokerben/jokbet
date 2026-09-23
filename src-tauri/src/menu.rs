@@ -97,7 +97,7 @@ pub fn create_tray<R: Runtime>(app: &AppHandle<R>, menu: &AppMenu<R>) -> tauri::
     TrayIconBuilder::with_id("main")
         .icon(icon)
         .icon_as_template(cfg!(target_os = "macos"))
-        .tooltip("jokerben-desktop-pet")
+        .tooltip("Jokbet")
         .menu(&menu.menu)
         .show_menu_on_left_click(true)
         .build(app)?;
@@ -141,7 +141,7 @@ pub fn open_panel<R: Runtime>(app: &AppHandle<R>, panel: Panel) {
     let title = match panel {
         Panel::Stats => t(lang, Text::Stats),
         Panel::Settings => t(lang, Text::Settings),
-        Panel::Onboarding | Panel::Tour => "jokerben-desktop-pet",
+        Panel::Onboarding | Panel::Tour => "Jokbet",
     };
     if let Err(e) = panels::open(app, panel, title.trim_end_matches('…')) {
         eprintln!("opening {panel:?} failed: {e}");

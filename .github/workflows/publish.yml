@@ -26,7 +26,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     env:
-      BUCKET: jokerben-desktop-pet-downloads
+      BUCKET: jokbet-downloads
       ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
       AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}

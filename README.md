@@ -1,4 +1,4 @@
-# jokerben-desktop-pet
+# jokbet
 
 Jokbet is a lightweight desktop pet drawn in the pixel style of Claude Code's mascot. It sits in a corner of your screen, reacts while you type and click, and counts your keyboard and mouse activity.
 
@@ -26,16 +26,16 @@ Only counts are stored: how many times each key was pressed, clicks, scroll gest
 
 ## Install / 安装
 
-Download the installer for your platform from **[jokbet.jokerben.top](https://jokbet.jokerben.top)** or from [Releases](https://github.com/sparkjokerben/jokerben-desktop-pet/releases). The builds are not signed by Apple or Microsoft, so your system will warn you the first time.
+Download the installer for your platform from **[jokbet.jokerben.top](https://jokbet.jokerben.top)** or from [Releases](https://github.com/sparkjokerben/jokbet/releases). The builds are not signed by Apple or Microsoft, so your system will warn you the first time.
 
-从 **[jokbet.jokerben.top](https://jokbet.jokerben.top)** 或 [Releases](https://github.com/sparkjokerben/jokerben-desktop-pet/releases) 下载对应平台的安装包。安装包没有经过 Apple 或微软的签名，第一次打开时系统会拦截，按下面的步骤放行即可。
+从 **[jokbet.jokerben.top](https://jokbet.jokerben.top)** 或 [Releases](https://github.com/sparkjokerben/jokbet/releases) 下载对应平台的安装包。安装包没有经过 Apple 或微软的签名，第一次打开时系统会拦截，按下面的步骤放行即可。
 
 ### macOS
 
-1. Unzip and move `jokerben-desktop-pet.app` to Applications. The `aarch64` build is for Apple Silicon, `x64` for Intel Macs.
+1. Unzip and move `Jokbet.app` to Applications. The `aarch64` build is for Apple Silicon, `x64` for Intel Macs.
 2. Open it once. When macOS says it can't verify the developer, go to **System Settings → Privacy & Security** and click **Open Anyway**. (On macOS 15 and later, right-click → Open no longer works.) Alternatively run:
    ```sh
-   xattr -dr com.apple.quarantine /Applications/jokerben-desktop-pet.app
+   xattr -dr com.apple.quarantine /Applications/Jokbet.app
    ```
 3. Allow **Input Monitoring** when asked (System Settings → Privacy & Security → Input Monitoring). Without it the pet shows a confused face and counts nothing.
 
@@ -65,11 +65,11 @@ Use the AppImage (auto-updates) or the `.deb`. Only X11 sessions are supported: 
 
 ## Where the data lives / 数据位置
 
-- macOS: `~/Library/Application Support/io.github.sparkjokerben.jokerben-desktop-pet/`
-- Windows: `%APPDATA%\io.github.sparkjokerben.jokerben-desktop-pet\`
-- Linux: `~/.local/share/io.github.sparkjokerben.jokerben-desktop-pet/`
+- macOS: `~/Library/Application Support/io.github.sparkjokerben.jokbet/`
+- Windows: `%APPDATA%\io.github.sparkjokerben.jokbet\`
+- Linux: `~/.local/share/io.github.sparkjokerben.jokbet/`
 
-`stats.sqlite` holds the counts; `settings.json` (in the config directory) holds your settings.
+`stats.sqlite` holds the counts; `settings.json` (in the config directory) holds your settings. Upgrading from the old `jokerben-desktop-pet` name brings those two files across on the first run.
 
 ## Development / 开发
 
@@ -94,7 +94,7 @@ The website in [`site/`](site/README.md) is plain static files served by Cloudfl
 On macOS, `tauri dev` runs the app as a child of your terminal, so grant Input Monitoring to the terminal app. To test the real permission flow, build a bundle with `npm run tauri build -- --debug --bundles app`. Every rebuild changes an ad-hoc signature, so clear the stale grant with:
 
 ```sh
-tccutil reset ListenEvent io.github.sparkjokerben.jokerben-desktop-pet
+tccutil reset ListenEvent io.github.sparkjokerben.jokbet
 ```
 
 ## Releasing / 发布

@@ -2,7 +2,7 @@
 // it from the published assets), CI (which validates the baked fallback) and the
 // download function (which needs the repo and the file names).
 
-export const REPO = "sparkjokerben/jokerben-desktop-pet";
+export const REPO = "sparkjokerben/jokbet";
 
 /** One installer, as the download page offers it. */
 export interface ManifestFile {
@@ -29,12 +29,12 @@ export interface Manifest {
 
 /** The installers, in the order the page lists them. */
 export const PLATFORMS: { id: string; file: (version: string) => string; bundle: string }[] = [
-  { id: "macos-aarch64", file: (v) => `jokerben-desktop-pet_${v}_aarch64.dmg`, bundle: "dmg" },
-  { id: "macos-x64", file: (v) => `jokerben-desktop-pet_${v}_x64.dmg`, bundle: "dmg" },
-  { id: "windows-x64", file: (v) => `jokerben-desktop-pet_${v}_x64-setup.exe`, bundle: "nsis" },
-  { id: "windows-x64-msi", file: (v) => `jokerben-desktop-pet_${v}_x64_en-US.msi`, bundle: "msi" },
-  { id: "linux-appimage", file: (v) => `jokerben-desktop-pet_${v}_amd64.AppImage`, bundle: "appimage" },
-  { id: "linux-deb", file: (v) => `jokerben-desktop-pet_${v}_amd64.deb`, bundle: "deb" },
+  { id: "macos-aarch64", file: (v) => `Jokbet_${v}_aarch64.dmg`, bundle: "dmg" },
+  { id: "macos-x64", file: (v) => `Jokbet_${v}_x64.dmg`, bundle: "dmg" },
+  { id: "windows-x64", file: (v) => `Jokbet_${v}_x64-setup.exe`, bundle: "nsis" },
+  { id: "windows-x64-msi", file: (v) => `Jokbet_${v}_x64_en-US.msi`, bundle: "msi" },
+  { id: "linux-appimage", file: (v) => `Jokbet_${v}_amd64.AppImage`, bundle: "appimage" },
+  { id: "linux-deb", file: (v) => `Jokbet_${v}_amd64.deb`, bundle: "deb" },
 ];
 
 export const PLATFORM_IDS = PLATFORMS.map((p) => p.id);

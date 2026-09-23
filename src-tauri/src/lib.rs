@@ -4,6 +4,7 @@ mod engine;
 mod hover;
 mod i18n;
 mod input;
+mod legacy;
 mod menu;
 mod panels;
 mod pet_window;
@@ -51,12 +52,18 @@ pub fn run() {
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
             let config_dir = app.path().app_config_dir()?;
+            let data_dir = app.path().app_data_dir()?;
+            // The app used to be called jokerben-desktop-pet, and its data lives
+            // under that name: bring it over rather than start from zero.
+            for path in legacy::adopt(&data_dir, &config_dir) {
+                println!("kept {} from the pre-rename app", path.display());
+            }
             let settings = SettingsStore::load(config_dir.join("settings.json"));
             let initial = settings.get();
             app.manage(settings);
             app.manage(HoverState::default());
 
-            let db_path = app.path().app_data_dir()?.join("stats.sqlite");
+            let db_path = data_dir.join("stats.sqlite");
             let db = db::Db::open(&db_path)
                 .inspect_err(|e| eprintln!("opening {} failed: {e}", db_path.display()))
                 .ok();

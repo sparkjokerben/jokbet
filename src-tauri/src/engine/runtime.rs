@@ -372,9 +372,8 @@ impl<R: Runtime> Worker<R> {
         let db = self.db()?;
         let daily = db.daily_csv().map_err(|e| e.to_string())?;
         let keys = db.keys_csv().map_err(|e| e.to_string())?;
-        std::fs::write(dir.join("jokerben-desktop-pet-daily.csv"), daily)
-            .map_err(|e| e.to_string())?;
-        std::fs::write(dir.join("jokerben-desktop-pet-keys.csv"), keys).map_err(|e| e.to_string())
+        std::fs::write(dir.join("jokbet-daily.csv"), daily).map_err(|e| e.to_string())?;
+        std::fs::write(dir.join("jokbet-keys.csv"), keys).map_err(|e| e.to_string())
     }
 
     fn clear(&mut self) -> Result<(), String> {

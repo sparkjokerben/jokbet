@@ -4,7 +4,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const REPO = "sparkjokerben/jokerben-desktop-pet";
+const REPO = "sparkjokerben/jokbet";
 
 /** A bucket holding the given objects; anything else is missing. */
 function bucket(objects: Record<string, Uint8Array> = {}, fail = false) {
@@ -62,7 +62,7 @@ beforeEach(async () => {
 const call = (handler: Handler, request: Request, env: TestContext["env"], path: string[] = []) =>
   handler({ request, env, params: { path } } as TestContext);
 
-const installer = "jokerben-desktop-pet_0.1.0_x64.dmg";
+const installer = "Jokbet_0.1.0_x64.dmg";
 const at = (name: string, init?: RequestInit) => new Request(`https://jokbet.jokerben.top/dl/${name}`, init);
 
 describe("the download proxy", () => {
@@ -94,7 +94,7 @@ describe("the download proxy", () => {
   });
 
   it("answers a probe without reading the file", async () => {
-    const name = "jokerben-desktop-pet_0.1.0_amd64.deb";
+    const name = "Jokbet_0.1.0_amd64.deb";
     const response = await call(
       dl,
       at(name, { method: "HEAD" }),
@@ -150,7 +150,7 @@ describe("the download proxy", () => {
   });
 
   it("refuses names that are not ours", async () => {
-    for (const name of ["evil.dmg", "jokerben-desktop-pet_/../x.dmg", ""]) {
+    for (const name of ["evil.dmg", "Jokbet_/../x.dmg", ""]) {
       const response = await call(dl, at(name), { DOWNLOADS: bucket(), ASSETS: assets({}) }, [name]);
       expect(response.status, name).toBe(404);
     }

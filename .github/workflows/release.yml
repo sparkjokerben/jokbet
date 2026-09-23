@@ -72,6 +72,8 @@ jobs:
           # app's designated requirement stable, so macOS keeps the Input
           # Monitoring grant across updates. Falls back to ad-hoc signing.
           identity="-"
+          # The name of the certificate the P12 secret holds; it is not
+          # renamed here, since that would mean issuing a new one.
           name="jokerben-desktop-pet Self-Signed"
           if [ -n "$P12" ]; then
             kc="$RUNNER_TEMP/signing.keychain-db"
@@ -101,12 +103,12 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: jokerben-desktop-pet ${{ github.ref_name }}
+          releaseName: Jokbet ${{ github.ref_name }}
           releaseBody: |
             Unofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.
             非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见 README。
 
-            See the [README](https://github.com/sparkjokerben/jokerben-desktop-pet#install) for install steps.
+            See the [README](https://github.com/sparkjokerben/jokbet#install) for install steps.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

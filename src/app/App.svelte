@@ -6,7 +6,7 @@
 
   // Each on-demand window loads app.html?view=<name>.
   const view = new URLSearchParams(location.search).get("view") ?? "stats";
-  document.title = view === "settings" ? t("settings") : view === "onboarding" ? "jokerben-desktop-pet" : t("stats");
+  document.title = view === "settings" ? t("settings") : view === "onboarding" ? "Jokbet" : t("stats");
 </script>
 
 {#if view === "settings"}

@@ -6,7 +6,7 @@
 #
 # The file is the source of truth: these fields are read-only in the dashboard.
 
-name = "jokerben-desktop-pet-site"
+name = "jokbet-site"
 # Bump this to a newer date when convenient; it only pins runtime defaults.
 compatibility_date = "2026-01-01"
 pages_build_output_dir = "."
@@ -14,4 +14,4 @@ pages_build_output_dir = "."
 # The installers live here; the /dl function is the only way to reach them.
 [[r2_buckets]]
 binding = "DOWNLOADS"
-bucket_name = "jokerben-desktop-pet-downloads"
+bucket_name = "jokbet-downloads"

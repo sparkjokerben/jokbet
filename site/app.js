@@ -65,7 +65,7 @@ const GROUPS = [
 
 /** @param {number | null} n */
 /** Where a visitor ends up when this site has nothing to offer yet. */
-const RELEASES = "https://github.com/sparkjokerben/jokerben-desktop-pet/releases";
+const RELEASES = "https://github.com/sparkjokerben/jokbet/releases";
 
 /** @param {number | null} n */
 const bytes = (n) => (n === null ? "" : n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.ceil(n / 1024)} KB`);

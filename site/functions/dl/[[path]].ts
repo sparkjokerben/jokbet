@@ -13,11 +13,11 @@ interface Env {
 }
 
 /** Where the GitHub copies live; the repo is the one in scripts/site-manifest.ts. */
-const REPO = "sparkjokerben/jokerben-desktop-pet";
+const REPO = "sparkjokerben/jokbet";
 const RELEASES = `https://github.com/${REPO}/releases`;
 
 /** The names Tauri produces, and nothing else: no slashes, no traversal. */
-const NAME = /^jokerben-desktop-pet_[A-Za-z0-9][A-Za-z0-9._-]{0,180}$/;
+const NAME = /^(?:Jokbet|jokbet)_[A-Za-z0-9][A-Za-z0-9._-]{0,180}$/;
 const VERSION = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
 /** Version-stamped names never change under a URL, so they may be cached hard. */
 const IMMUTABLE = "public, max-age=31536000, immutable";
