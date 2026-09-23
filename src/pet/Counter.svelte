@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { formatCount } from "../lib/format";
+  import { formatCount, formatRate } from "../lib/format";
   import { t } from "../lib/i18n";
 
   let { value, rate, dimmed }: { value: number; rate: boolean; dimmed: boolean } = $props();
 </script>
 
 <div class="counter" class:dimmed>
-  {rate ? t("perMinute", { n: formatCount(value) }) : formatCount(value)}
+  {rate ? t("perSecond", { n: formatRate(value) }) : formatCount(value)}
 </div>
 
 <style>

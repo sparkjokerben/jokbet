@@ -4,7 +4,7 @@ import type { Anim, AnimName } from "../sprites/jokbet";
 
 export type Blocked = "noperm" | "secure";
 export type Activity = "typing" | "click" | "scroll";
-export type OneShot = "poke" | "hearts" | "soccer" | "wave" | "wake";
+export type OneShot = "poke" | "hearts" | "soccer" | "wave" | "wake" | "typingEnd";
 
 export interface Signals {
   blocked: Blocked | null;
@@ -24,7 +24,7 @@ export function blockedBy(s: { permission: string; listening: boolean; secureInp
 }
 
 /** How long a reaction lasts after the last input of that kind. */
-export const REACT_MS: Record<Activity, number> = { typing: 800, scroll: 500, click: 300 };
+export const REACT_MS: Record<Activity, number> = { typing: 1500, scroll: 500, click: 300 };
 
 /** Highest priority first: blocked > dragged > celebrate > one-shot > sleep > react > idle. */
 export function pickAnim(s: Signals, now: number): AnimName {
@@ -46,24 +46,34 @@ export function nextDeadline(s: Signals, now: number): number {
 }
 
 /** Typing frame period: faster typing, faster paws. */
-export function typingFrameMs(kpm: number): number {
-  return Math.min(350, Math.max(70, Math.round(21000 / Math.max(kpm, 1))));
+export function typingFrameMs(keysPerSecond: number): number {
+  return Math.min(350, Math.max(70, Math.round(350 / Math.max(keysPerSecond, 0.1))));
 }
+
+const sum = (ms: number[]) => ms.reduce((a, b) => a + b, 0);
 
 /** Total duration of a one-shot animation. */
 export function animDuration(anim: Anim): number {
-  return anim.frames.reduce((sum, f) => sum + f.ms, 0);
+  return sum(anim.frames.map((f) => f.ms));
+}
+
+/** Duration of the frames a looping animation plays only once, before its loop. */
+export function introDuration(anim: Anim): number {
+  return sum(anim.frames.slice(0, anim.loop ? (anim.loopFrom ?? 0) : 0).map((f) => f.ms));
 }
 
 /**
  * Frame index at `elapsed` ms and ms until the next frame change
  * (Infinity once a one-shot animation rests on its last frame).
+ * `loopMs` overrides the period of the looping frames.
  */
-export function frameAt(anim: Anim, elapsed: number, msOverride?: number): { index: number; nextIn: number } {
-  const durations = anim.frames.map((f) => msOverride ?? f.ms);
-  const total = durations.reduce((a, b) => a + b, 0);
+export function frameAt(anim: Anim, elapsed: number, loopMs?: number): { index: number; nextIn: number } {
+  const loopFrom = anim.loop ? (anim.loopFrom ?? 0) : anim.frames.length;
+  const durations = anim.frames.map((f, i) => (i >= loopFrom ? (loopMs ?? f.ms) : f.ms));
+  const intro = sum(durations.slice(0, loopFrom));
+  const total = sum(durations);
   if (!anim.loop && elapsed >= total) return { index: durations.length - 1, nextIn: Infinity };
-  let t = anim.loop ? elapsed % total : elapsed;
+  let t = anim.loop && elapsed >= intro ? intro + ((elapsed - intro) % (total - intro)) : elapsed;
   for (let i = 0; i < durations.length; i++) {
     if (t < durations[i]) return { index: i, nextIn: durations[i] - t };
     t -= durations[i];

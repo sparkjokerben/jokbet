@@ -30,7 +30,7 @@ pub enum CounterKind {
     /// Today's total.
     #[default]
     Today,
-    /// Per-minute rate over the last few seconds.
+    /// Per-second rate over the last few seconds.
     Rate,
 }
 

@@ -102,6 +102,7 @@ pub fn open_panel(app: AppHandle, view: String) -> Result<(), String> {
         "stats" => Panel::Stats,
         "settings" => Panel::Settings,
         "onboarding" => Panel::Onboarding,
+        "tour" => Panel::Tour,
         other => return Err(format!("unknown panel {other}")),
     };
     crate::menu::open_panel(&app, panel);

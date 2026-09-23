@@ -92,7 +92,7 @@ if (view === "pet") {
   setTimeout(async () => {
     const today = fakeStats(1).days[0];
     await emit("app://status", { permission: "granted", listening: true, secureInput: false, paused: false });
-    await emit("pet://tick", { today, kpm: 186, cpm: 12, activity: null });
+    await emit("pet://tick", { today, kps: 3.1, cps: 0.2, activity: null });
     await emit("pet://hover", true);
     await emit("pet://celebrate", {
       hits: [{ id: "a", period: "daily", metric: "keys", level: 10000 }],

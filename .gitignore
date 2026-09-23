@@ -7,3 +7,5 @@ dist
 vite.config.ts.timestamp-*
 *.log
 sprites.png
+
+references/

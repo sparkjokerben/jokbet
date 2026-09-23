@@ -11,10 +11,10 @@ Jokbet 是一个轻量级桌宠，画风取自 Claude Code 的像素吉祥物。
 ## Features / 功能
 
 - Counts key presses (per key), left/right/middle clicks, scroll gestures and mouse travel (in metres), stored per day
-- A number above the pet's head: today's count or live per-minute speed, from the keyboard, the mouse, or both combined
+- A number above the pet's head: today's count or live per-second speed, from the keyboard, the mouse, or both combined
 - Hover the pet for today's stats; right-click (or use the tray icon) for the menu
-- Jokbet types along with you, reacts to clicks and scrolling, follows your cursor with its eyes, falls asleep when you're away, and likes being poked
-- Pick what it does when idle (breathe, juggle a soccer ball, look around) and when you click or double-click it (flinch, hearts, soccer, wave)
+- Jokbet gets out a laptop and types along with you, reacts to clicks and scrolling, follows your cursor with its eyes, falls asleep when you're away, and likes being poked
+- Pick what it does when idle (breathe, juggle a soccer ball, look around; its eyes keep following the cursor) and when you click or double-click it (flinch, hearts, soccer, wave)
 - 中英双语，跟随系统语言
 
 ## Privacy / 隐私

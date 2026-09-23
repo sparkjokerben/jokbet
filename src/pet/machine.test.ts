@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ANIMS } from "../sprites/jokbet";
-import { blockedBy, frameAt, nextDeadline, pickAnim, typingFrameMs, type Signals } from "./machine";
+import { blockedBy, frameAt, introDuration, nextDeadline, pickAnim, typingFrameMs, type Signals } from "./machine";
 
 const base = (over: Partial<Signals> = {}): Signals => ({
   blocked: null,
@@ -36,8 +36,8 @@ describe("pickAnim priorities", () => {
   });
   it("reacts briefly to input, then idles", () => {
     const s = base({ lastInputAt: 1000, lastActivity: "typing" });
-    expect(pickAnim(s, 1500)).toBe("typing");
-    expect(pickAnim(s, 1800)).toBe("idle");
+    expect(pickAnim(s, 2499)).toBe("typing");
+    expect(pickAnim(s, 2500)).toBe("idle");
     const c = base({ lastInputAt: 1000, lastActivity: "click" });
     expect(pickAnim(c, 1299)).toBe("click");
     expect(pickAnim(c, 1300)).toBe("idle");
@@ -47,8 +47,8 @@ describe("pickAnim priorities", () => {
 describe("nextDeadline", () => {
   it("returns the earliest future transition", () => {
     const s = base({ lastInputAt: 1000, lastActivity: "typing", celebrateUntil: 5000 });
-    expect(nextDeadline(s, 1200)).toBe(1800);
-    expect(nextDeadline(s, 1900)).toBe(5000);
+    expect(nextDeadline(s, 1200)).toBe(2500);
+    expect(nextDeadline(s, 2600)).toBe(5000);
     expect(nextDeadline(s, 6000)).toBe(61_000);
   });
 });
@@ -63,16 +63,21 @@ describe("frameAt", () => {
     expect(frameAt(ANIMS.poke, 100)).toEqual({ index: 0, nextIn: 100 });
     expect(frameAt(ANIMS.poke, 10_000)).toEqual({ index: 1, nextIn: Infinity });
   });
-  it("applies the typing override", () => {
-    expect(frameAt(ANIMS.typing, 100, 70)).toEqual({ index: 1, nextIn: 40 });
+  it("plays the intro once, then loops at the typing override", () => {
+    const intro = introDuration(ANIMS.typing);
+    expect(intro).toBe(460);
+    expect(frameAt(ANIMS.typing, 100, 70)).toEqual({ index: 0, nextIn: 60 });
+    expect(frameAt(ANIMS.typing, intro, 70)).toEqual({ index: 3, nextIn: 70 });
+    expect(frameAt(ANIMS.typing, intro + 100, 70)).toEqual({ index: 4, nextIn: 40 });
+    expect(frameAt(ANIMS.typing, intro + 140, 70)).toEqual({ index: 3, nextIn: 70 });
   });
 });
 
 describe("typingFrameMs", () => {
-  it("speeds up with KPM within bounds", () => {
+  it("speeds up with keys per second within bounds", () => {
     expect(typingFrameMs(0)).toBe(350);
-    expect(typingFrameMs(150)).toBe(140);
-    expect(typingFrameMs(1000)).toBe(70);
+    expect(typingFrameMs(2.5)).toBe(140);
+    expect(typingFrameMs(20)).toBe(70);
   });
 });
 

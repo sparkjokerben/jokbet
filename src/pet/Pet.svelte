@@ -23,16 +23,16 @@
   import Sprite from "./Sprite.svelte";
 
   const IDLE: Record<IdleAnim, AnimName> = { breathe: "idle", soccer: "soccerIdle", lookAround: "lookAround" };
-  /** Typing animation speed when live typing speed is turned off. */
-  const FIXED_KPM = 150;
+  /** Typing animation speed (keys per second) when live typing speed is turned off. */
+  const FIXED_KPS = 2.5;
   const CELEBRATE_MS = 3500;
 
   let rows = $state<string[]>([]);
   let settings = $state<Settings | null>(null);
   let tick = $state<Tick>({
     today: { keys: 0, clickLeft: 0, clickRight: 0, clickMiddle: 0, scrolls: 0, movePx: 0, moveMm: 0 },
-    kpm: 0,
-    cpm: 0,
+    kps: 0,
+    cps: 0,
     activity: null,
   });
   let paused = $state(false);
@@ -60,7 +60,7 @@
     settings = s;
     pet.setSleepAfter(s.sleepAfterMin * 60_000);
     pet.setIdleAnim(IDLE[s.idleAnim]);
-    if (!s.typingSpeed) pet.setKpm(FIXED_KPM);
+    if (!s.typingSpeed) pet.setKeysPerSecond(FIXED_KPS);
   }
 
   function applyStatus(s: Status) {
@@ -72,7 +72,7 @@
 
   function applyTick(t: Tick) {
     tick = t;
-    if (settings?.typingSpeed !== false) pet.setKpm(t.kpm);
+    if (settings?.typingSpeed !== false) pet.setKeysPerSecond(t.kps);
     if (t.activity) pet.input(t.activity);
   }
 

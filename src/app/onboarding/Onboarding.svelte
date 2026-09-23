@@ -2,7 +2,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import { disable, enable } from "@tauri-apps/plugin-autostart";
+  import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
   import { onMount } from "svelte";
   import { t } from "../../lib/i18n";
   import type { Settings, Status } from "../../lib/types";
@@ -13,6 +13,8 @@
 
   /** A granted permission that still yields no events this long needs a restart. */
   const RESTART_HINT_AFTER_MS = 3000;
+  /** Opened from the settings to see every step again. */
+  const tour = new URLSearchParams(location.search).has("tour");
 
   let settings = $state<Settings | null>(null);
   let status = $state<Status | null>(null);
@@ -23,7 +25,11 @@
 
   const needsPermission = $derived(status?.permission !== "notRequired");
   const steps = $derived<Step[]>(
-    settings?.onboarded ? ["permission"] : needsPermission ? ["welcome", "permission", "autostart"] : ["welcome", "autostart"],
+    settings?.onboarded && !tour
+      ? ["permission"]
+      : needsPermission
+        ? ["welcome", "permission", "autostart"]
+        : ["welcome", "autostart"],
   );
   const index = $derived(steps.indexOf(step));
   const last = $derived(index === steps.length - 1);
@@ -43,10 +49,8 @@
 
   async function finish() {
     try {
-      if (!settings?.onboarded) {
-        await (autostart ? enable() : disable()).catch(() => {});
-        await invoke("update_settings", { patch: { onboarded: true } });
-      }
+      if (!settings?.onboarded || tour) await (autostart ? enable() : disable()).catch(() => {});
+      if (!settings?.onboarded) await invoke("update_settings", { patch: { onboarded: true } });
       await getCurrentWindow().close();
     } catch (e) {
       error = String(e);
@@ -56,8 +60,10 @@
   onMount(() => {
     invoke<Settings>("get_settings").then((s) => {
       settings = s;
-      if (s.onboarded) step = "permission";
+      if (s.onboarded && !tour) step = "permission";
     });
+    // A replayed tour starts from the current autostart state.
+    if (tour) isEnabled().then((on) => (autostart = on), () => {});
     invoke<Status>("get_status").then(applyStatus, () => {});
     const un = listen<Status>("app://status", (e) => applyStatus(e.payload));
     const tick = setInterval(() => (now = Date.now()), 1000);

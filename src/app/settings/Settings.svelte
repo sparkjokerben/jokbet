@@ -178,9 +178,12 @@
         <Toggle label={t("autostart")} checked={autostart} onchange={setAutostart} />
       {/if}
       <Toggle label={t("pauseCounting")} checked={s.paused} onchange={(v) => update({ paused: v })} />
-      {#if isMac}
-        <button class="btn fix" onclick={() => invoke("open_panel", { view: "onboarding" })}>{t("fixPermission")}</button>
-      {/if}
+      <div class="actions">
+        <button class="btn" onclick={() => invoke("open_panel", { view: "tour" })}>{t("replayOnboarding")}</button>
+        {#if isMac}
+          <button class="btn" onclick={() => invoke("open_panel", { view: "onboarding" })}>{t("fixPermission")}</button>
+        {/if}
+      </div>
     </section>
 
     {#if error}
@@ -234,7 +237,10 @@
   .error {
     color: var(--danger);
   }
-  .fix {
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
     margin-top: 6px;
   }
 </style>

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { celebrationText, formatCount, formatDistance, headValue } from "./format";
+import { celebrationText, formatCount, formatDistance, formatRate, headValue } from "./format";
 import { detectLang, messages, t } from "./i18n";
 import type { HeadCounter, MilestoneHit, Tick } from "./types";
 
 const tick: Tick = {
   today: { keys: 1000, clickLeft: 50, clickRight: 20, clickMiddle: 5, scrolls: 7, movePx: 0, moveMm: 0 },
-  kpm: 180,
-  cpm: 12,
+  kps: 3.2,
+  cps: 0.4,
   activity: null,
 };
 const head = (over: Partial<HeadCounter>): HeadCounter => ({
@@ -23,9 +23,9 @@ describe("headValue", () => {
     expect(headValue(tick, head({ keyboard: false, mouse: true }))).toBe(75);
     expect(headValue(tick, head({ mouse: true }))).toBe(1075);
   });
-  it("sums per-minute rates", () => {
-    expect(headValue(tick, head({ kind: "rate" }))).toBe(180);
-    expect(headValue(tick, head({ kind: "rate", mouse: true }))).toBe(192);
+  it("sums per-second rates", () => {
+    expect(headValue(tick, head({ kind: "rate" }))).toBe(3.2);
+    expect(headValue(tick, head({ kind: "rate", mouse: true }))).toBeCloseTo(3.6);
   });
 });
 
@@ -34,6 +34,14 @@ describe("formatCount", () => {
     expect(formatCount(12345, "en")).toBe("12,345");
     expect(formatCount(123456, "en")).toBe("123.5K");
     expect(formatCount(123456, "zh")).toBe("12.3万");
+  });
+});
+
+describe("formatRate", () => {
+  it("shows one decimal, rounding float noise away", () => {
+    expect(formatRate(3.2 + 0.4, "en")).toBe("3.6");
+    expect(formatRate(0, "zh")).toBe("0.0");
+    expect(formatRate(12, "en")).toBe("12.0");
   });
 });
 

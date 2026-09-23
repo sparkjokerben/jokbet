@@ -141,7 +141,7 @@ pub fn open_panel<R: Runtime>(app: &AppHandle<R>, panel: Panel) {
     let title = match panel {
         Panel::Stats => t(lang, Text::Stats),
         Panel::Settings => t(lang, Text::Settings),
-        Panel::Onboarding => "jokerben-desktop-pet",
+        Panel::Onboarding | Panel::Tour => "jokerben-desktop-pet",
     };
     if let Err(e) = panels::open(app, panel, title.trim_end_matches('…')) {
         eprintln!("opening {panel:?} failed: {e}");

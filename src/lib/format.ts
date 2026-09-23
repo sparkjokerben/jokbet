@@ -5,7 +5,7 @@ export const clicks = (x: Totals) => x.clickLeft + x.clickRight + x.clickMiddle;
 
 /** The single number above the pet's head. */
 export function headValue(tick: Tick, h: HeadCounter): number {
-  if (h.kind === "rate") return (h.keyboard ? tick.kpm : 0) + (h.mouse ? tick.cpm : 0);
+  if (h.kind === "rate") return (h.keyboard ? tick.kps : 0) + (h.mouse ? tick.cps : 0);
   return (h.keyboard ? tick.today.keys : 0) + (h.mouse ? clicks(tick.today) : 0);
 }
 
@@ -16,6 +16,11 @@ export function formatCount(n: number, l: Lang = defaultLang): string {
   const opts: Intl.NumberFormatOptions =
     n < 100_000 ? {} : { notation: "compact", maximumFractionDigits: 1 };
   return new Intl.NumberFormat(locale(l), opts).format(n);
+}
+
+/** A per-second rate, always with one decimal. */
+export function formatRate(n: number, l: Lang = defaultLang): string {
+  return new Intl.NumberFormat(locale(l), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
 }
 
 export function formatDistance(mm: number, l: Lang = defaultLang): string {

@@ -5,6 +5,7 @@ import { ANIMS, compose, type AnimName, type Effect, type Pose } from "../sprite
 import {
   animDuration,
   frameAt,
+  introDuration,
   nextDeadline,
   pickAnim,
   typingFrameMs,
@@ -26,7 +27,9 @@ export class PetController {
   private gaze: readonly [number, number] = [0, 0];
   private blinkAt: number;
   private paused = false;
-  private kpm = 0;
+  private keysPerSecond = 0;
+  /** Typing resumed while the laptop was being put away: skip getting it out again. */
+  private resumeTyping = false;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private lastKey = "";
 
@@ -52,6 +55,10 @@ export class PetController {
   input(activity: Activity) {
     const t = this.now();
     if (this.anim === "sleep") this.oneShot("wake");
+    if (activity === "typing" && this.signals.oneShot?.anim === "typingEnd") {
+      this.signals.oneShot = null;
+      this.resumeTyping = true;
+    }
     if (activity === "click") this.animStart = t;
     this.signals.lastInputAt = t;
     this.signals.lastActivity = activity;
@@ -90,8 +97,8 @@ export class PetController {
     this.update();
   }
 
-  setKpm(kpm: number) {
-    this.kpm = kpm;
+  setKeysPerSecond(kps: number) {
+    this.keysPerSecond = kps;
   }
 
   setIdleAnim(anim: AnimName) {
@@ -113,22 +120,29 @@ export class PetController {
   private update() {
     clearTimeout(this.timer);
     const t = this.now();
-    const next = pickAnim(this.signals, t);
+    let next = pickAnim(this.signals, t);
+    if (this.anim === "typing" && next === "idle") {
+      // Put the laptop away before idling.
+      this.signals.oneShot = { anim: "typingEnd", until: t + animDuration(ANIMS.typingEnd) };
+      next = "typingEnd";
+    }
     if (next !== this.anim) {
       this.anim = next;
-      this.animStart = t;
+      this.animStart = next === "typing" && this.resumeTyping ? t - introDuration(ANIMS.typing) : t;
     }
+    this.resumeTyping = false;
     const anim = ANIMS[this.anim === "idle" ? this.idleAnim : this.anim];
     const { index, nextIn } = frameAt(
       anim,
       t - this.animStart,
-      this.anim === "typing" ? typingFrameMs(this.kpm) : undefined,
+      this.anim === "typing" ? typingFrameMs(this.keysPerSecond) : undefined,
     );
     const pose: Pose = { ...anim.frames[index].pose };
 
     let wakeAt = Math.min(t + nextIn, nextDeadline(this.signals, t));
     if (this.anim === "idle" || this.anim === "scroll") {
-      if (this.anim === "idle") pose.gaze ??= this.gaze;
+      // Whatever the idle animation does, the eyes stay on the cursor.
+      if (this.anim === "idle") pose.gaze = this.gaze;
       if (t >= this.blinkAt + BLINK_MS) this.blinkAt = t + blinkGap();
       if (t >= this.blinkAt) pose.eyes = "closed";
       wakeAt = Math.min(wakeAt, t >= this.blinkAt ? this.blinkAt + BLINK_MS : this.blinkAt);

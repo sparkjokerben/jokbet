@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { clicks, formatCount, formatDistance } from "../lib/format";
+  import { clicks, formatCount, formatDistance, formatRate } from "../lib/format";
   import { t } from "../lib/i18n";
   import type { Tick } from "../lib/types";
 
@@ -24,7 +24,7 @@
     <dd>{formatDistance(d.moveMm)}</dd>
     {#if showSpeed}
       <dt>{t("speed")}</dt>
-      <dd>{t("perMinute", { n: tick.kpm })}</dd>
+      <dd>{t("perSecond", { n: formatRate(tick.kps) })}</dd>
     {/if}
   </dl>
 </div>

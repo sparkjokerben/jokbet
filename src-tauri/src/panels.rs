@@ -7,7 +7,10 @@ use tauri::{AppHandle, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
 pub enum Panel {
     Stats,
     Settings,
+    /// First-run steps, or only the permission step once onboarded.
     Onboarding,
+    /// Every onboarding step again, asked for from the settings.
+    Tour,
 }
 
 impl Panel {
@@ -15,7 +18,14 @@ impl Panel {
         match self {
             Panel::Stats => "stats",
             Panel::Settings => "settings",
-            Panel::Onboarding => "onboarding",
+            Panel::Onboarding | Panel::Tour => "onboarding",
+        }
+    }
+
+    fn query(self) -> &'static str {
+        match self {
+            Panel::Tour => "view=onboarding&tour",
+            _ => "",
         }
     }
 
@@ -23,7 +33,7 @@ impl Panel {
         match self {
             Panel::Stats => (820.0, 640.0),
             Panel::Settings => (520.0, 660.0),
-            Panel::Onboarding => (480.0, 520.0),
+            Panel::Onboarding | Panel::Tour => (480.0, 520.0),
         }
     }
 }
@@ -35,7 +45,11 @@ pub fn open<R: Runtime>(app: &AppHandle<R>, panel: Panel, title: &str) -> tauri:
         return window.set_focus();
     }
     let (w, h) = panel.size();
-    let url = WebviewUrl::App(format!("app.html?view={}", panel.label()).into());
+    let query = match panel.query() {
+        "" => format!("view={}", panel.label()),
+        q => q.to_string(),
+    };
+    let url = WebviewUrl::App(format!("app.html?{query}").into());
     let window = WebviewWindowBuilder::new(app, panel.label(), url)
         .title(title)
         .inner_size(w, h)

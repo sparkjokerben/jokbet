@@ -91,9 +91,9 @@ impl RuntimeHandle {
 #[serde(rename_all = "camelCase")]
 pub struct Tick {
     pub today: Totals,
-    /// Keys and clicks per minute over the last few seconds.
-    pub kpm: u32,
-    pub cpm: u32,
+    /// Keys and clicks per second over the last few seconds.
+    pub kps: f64,
+    pub cps: f64,
     /// Most recent activity since the previous tick.
     pub activity: Option<Activity>,
 }
@@ -422,8 +422,8 @@ impl<R: Runtime> Worker<R> {
         let now = input::now_ms();
         let tick = Tick {
             today: self.agg.today.totals.clone(),
-            kpm: self.agg.keys_per_minute(now),
-            cpm: self.agg.clicks_per_minute(now),
+            kps: self.agg.keys_per_second(now),
+            cps: self.agg.clicks_per_second(now),
             activity: self.activity.take(),
         };
         if self.last_tick.as_ref() != Some(&tick) {

@@ -156,12 +156,12 @@ impl Aggregator {
         }
     }
 
-    pub fn keys_per_minute(&self, t_ms: u64) -> u32 {
-        self.keys_rate.per_minute(t_ms)
+    pub fn keys_per_second(&self, t_ms: u64) -> f64 {
+        self.keys_rate.per_second(t_ms)
     }
 
-    pub fn clicks_per_minute(&self, t_ms: u64) -> u32 {
-        self.clicks_rate.per_minute(t_ms)
+    pub fn clicks_per_second(&self, t_ms: u64) -> f64 {
+        self.clicks_rate.per_second(t_ms)
     }
 
     /// Hands over what still needs saving.
@@ -293,7 +293,7 @@ mod tests {
         assert_eq!(a.ingest(key(0, "KeyA", true), &map), Some(Activity::Typing));
         feed(&mut a, click(10, MouseButton::Left));
         assert!(a.today.is_empty());
-        assert_eq!(a.keys_per_minute(100), 0);
+        assert_eq!(a.keys_per_second(100), 0.0);
     }
 
     #[test]
@@ -321,7 +321,7 @@ mod tests {
             &mut a,
             (0..10).flat_map(|i| [key(i * 100, "KeyA", true), key(i * 100 + 50, "KeyA", false)]),
         );
-        assert_eq!(a.keys_per_minute(1000), 60);
-        assert_eq!(a.clicks_per_minute(1000), 0);
+        assert_eq!(a.keys_per_second(1000), 2.0);
+        assert_eq!(a.clicks_per_second(1000), 0.0);
     }
 }

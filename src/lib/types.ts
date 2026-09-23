@@ -52,8 +52,9 @@ export interface Totals {
 
 export interface Tick {
   today: Totals;
-  kpm: number;
-  cpm: number;
+  /** Keys and clicks per second over the last few seconds. */
+  kps: number;
+  cps: number;
   activity: Activity | null;
 }
 
