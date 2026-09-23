@@ -72,9 +72,7 @@ jobs:
           # app's designated requirement stable, so macOS keeps the Input
           # Monitoring grant across updates. Falls back to ad-hoc signing.
           identity="-"
-          # The name of the certificate the P12 secret holds; it is not
-          # renamed here, since that would mean issuing a new one.
-          name="jokerben-desktop-pet Self-Signed"
+          name="Jokbet Self-Signed"
           if [ -n "$P12" ]; then
             kc="$RUNNER_TEMP/signing.keychain-db"
             kcp="$(openssl rand -hex 16)"
