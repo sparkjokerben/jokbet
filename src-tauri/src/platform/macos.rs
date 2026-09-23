@@ -112,7 +112,11 @@ const VIBRANCY_POPOVER: isize = 6;
 const BLENDING_BEHIND_WINDOW: isize = 0;
 const STATE_ACTIVE: isize = 1;
 
-pub fn set_glass(ns_window: *mut std::ffi::c_void, rect: Option<(f64, f64, f64, f64)>, radius: f64) {
+pub fn set_glass(
+    ns_window: *mut std::ffi::c_void,
+    rect: Option<(f64, f64, f64, f64)>,
+    radius: f64,
+) {
     use objc2::msg_send;
     use objc2::runtime::{AnyClass, AnyObject};
     // SAFETY: the NSWindow is alive and this runs on the main thread.
@@ -141,8 +145,7 @@ pub fn set_glass(ns_window: *mut std::ffi::c_void, rect: Option<(f64, f64, f64, 
                     return;
                 }
                 let _: () = msg_send![view, setTag: GLASS_TAG];
-                let is_vibrancy: objc2::runtime::Bool = match AnyClass::get(c"NSVisualEffectView")
-                {
+                let is_vibrancy: objc2::runtime::Bool = match AnyClass::get(c"NSVisualEffectView") {
                     Some(class) => msg_send![view, isKindOfClass: class],
                     None => false.into(),
                 };
@@ -177,7 +180,11 @@ pub fn set_glass(ns_window: *mut std::ffi::c_void, rect: Option<(f64, f64, f64, 
 /// the view is flipped.
 fn frame_in_view(rect: (f64, f64, f64, f64), height: f64, flipped: objc2::runtime::Bool) -> NSRect {
     let (x, y, w, h) = rect;
-    let top = if flipped.as_bool() { y } else { height - (y + h) };
+    let top = if flipped.as_bool() {
+        y
+    } else {
+        height - (y + h)
+    };
     NSRect::new(
         objc2_foundation::NSPoint::new(x, top),
         objc2_foundation::NSSize::new(w, h),
@@ -194,7 +201,9 @@ unsafe fn bounds(view: *mut objc2::runtime::AnyObject) -> NSRect {
     objc2::msg_send![view, bounds]
 }
 
-unsafe fn find_glass(content: *mut objc2::runtime::AnyObject) -> Option<*mut objc2::runtime::AnyObject> {
+unsafe fn find_glass(
+    content: *mut objc2::runtime::AnyObject,
+) -> Option<*mut objc2::runtime::AnyObject> {
     use objc2::msg_send;
     use objc2::runtime::AnyObject;
     let subviews: *mut AnyObject = msg_send![content, subviews];

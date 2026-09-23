@@ -1,7 +1,7 @@
 use crate::engine::distance::Display;
 use windows::core::BOOL;
-use windows::Win32::Foundation::{LPARAM, RECT};
 use windows::Win32::Foundation::HWND;
+use windows::Win32::Foundation::{LPARAM, RECT};
 use windows::Win32::Graphics::Gdi::{
     CreateRectRgn, DeleteObject, EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, HRGN,
     MONITORINFO,
@@ -48,7 +48,7 @@ unsafe extern "system" fn collect(monitor: HMONITOR, _: HDC, _: *mut RECT, data:
 /// coordinates; `None` clears it.
 pub fn set_glass(hwnd: HWND, rect: Option<(i32, i32, i32, i32)>) {
     use windows::Win32::Graphics::Dwm::{
-        DwmEnableBlurBehindWindow, DWM_BLURBEHIND, DWM_BB_BLURREGION, DWM_BB_ENABLE,
+        DwmEnableBlurBehindWindow, DWM_BB_BLURREGION, DWM_BB_ENABLE, DWM_BLURBEHIND,
     };
     let (enabled, region) = match rect {
         Some((x, y, w, h)) => {
