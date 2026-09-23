@@ -407,6 +407,22 @@ html[data-lang="en"] [data-lang="zh"] {
   opacity: 0.72;
 }
 
+/* A button that reads as a link: the one place inside prose that warms up,
+   because what it does is the pet's own. */
+.linkish {
+  border: 0;
+  background: none;
+  padding: 0;
+  margin-left: 0.4em;
+  font: inherit;
+  font-size: 13px;
+  color: var(--pet-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
 :focus-visible {
   outline: 2px solid var(--pet);
   outline-offset: 2px;
