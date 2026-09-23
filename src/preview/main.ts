@@ -36,12 +36,13 @@ function fakeStats(days: number) {
   return { days: out, keys, lifetime: { ...out[0], keys: 1_234_567, moveMm: 12_345_678 } };
 }
 
+// Mirrors the shipped defaults (see Settings::default in src-tauri).
 let settings: Settings = {
-  petScale: 5,
+  petScale: 3.5,
   petPosition: null,
-  headCounter: { enabled: true, kind: "today", keyboard: true, mouse: false },
-  idleAnim: "breathe",
-  clickAnim: "poke",
+  headCounter: { enabled: true, kind: "today", keyboard: true, mouse: true },
+  idleAnim: "soccer",
+  clickAnim: "wave",
   doubleClickAnim: "hearts",
   bubble: true,
   liquidGlass: true,
@@ -49,7 +50,7 @@ let settings: Settings = {
   typingSpeed: true,
   milestones: true,
   customMilestones: [{ id: "a", period: "daily", metric: "keys", threshold: 30000, repeat: false }],
-  sleepAfterMin: 5,
+  sleepAfterMin: 1,
   paused: false,
   onboarded: true,
 };
@@ -104,7 +105,7 @@ if (view === "pet") {
   const frame = document.createElement("iframe");
   frame.src = "/preview.html?view=pet-frame";
   // The size of the real pet window at the scale in the fake settings below.
-  frame.style.cssText = "width:220px;height:310px;border:1px dashed #555;margin:20px";
+  frame.style.cssText = "width:220px;height:271px;border:1px dashed #555;margin:20px";
   document.body.append(frame);
 } else if (view === "pet-frame") {
   // pet.html has no theme; undo the one imported for the app views.

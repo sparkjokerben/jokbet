@@ -8,7 +8,7 @@ use std::sync::Mutex;
 /// sized from this, so the slider's range is what keeps it sane.
 pub const PET_SCALE_MIN: f64 = 3.0;
 pub const PET_SCALE_MAX: f64 = 7.0;
-pub const PET_SCALE_DEFAULT: f64 = 5.0;
+pub const PET_SCALE_DEFAULT: f64 = 3.5;
 /// The tint slider's range, in percent of the card colour.
 pub const GLASS_TINT_MAX: u32 = 60;
 
@@ -40,7 +40,7 @@ impl Default for HeadCounter {
             enabled: true,
             kind: CounterKind::Today,
             keyboard: true,
-            mouse: false,
+            mouse: true,
         }
     }
 }
@@ -49,8 +49,8 @@ impl Default for HeadCounter {
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum IdleAnim {
-    #[default]
     Breathe,
+    #[default]
     Soccer,
     LookAround,
 }
@@ -140,8 +140,8 @@ impl Default for Settings {
             pet_scale: PET_SCALE_DEFAULT,
             pet_position: None,
             head_counter: HeadCounter::default(),
-            idle_anim: IdleAnim::Breathe,
-            click_anim: ActionAnim::Poke,
+            idle_anim: IdleAnim::Soccer,
+            click_anim: ActionAnim::Wave,
             double_click_anim: ActionAnim::Hearts,
             bubble: true,
             liquid_glass: false,
@@ -149,7 +149,7 @@ impl Default for Settings {
             typing_speed: true,
             milestones: true,
             custom_milestones: Vec::new(),
-            sleep_after_min: 5,
+            sleep_after_min: 1,
             paused: false,
             onboarded: false,
         }
@@ -373,6 +373,20 @@ mod tests {
         s.custom_milestones[0].repeat = false;
         s.custom_milestones[0].threshold = 100.0;
         assert!(s.validate().is_ok());
+    }
+
+    /// The defaults a fresh install starts from, as chosen in the settings UI.
+    #[test]
+    fn a_fresh_install_gets_the_shipped_defaults() {
+        let s = Settings::default();
+        assert_eq!(s.pet_scale, 3.5);
+        assert!(s.head_counter.keyboard && s.head_counter.mouse);
+        assert_eq!(s.head_counter.kind, CounterKind::Today);
+        assert_eq!(s.idle_anim, IdleAnim::Soccer);
+        assert_eq!(s.click_anim, ActionAnim::Wave);
+        assert_eq!(s.double_click_anim, ActionAnim::Hearts);
+        assert_eq!(s.sleep_after_min, 1);
+        assert!(!s.liquid_glass, "the material starts switched off");
     }
 
     #[test]

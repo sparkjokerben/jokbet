@@ -5,23 +5,34 @@
   import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
   import { onMount } from "svelte";
   import { t } from "../../lib/i18n";
-  import type { Settings, Status } from "../../lib/types";
+  import type { ActionAnim, IdleAnim, Settings, Status } from "../../lib/types";
+  import { PetController } from "../../pet/controller";
+  import { attachGestures } from "../../pet/gestures";
   import Sprite from "../../pet/Sprite.svelte";
-  import { compose } from "../../sprites/jokbet";
+  import type { AnimName } from "../../sprites/jokbet";
 
   type Step = "welcome" | "permission" | "autostart";
 
+  /** The idle animation setting, as the sprite knows it. */
+  const IDLE: Record<IdleAnim, AnimName> = { breathe: "idle", soccer: "soccer", lookAround: "lookAround" };
   /** A granted permission that still yields no events this long needs a restart. */
   const RESTART_HINT_AFTER_MS = 3000;
   /** Opened from the settings to see every step again. */
   const tour = new URLSearchParams(location.search).has("tour");
 
+  let rows = $state<string[]>([]);
+  let heroEl: HTMLDivElement;
   let settings = $state<Settings | null>(null);
   let status = $state<Status | null>(null);
   let step = $state<Step>("welcome");
   let autostart = $state(true);
   let grantedAt = $state<number | null>(null);
   let now = $state(Date.now());
+
+  // The mascot here is the pet itself, so the steps show what it really does.
+  const pet = new PetController((r) => (rows = r));
+  // Bar the nap: it should not be asleep while the user reads the steps.
+  pet.setSleepAfter(Number.POSITIVE_INFINITY);
 
   const needsPermission = $derived(status?.permission !== "notRequired");
   const steps = $derived<Step[]>(
@@ -36,15 +47,25 @@
   const needsRestart = $derived(
     status?.permission === "granted" && !status.listening && grantedAt !== null && now - grantedAt > RESTART_HINT_AFTER_MS,
   );
-  // Always open-eyed here; a question mark while it cannot see input yet.
-  const face = $derived(
-    compose(step === "permission" && !status?.listening ? { fx: ["question"] } : {}),
-  );
+  // On the permission step it cannot see input yet: the pet's own way of
+  // saying so is crossed eyes and a question mark.
+  const cannotSee = $derived(step === "permission" && !status?.listening);
   let error = $state("");
+
+  $effect(() => pet.setBlocked(cannotSee ? "noperm" : null));
 
   function applyStatus(s: Status) {
     if (s.permission === "granted" && status?.permission !== "granted") grantedAt = Date.now();
     status = s;
+  }
+
+  function applySettings(s: Settings) {
+    settings = s;
+    pet.setIdleAnim(IDLE[s.idleAnim]);
+  }
+
+  function react(anim: ActionAnim | undefined) {
+    if (anim) pet.oneShot(anim);
   }
 
   async function finish() {
@@ -58,8 +79,16 @@
   }
 
   onMount(() => {
+    // Same click timing as the pet: one click reacts, two clicks react twice.
+    const detach = attachGestures(heroEl, {
+      press: () => {},
+      click: () => react(settings?.clickAnim),
+      doubleClick: () => react(settings?.doubleClickAnim),
+      dragStart: () => {},
+      context: () => {},
+    });
     invoke<Settings>("get_settings").then((s) => {
-      settings = s;
+      applySettings(s);
       if (s.onboarded && !tour) step = "permission";
     });
     // A replayed tour starts from the current autostart state.
@@ -68,6 +97,8 @@
     const un = listen<Status>("app://status", (e) => applyStatus(e.payload));
     const tick = setInterval(() => (now = Date.now()), 1000);
     return () => {
+      detach();
+      pet.destroy();
       un.then((f) => f());
       clearInterval(tick);
     };
@@ -75,7 +106,7 @@
 </script>
 
 <main>
-  <div class="hero"><Sprite rows={face} scale={6} /></div>
+  <div class="hero" bind:this={heroEl}><Sprite {rows} scale={6} /></div>
 
   {#if step === "welcome"}
     <h1>{t("welcomeTitle")}</h1>
@@ -111,9 +142,16 @@
   {/if}
 
   <footer>
-    {#if index > 0}
-      <button class="btn" onclick={() => (step = steps[index - 1])}>{t("back")}</button>
-    {/if}
+    <!-- The first step has nothing to go back to, but the button keeps its
+         place so the dots stay put when the steps change. -->
+    <button
+      class="btn back"
+      class:ghost={index === 0}
+      disabled={index === 0}
+      onclick={() => (step = steps[index - 1])}
+    >
+      {t("back")}
+    </button>
     <span class="dots" aria-hidden="true">
       {#each steps as s (s)}<span class:on={s === step}></span>{/each}
     </span>
@@ -136,6 +174,7 @@
     display: flex;
     justify-content: center;
     margin-bottom: 8px;
+    cursor: pointer;
   }
   h1 {
     font-size: 18px;
@@ -173,6 +212,14 @@
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+  footer .btn {
+    /* One width for both ends, so the dots never shift when "next" becomes
+       "done" or when a step gains the back button. */
+    min-width: 84px;
+  }
+  .ghost {
+    visibility: hidden;
   }
   .dots {
     flex: 1;

@@ -3,7 +3,7 @@
 /** Pixels per sprite cell; the slider covers the same range as PET_SCALE_* in Rust. */
 export const PET_SCALE_MIN = 3;
 export const PET_SCALE_MAX = 7;
-export const PET_SCALE_DEFAULT = 5;
+export const PET_SCALE_DEFAULT = 3.5;
 /** The tint slider's range, in percent; matches GLASS_TINT_MAX in Rust. */
 export const GLASS_TINT_MAX = 60;
 export type CounterKind = "today" | "rate";
