@@ -972,7 +972,7 @@ function ne(e, t) {
 }
 //#endregion
 //#region src/pet/web.ts
-var re = 8, ie = 40, ae = 2200, J = 5, oe = 1600, se = 4200, ce = 260, Y = 8, X = "http://www.w3.org/2000/svg";
+var re = 8, ie = 40, ae = 2200, J = 5, oe = 3300, se = 1600, ce = 4200, le = 260, Y = 8, X = "http://www.w3.org/2000/svg";
 function Z(e, t, n) {
 	let r = (e) => e < -40 ? -1 : +(e > ie);
 	return [r(e - (n.x + n.w / 2)), r(t - (n.y + n.h / 2))];
@@ -993,7 +993,7 @@ function $(e, t, n, r = {
 		maxY: Math.max(a, s - n)
 	};
 }
-function le(e, t = {}) {
+function ue(e, t = {}) {
 	let n = t.scale ?? 6, i = t.still ?? !1, o = t.sleepAfterMs ?? 6e4, s = t.idleAnim ?? "soccer", c = t.clickAnim ?? "wave", l = t.doubleClickAnim ?? "hearts", u = t.counter ?? !0, d = t.lang ?? "zh", f = document.createElement("div");
 	f.className = "pet-stage", f.style.setProperty("--pet-w", `${40 * n}px`), f.style.setProperty("--pet-h", `${26 * n}px`), f.style.setProperty("--pet-above", `${16 * n + re}px`), f.style.setProperty("--pet-shift", `${-2 * n}px`);
 	let p = document.createElement("div");
@@ -1024,7 +1024,7 @@ function le(e, t = {}) {
 	}, () => performance.now());
 	x.setSleepAfter(o), x.setIdleAnim(s);
 	let S, C = null;
-	function w(e, t = oe) {
+	function w(e, t = se) {
 		C !== e && (C = e, v(Q(e)), clearTimeout(S), S = setTimeout(() => {
 			C = null, v(Q("idle"));
 		}, t));
@@ -1051,6 +1051,9 @@ function le(e, t = {}) {
 			case "celebrate":
 				x.celebrate(3500);
 				break;
+			case "lookAround":
+				x.setIdleAnim("lookAround"), setTimeout(() => x.setIdleAnim(s), oe);
+				break;
 			default: x.oneShot(e);
 		}
 	}
@@ -1058,7 +1061,7 @@ function le(e, t = {}) {
 		E(), O(), i ? w(e) : x.oneShot(e);
 	}
 	let j;
-	function M(e, t = se) {
+	function M(e, t = ce) {
 		if (clearTimeout(j), i) {
 			e && w(e, t);
 			return;
@@ -1080,7 +1083,7 @@ function le(e, t = {}) {
 		let t = $(P() ?? I.home, I.w, I.h), n = Math.min(Math.max(I.box.left + (e.clientX - I.pointer.x), t.minX), t.maxX), r = Math.min(Math.max(I.box.top + (e.clientY - I.pointer.y), t.minY), t.maxY);
 		f.style.translate = `${n - I.home.left}px ${r - I.home.top}px`;
 	}, R = () => {
-		I && (I = null, window.removeEventListener("pointermove", L), window.removeEventListener("pointerup", R), window.removeEventListener("pointercancel", R), x.setDragging(!1), f.classList.add("pet-home"), f.style.translate = "0px 0px", setTimeout(() => f.classList.remove("pet-home"), ce));
+		I && (I = null, window.removeEventListener("pointermove", L), window.removeEventListener("pointerup", R), window.removeEventListener("pointercancel", R), x.setDragging(!1), f.classList.add("pet-home"), f.style.translate = "0px 0px", setTimeout(() => f.classList.remove("pet-home"), le));
 	}, z = ne(f, {
 		press: () => x.pressed(),
 		click: () => A(c),
@@ -1135,4 +1138,4 @@ function le(e, t = {}) {
 	};
 }
 //#endregion
-export { $ as clampBox, le as createPet, Z as gazeFor, Q as stillFrame };
+export { $ as clampBox, ue as createPet, Z as gazeFor, Q as stillFrame };

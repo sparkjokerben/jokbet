@@ -25,6 +25,8 @@ const GAZE_DEAD_ZONE_PX = 40;
 /** What a "type along" demo types for, and how fast. */
 const DEMO_TYPING_MS = 2200;
 const DEMO_TYPING_KPS = 5;
+/** How long "look around" is the idle animation for, plus a moment. */
+const DEMO_LOOK_MS = 3300;
 /** How long a reduced-motion pose stays up before the pet sits again. */
 const STILL_HOLD_MS = 1600;
 /** How long a blocked face (blindfold, no permission) is shown for. */
@@ -37,7 +39,7 @@ const EDGE = 8;
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 /** The chips beside the hero, and what each one makes the pet do. */
-export type Demo = "wave" | "hearts" | "soccer" | "typing" | "sleep" | "celebrate";
+export type Demo = "wave" | "hearts" | "soccer" | "typing" | "sleep" | "celebrate" | "lookAround";
 
 export interface WebPetOptions {
   /** Integer, so every sprite pixel is the same number of screen pixels. */
@@ -232,6 +234,12 @@ export function createPet(host: HTMLElement, options: WebPetOptions = {}): WebPe
         break;
       case "celebrate":
         controller.celebrate(3500);
+        break;
+      case "lookAround":
+        // The app sets this one as the idle animation rather than playing it as
+        // a one-shot, so ask for it and put the visitor's pet back afterwards.
+        controller.setIdleAnim("lookAround");
+        setTimeout(() => controller.setIdleAnim(idleAnim), DEMO_LOOK_MS);
         break;
       default:
         controller.oneShot(name);
