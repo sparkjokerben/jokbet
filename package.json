@@ -13,7 +13,11 @@
     "test": "vitest run --passWithNoTests",
     "tauri": "tauri",
     "icons": "node scripts/render-sprites.ts icons src-tauri/icons/source && tauri icon src-tauri/icons/source/icon-source.png && rm -rf src-tauri/icons/android src-tauri/icons/ios",
-    "sprites": "node scripts/render-sprites.ts sheet sprites.png"
+    "sprites": "node scripts/render-sprites.ts sheet sprites.png",
+    "site:assets": "node scripts/render-site-assets.ts gen site/assets",
+    "site:check": "node scripts/render-site-assets.ts check site/assets && node scripts/make-manifest.ts check site/latest.baked.json",
+    "site:manifest": "node scripts/make-manifest.ts baked --out site/latest.baked.json",
+    "site:dev": "wrangler pages dev site"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",
@@ -21,6 +25,7 @@
     "@tauri-apps/plugin-dialog": "^2.7.3"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260923.1",
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@tauri-apps/cli": "^2.11.5",
     "@types/node": "^26.6.2",

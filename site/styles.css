@@ -1,0 +1,486 @@
+/* The site's look: the app's own pixels and palette, one column, nothing that
+   does not earn its place. Colours come from src/app/theme.css and the sprite
+   palette, so the page and the pet read as the same thing. */
+
+:root {
+  --paper: #f5f4f0;
+  --card: #fcfcfb;
+  --line: #e2e0da;
+  --ink: #1f1e1d;
+  --ink-soft: #52514e;
+  --ink-mute: #7c7a74;
+  --accent: #d97757;
+  --accent-deep: #b85a3a;
+  --accent-ink: #ffffff;
+  --pet-shadow: rgba(31, 30, 29, 0.12);
+  --measure: 68ch;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #141413;
+    --card: #1a1a19;
+    --line: #34332f;
+    --ink: #f5f4f0;
+    --ink-soft: #c3c2b7;
+    --ink-mute: #8f8d85;
+    --accent: #d26f4f;
+    --accent-deep: #e8906f;
+    --accent-ink: #1a1a19;
+    --pet-shadow: rgba(0, 0, 0, 0.4);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 15px/1.6 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Language: both are in the markup, one is shown. */
+[data-lang="zh"] .i18n[data-lang="en"],
+[data-lang="en"] .i18n[data-lang="zh"] {
+  display: none;
+}
+
+.page {
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 20px 24px 72px;
+}
+
+/* --- the top strip and the language switch ------------------------------- */
+
+.top {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 28px;
+}
+
+.langs {
+  display: flex;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.langs button {
+  border: 0;
+  background: none;
+  color: var(--ink-mute);
+  font: inherit;
+  font-size: 13px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.langs button[aria-pressed="true"] {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 2px var(--pet-shadow);
+}
+
+/* --- hero ---------------------------------------------------------------- */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  column-gap: 32px;
+  padding-bottom: 56px;
+}
+
+.wordmark {
+  display: block;
+  width: 140px;
+  height: 28px;
+  margin-bottom: 20px;
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-size: clamp(25px, 3.6vw, 34px);
+  line-height: 1.25;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  max-width: 22ch;
+  text-wrap: balance;
+}
+
+.lede {
+  margin: 0 0 16px;
+  color: var(--ink-soft);
+  max-width: var(--measure);
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 22px 0 14px;
+}
+
+.meta {
+  margin: 0;
+  color: var(--ink-mute);
+  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.status-version {
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-pet {
+  align-self: end;
+}
+
+.hero-pet .sprite {
+  cursor: pointer;
+  margin: 0 auto;
+}
+
+/* The desktop edge the pet stands on: one hairline across the whole hero. */
+.screen-line {
+  grid-column: 1 / -1;
+  display: block;
+  height: 2px;
+  margin-top: 0;
+  background: var(--line);
+}
+
+/* --- the mascot's flipbooks --------------------------------------------- */
+
+.sprite {
+  display: block;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  /* the sheets are one row of frames, so only the x position changes */
+  background-position: 0 0;
+  /* The first frame, so the pet is there before (and without) app.js. The
+     size is GRID_W/GRID_H * the scale in scripts/render-site-assets.ts. */
+  width: 240px;
+  height: 156px;
+}
+
+.sprite[data-flipbook="idle"] {
+  background-image: url(/assets/jokbet-idle.png);
+}
+
+.sprite[data-flipbook="soccer"] {
+  background-image: url(/assets/jokbet-soccer.png);
+}
+
+/* --- sections ------------------------------------------------------------ */
+
+.block {
+  padding: 44px 0;
+  border-bottom: 2px solid var(--line);
+}
+
+.block:last-of-type {
+  border-bottom: 0;
+}
+
+h2 {
+  margin: 0 0 16px;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+}
+
+h3 {
+  margin: 26px 0 8px;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+p {
+  max-width: var(--measure);
+}
+
+.block > p,
+.block > ol,
+.block > ul,
+.block > details {
+  max-width: var(--measure);
+}
+
+.note {
+  color: var(--ink-mute);
+  font-size: 13px;
+}
+
+code,
+pre {
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+pre {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  overflow-x: auto;
+}
+
+ol,
+ul {
+  padding-left: 22px;
+}
+
+li {
+  margin-bottom: 8px;
+}
+
+li::marker {
+  color: var(--ink-mute);
+}
+
+/* --- downloads ----------------------------------------------------------- */
+
+.files {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  overflow: hidden;
+}
+
+.file {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 16px;
+  padding: 12px 14px;
+  margin: 0;
+}
+
+.file + .file {
+  border-top: 1px solid var(--line);
+}
+
+.file-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.file-main:hover .file-label {
+  color: var(--accent-deep);
+}
+
+.file-label {
+  font-weight: 600;
+}
+
+.file-meta,
+.file-mirror,
+.file-sha {
+  color: var(--ink-mute);
+  font-size: 13px;
+}
+
+.file-mirror {
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.file-mirror:hover {
+  color: var(--accent-deep);
+}
+
+.file-sha {
+  grid-column: 1 / -1;
+}
+
+.file-sha summary {
+  cursor: pointer;
+  color: var(--ink-mute);
+  font-size: 13px;
+}
+
+.file-sha code {
+  display: block;
+  margin-top: 6px;
+  word-break: break-all;
+  color: var(--ink-soft);
+}
+
+#download-status[data-state="github"] {
+  color: var(--accent-deep);
+}
+
+.notes {
+  white-space: pre-wrap;
+  color: var(--ink-soft);
+}
+
+/* --- features and figures ------------------------------------------------ */
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 32px;
+}
+
+.features {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.features li {
+  max-width: 46ch;
+}
+
+.figure {
+  margin: 6px 0 0;
+  text-align: center;
+}
+
+.figure .sprite {
+  margin: 0 auto;
+}
+
+.figure figcaption {
+  margin-top: 10px;
+  color: var(--ink-mute);
+  font-size: 13px;
+  max-width: 18ch;
+  margin-inline: auto;
+}
+
+/* --- footer -------------------------------------------------------------- */
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 0 0 20px;
+}
+
+.links a {
+  color: var(--ink);
+}
+
+blockquote {
+  margin: 0;
+  padding: 14px 16px;
+  border-left: 3px solid var(--line);
+  background: var(--card);
+  border-radius: 0 8px 8px 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  max-width: var(--measure);
+}
+
+blockquote p {
+  margin: 0 0 8px;
+}
+
+blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* --- interactive bits ---------------------------------------------------- */
+
+a {
+  color: var(--accent-deep);
+  text-underline-offset: 2px;
+}
+
+.btn {
+  display: inline-block;
+  padding: 9px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn:hover {
+  border-color: var(--accent);
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.btn-primary:hover {
+  background: var(--accent-deep);
+  border-color: var(--accent-deep);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* --- narrow screens ------------------------------------------------------ */
+
+@media (max-width: 720px) {
+  .page {
+    padding: 16px 16px 56px;
+  }
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    padding-bottom: 40px;
+  }
+  .hero-pet {
+    order: -1;
+    align-self: start;
+  }
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .figure {
+    order: -1;
+    text-align: left;
+  }
+  .figure .sprite {
+    margin: 0;
+  }
+  .figure figcaption {
+    margin-inline: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

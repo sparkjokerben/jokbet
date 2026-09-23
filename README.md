@@ -26,9 +26,9 @@ Only counts are stored: how many times each key was pressed, clicks, scroll gest
 
 ## Install / 安装
 
-Download the installer for your platform from [Releases](https://github.com/sparkjokerben/jokerben-desktop-pet/releases). The builds are not signed by Apple or Microsoft, so your system will warn you the first time.
+Download the installer for your platform from **[jokbet.jokerben.top](https://jokbet.jokerben.top)** or from [Releases](https://github.com/sparkjokerben/jokerben-desktop-pet/releases). The builds are not signed by Apple or Microsoft, so your system will warn you the first time.
 
-安装包没有经过 Apple 或微软的签名，第一次打开时系统会拦截，按下面的步骤放行即可。
+从 **[jokbet.jokerben.top](https://jokbet.jokerben.top)** 或 [Releases](https://github.com/sparkjokerben/jokerben-desktop-pet/releases) 下载对应平台的安装包。安装包没有经过 Apple 或微软的签名，第一次打开时系统会拦截，按下面的步骤放行即可。
 
 ### macOS
 
@@ -89,6 +89,8 @@ python3 tools/extract-reference-frames/build-frames.py --help  # re-derive the v
 
 With `npm run dev` running, `http://localhost:1420/preview.html?view=stats` (or `settings`, `onboarding`, `pet`) renders a window in a normal browser with fake data, which is handy for layout work.
 
+The website in [`site/`](site/README.md) is plain static files served by Cloudflare Pages, with the installers in an R2 bucket and a Pages Function in front of them. `npm run site:assets` regenerates its pixel art from the sprites; `npm test` covers the two functions; `site/README.md` has the Cloudflare setup and the release flow.
+
 On macOS, `tauri dev` runs the app as a child of your terminal, so grant Input Monitoring to the terminal app. To test the real permission flow, build a bundle with `npm run tauri build -- --debug --bundles app`. Every rebuild changes an ad-hoc signature, so clear the stale grant with:
 
 ```sh
@@ -100,7 +102,7 @@ tccutil reset ListenEvent io.github.sparkjokerben.jokerben-desktop-pet
 1. Bump `version` in `package.json` (the app reads it from there) and commit.
 2. Tag and push: `git tag v0.1.0 && git push origin v0.1.0`.
 3. The Release workflow builds macOS (arm64 and x64), Windows and Linux into a draft release with the updater manifest (`latest.json`).
-4. Check the draft and publish it. Installed apps pick the update up within six hours and install it on restart.
+4. Check the draft and publish it. Installed apps pick the update up within six hours and install it on restart, and publishing also runs the *Publish to R2* workflow that puts the installers and the site's manifest on the download mirror (see `site/README.md`).
 
 The updater signing key lives in the `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secrets. Keep a backup: without it, installed copies can never be updated again.
 

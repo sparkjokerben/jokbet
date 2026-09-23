@@ -1,0 +1,42 @@
+{
+ "schema": 1,
+ "version": "0.0.1",
+ "tag": "v0.0.1",
+ "pubDate": null,
+ "draft": null,
+ "notes": null,
+ "releaseUrl": "https://github.com/sparkjokerben/jokerben-desktop-pet/releases/tag/v0.0.1",
+ "downloadBase": "https://github.com/sparkjokerben/jokerben-desktop-pet/releases/download/v0.0.1",
+ "files": {
+  "macos-aarch64": {
+   "name": "jokerben-desktop-pet_0.0.1_aarch64.dmg",
+   "size": null,
+   "sha256": null
+  },
+  "macos-x64": {
+   "name": "jokerben-desktop-pet_0.0.1_x64.dmg",
+   "size": null,
+   "sha256": null
+  },
+  "windows-x64": {
+   "name": "jokerben-desktop-pet_0.0.1_x64-setup.exe",
+   "size": null,
+   "sha256": null
+  },
+  "windows-x64-msi": {
+   "name": "jokerben-desktop-pet_0.0.1_x64_en-US.msi",
+   "size": null,
+   "sha256": null
+  },
+  "linux-appimage": {
+   "name": "jokerben-desktop-pet_0.0.1_amd64.AppImage",
+   "size": null,
+   "sha256": null
+  },
+  "linux-deb": {
+   "name": "jokerben-desktop-pet_0.0.1_amd64.deb",
+   "size": null,
+   "sha256": null
+  }
+ }
+}

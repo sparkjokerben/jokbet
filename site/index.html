@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jokbet — 屏幕角落的像素桌宠，帮你数键鼠</title>
+    <meta
+      name="description"
+      content="Jokbet 是一个轻量级像素桌宠：待在屏幕角落，会跟着你打字和点击做出反应，并统计键盘和鼠标操作。数据只存本机。"
+    />
+    <link rel="canonical" href="https://jokbet.jokerben.top/" />
+    <link rel="icon" href="/assets/favicon.ico" sizes="any" />
+    <link rel="icon" href="/assets/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://jokbet.jokerben.top/" />
+    <meta property="og:title" content="Jokbet — 屏幕角落的像素桌宠" />
+    <meta
+      property="og:description"
+      content="轻量级像素桌宠，会跟着你打字和点击做出反应，并统计键盘和鼠标操作。macOS / Windows / Linux，GPL-3.0，数据只存本机。"
+    />
+    <meta property="og:image" content="https://jokbet.jokerben.top/assets/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/lang-boot.js"></script>
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <div class="page">
+      <header class="top">
+        <div class="langs" role="group" aria-label="语言 / Language">
+          <button type="button" data-set-lang="zh" aria-pressed="false" lang="zh-Hans">中文</button>
+          <button type="button" data-set-lang="en" aria-pressed="false">English</button>
+        </div>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div class="hero-text">
+            <img class="wordmark" src="/assets/wordmark.svg" alt="JOKBET" width="140" height="28" />
+            <h1>
+              <span class="i18n" data-lang="zh">屏幕角落里的像素桌宠，顺手数一数你按了多少键。</span>
+              <span class="i18n" data-lang="en">A pixel pet in the corner of your screen, counting your keys and clicks.</span>
+            </h1>
+            <p class="lede i18n" data-lang="zh">你打字，它掏出笔记本跟着敲；你点它，它会挥手、比心，或者踢一脚球。</p>
+            <p class="lede i18n" data-lang="en">You type, it gets out a laptop and types along. Poke it and it waves, makes a heart, or kicks a ball.</p>
+            <div class="cta" id="cta-alt"></div>
+            <p class="meta">
+              <span class="i18n" data-lang="zh">支持 macOS 11+、Windows 和 Linux（X11），以 GPL-3.0 开源</span>
+              <span class="i18n" data-lang="en">Runs on macOS 11+, Windows and Linux (X11). GPL-3.0.</span>
+            </p>
+          </div>
+          <div class="hero-pet">
+            <div class="sprite" data-flipbook="idle" role="img" aria-label="Jokbet"></div>
+          </div>
+          <span class="screen-line" aria-hidden="true"></span>
+        </section>
+
+        <section class="block" id="downloads">
+          <h2><span class="i18n" data-lang="zh">下载</span><span class="i18n" data-lang="en">Download</span></h2>
+          <p class="meta" id="download-status" aria-live="polite">
+            <span class="i18n" data-lang="zh">正在读取版本信息…</span>
+            <span class="i18n" data-lang="en">Reading the current release…</span>
+          </p>
+          <noscript>
+            <p class="lede">
+              下载列表需要 JavaScript。安装包都在
+              <a href="https://github.com/sparkjokerben/jokerben-desktop-pet/releases">GitHub Releases</a>。
+            </p>
+          </noscript>
+          <ul class="files" id="files"></ul>
+          <details id="notes-details" hidden>
+            <summary><span class="i18n" data-lang="zh">本次更新</span><span class="i18n" data-lang="en">What changed</span></summary>
+            <p class="notes" id="notes-body"></p>
+          </details>
+          <p class="note i18n" data-lang="zh">安装包没有 Apple 或微软的签名，第一次打开时系统会拦截一次，按下面的步骤放行即可。</p>
+          <p class="note i18n" data-lang="en">The builds are not signed by Apple or Microsoft, so your system warns you once on the first launch. The steps below get you past it.</p>
+        </section>
+
+        <section class="block">
+          <h2><span class="i18n" data-lang="zh">它会什么</span><span class="i18n" data-lang="en">What it does</span></h2>
+          <div class="split">
+            <ul class="features">
+              <li>
+                <span class="i18n" data-lang="zh">统计按键、左中右键点击、滚动手势和鼠标移动距离，按天保存</span>
+                <span class="i18n" data-lang="en">Counts key presses, left/right/middle clicks, scroll gestures and mouse travel, per day</span>
+              </li>
+              <li>
+                <span class="i18n" data-lang="zh">头顶一个数字：今天次数或实时手速，来源可选键盘、鼠标或合计</span>
+                <span class="i18n" data-lang="en">A number above its head: today's count or live speed, from the keyboard, the mouse, or both</span>
+              </li>
+              <li>
+                <span class="i18n" data-lang="zh">点它、双击、拖着它走都有反应，眼睛还会跟着光标转</span>
+                <span class="i18n" data-lang="en">Poking, double-clicking and dragging all get a reaction, and its eyes follow your cursor</span>
+              </li>
+              <li>
+                <span class="i18n" data-lang="zh">闲着的时候颠球、东张西望，或者只发呆——都可以自己选</span>
+                <span class="i18n" data-lang="en">When idle it juggles a ball, looks around, or just breathes — you pick</span>
+              </li>
+              <li>
+                <span class="i18n" data-lang="zh">统计面板有 7/30/90/365 天趋势和全尺寸键盘热力图，可以导出 CSV</span>
+                <span class="i18n" data-lang="en">A stats window with 7/30/90/365-day trends and a full keyboard heatmap, plus CSV export</span>
+              </li>
+              <li>
+                <span class="i18n" data-lang="zh">界面中英双语（跟随系统语言），到了里程碑会跳起来庆祝</span>
+                <span class="i18n" data-lang="en">Speaks Chinese and English (following your system), and jumps for joy at milestones</span>
+              </li>
+            </ul>
+            <figure class="figure">
+              <div class="sprite" data-flipbook="soccer" data-flipbook-loop role="img" aria-label="Jokbet juggling a ball"></div>
+              <figcaption>
+                <span class="i18n" data-lang="zh">闲着的时候，它会把球颠上一会儿</span>
+                <span class="i18n" data-lang="en">When nothing is happening, it juggles</span>
+              </figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section class="block">
+          <h2><span class="i18n" data-lang="zh">安装</span><span class="i18n" data-lang="en">Install</span></h2>
+
+          <h3>macOS</h3>
+          <ol>
+            <li>
+              <span class="i18n" data-lang="zh">解压后把 jokerben-desktop-pet.app 拖进「应用程序」。Apple 芯片选 aarch64，Intel 选 x64。</span>
+              <span class="i18n" data-lang="en">Unzip it and move jokerben-desktop-pet.app to Applications. Take aarch64 for Apple silicon, x64 for Intel.</span>
+            </li>
+            <li>
+              <span class="i18n" data-lang="zh">首次打开会被拦下：到「系统设置 → 隐私与安全性」点「仍要打开」。（macOS 15 起右键「打开」已经不管用。）或者运行：</span>
+              <span class="i18n" data-lang="en">The first launch is blocked: go to System Settings → Privacy &amp; Security and click Open Anyway. (Right-click → Open stopped working in macOS 15.) Or run:</span>
+              <pre><code>xattr -dr com.apple.quarantine /Applications/jokerben-desktop-pet.app</code></pre>
+            </li>
+            <li>
+              <span class="i18n" data-lang="zh">按提示授予「输入监控」权限。没有它，桌宠会一脸问号，也统计不到任何操作。更新后如果不计数了，在「输入监控」里删掉旧条目再重新添加。</span>
+              <span class="i18n" data-lang="en">Allow Input Monitoring when asked. Without it the pet shows a confused face and counts nothing. If counting stops after an update, remove the old entry from Input Monitoring and add the app again.</span>
+            </li>
+          </ol>
+
+          <h3>Windows</h3>
+          <p>
+            <span class="i18n" data-lang="zh">运行安装程序。SmartScreen 提示「Windows 已保护你的电脑」时，点「更多信息 → 仍要运行」。部分杀毒软件会把监听键盘的程序当成可疑程序；本程序只做计数。</span>
+            <span class="i18n" data-lang="en">Run the installer. If SmartScreen says “Windows protected your PC”, click More info → Run anyway. Some antivirus tools flag anything that listens to the keyboard; this app only counts.</span>
+          </p>
+
+          <h3>Linux (X11)</h3>
+          <p>
+            <span class="i18n" data-lang="zh">用 AppImage（支持自动更新）或 deb 包。只支持 X11：Wayland 不允许程序监听全局输入。透明窗口需要合成器，托盘菜单需要 AppIndicator。</span>
+            <span class="i18n" data-lang="en">Use the AppImage (it self-updates) or the .deb. X11 only — Wayland does not let apps listen to global input. A compositor is needed for the transparent window, and an AppIndicator for the tray menu.</span>
+          </p>
+        </section>
+
+        <section class="block">
+          <h2><span class="i18n" data-lang="zh">隐私</span><span class="i18n" data-lang="en">Privacy</span></h2>
+          <p class="lede i18n" data-lang="zh">
+            只保存计数：每个键按了几次、点击、滚动手势和鼠标移动距离。不记录输入内容，也不记录按键顺序。所有数据只存在本机。
+          </p>
+          <p class="lede i18n" data-lang="en">
+            Only counts are stored: how many times each key was pressed, clicks, scroll gestures, and how far the mouse moved. It never
+            records what you type or the order of your keys, and all data stays on your machine.
+          </p>
+          <p class="note i18n" data-lang="zh">
+            数据在 <code>~/Library/Application Support/io.github.sparkjokerben.jokerben-desktop-pet/</code>（Windows 是
+            <code>%APPDATA%\\</code> 下、Linux 是 <code>~/.local/share/</code> 下同名目录）。
+          </p>
+          <p class="note i18n" data-lang="en">
+            It lives in <code>~/Library/Application Support/io.github.sparkjokerben.jokerben-desktop-pet/</code> (the same folder under
+            <code>%APPDATA%\\</code> on Windows and <code>~/.local/share/</code> on Linux).
+          </p>
+        </section>
+
+        <section class="block">
+          <h2><span class="i18n" data-lang="zh">已知限制</span><span class="i18n" data-lang="en">Known limitations</span></h2>
+          <ul class="features">
+            <li>
+              <span class="i18n" data-lang="zh">macOS：开了「安全键盘输入」时（终端设置或密码框里），按键对所有程序都不可见，桌宠会戴上眼罩。</span>
+              <span class="i18n" data-lang="en">macOS: keys typed while Secure Keyboard Entry is on are hidden from every app, including this one. The pet puts on a blindfold.</span>
+            </li>
+            <li>
+              <span class="i18n" data-lang="zh">Windows：管理员权限窗口里的输入看不到（除非桌宠也以管理员运行）。桌宠会留在启动时的那个虚拟桌面。</span>
+              <span class="i18n" data-lang="en">Windows: input going to administrator windows is not seen unless the pet runs as administrator too. The pet stays on the virtual desktop it started on.</span>
+            </li>
+            <li>
+              <span class="i18n" data-lang="zh">Linux：只支持 X11。</span>
+              <span class="i18n" data-lang="en">Linux: X11 only.</span>
+            </li>
+            <li>
+              <span class="i18n" data-lang="zh">桌宠会在全屏应用上面，挡事的时候从托盘菜单里先隐藏。</span>
+              <span class="i18n" data-lang="en">The pet stays on top of fullscreen apps too; hide it from the tray menu when it gets in the way.</span>
+            </li>
+          </ul>
+        </section>
+      </main>
+
+      <footer class="block">
+        <p class="links">
+          <a href="https://github.com/sparkjokerben/jokerben-desktop-pet">GitHub</a>
+          <a href="https://github.com/sparkjokerben/jokerben-desktop-pet/blob/main/LICENSE">GPL-3.0</a>
+          <a href="#downloads"><span class="i18n" data-lang="zh">下载</span><span class="i18n" data-lang="en">Download</span></a>
+        </p>
+        <blockquote>
+          <p>
+            <strong>Unofficial fan project.</strong> This project is not affiliated with, endorsed by, or sponsored by Anthropic. Claude,
+            Claude Code and Clawd are trademarks or characters of Anthropic.
+          </p>
+          <p lang="zh-Hans">
+            <strong>非官方同人作品</strong>，与 Anthropic 无关，也未获其认可或赞助。Claude、Claude Code 和 Clawd 是 Anthropic
+            的商标或角色。
+          </p>
+        </blockquote>
+      </footer>
+    </div>
+  </body>
+</html>

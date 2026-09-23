@@ -43,6 +43,14 @@ jobs:
       - run: npm test
       - run: npm run build
 
+      - name: the site's generated assets match the sprites
+        if: runner.os == 'Linux'
+        run: npm run site:check
+
+      - name: type-check the Pages functions
+        if: runner.os == 'Linux'
+        run: npx tsc -p site/functions/tsconfig.json
+
       - name: cargo fmt
         working-directory: src-tauri
         run: cargo fmt --check

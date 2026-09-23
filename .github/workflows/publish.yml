@@ -1,0 +1,87 @@
+name: Publish to R2
+
+# Copies a published release's installers to Cloudflare R2, where the download
+# page serves them from (https://jokbet.jokerben.top/dl/<name>), and writes the
+# latest.json that page reads.
+#
+# It runs on `release: published` rather than on the tag push, because a draft
+# release's assets are not reachable on GitHub yet — and the download page's
+# fallback links point there. Publish the draft and both sides go live together.
+#
+# Re-runnable by hand: Actions → Publish to R2 → Run workflow, with the tag.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to publish, e.g. v0.1.0
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      BUCKET: jokerben-desktop-pet-downloads
+      ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      # R2 answers with CRC-32 only; the v2 CLI's default checksums can upset it.
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Decide which tag to publish
+        id: tag
+        run: echo "name=${{ github.event.release.tag_name || inputs.tag }}" >> "$GITHUB_OUTPUT"
+
+      - name: Download the release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p release-assets
+          gh release download "${{ steps.tag.outputs.name }}" --repo "$GITHUB_REPOSITORY" --dir release-assets
+          gh release view "${{ steps.tag.outputs.name }}" --repo "$GITHUB_REPOSITORY" \
+            --json body,createdAt,isDraft > release.json
+          ls -l release-assets
+
+      - name: Build the manifest the site reads
+        run: |
+          node scripts/make-manifest.ts full \
+            --tag "${{ steps.tag.outputs.name }}" \
+            --dir release-assets \
+            --release-json release.json \
+            --out site-manifest.json
+
+      - name: Upload the installers
+        run: |
+          set -euo pipefail
+          for file in release-assets/*; do
+            name="$(basename "$file")"
+            if [ "$name" = "latest.json" ]; then
+              # Tauri's own updater manifest (a different schema): keep it, but
+              # out of the way of the site's.
+              aws s3 cp "$file" "s3://$BUCKET/updater/latest.json" --endpoint-url "$ENDPOINT" \
+                --content-type application/json --cache-control "public, max-age=300" --no-progress
+            else
+              aws s3 cp "$file" "s3://$BUCKET/$name" --endpoint-url "$ENDPOINT" \
+                --cache-control "public, max-age=31536000, immutable" --no-progress
+            fi
+          done
+
+      - name: Publish the manifest last
+        # Last, so it never describes a file that has not arrived yet.
+        run: |
+          aws s3 cp site-manifest.json "s3://$BUCKET/latest.json" --endpoint-url "$ENDPOINT" \
+            --content-type application/json --cache-control "public, max-age=300" --no-progress
+          echo "published ${{ steps.tag.outputs.name }} to s3://$BUCKET"

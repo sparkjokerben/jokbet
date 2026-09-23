@@ -1,0 +1,16 @@
+# Cloudflare Pages configuration for the site in this directory.
+#
+# The Pages project's root directory is `site`, so `functions/` sits at the
+# project root (not inside the published output) as Pages requires, and the
+# whole directory is published as-is — there is no build step.
+#
+# The file is the source of truth: these fields are read-only in the dashboard.
+
+name = "jokerben-desktop-pet-site"
+compatibility_date = "2026-09-24"
+pages_build_output_dir = "."
+
+# The installers live here; the /dl function is the only way to reach them.
+[[r2_buckets]]
+binding = "DOWNLOADS"
+bucket_name = "jokerben-desktop-pet-downloads"
