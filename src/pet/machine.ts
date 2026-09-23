@@ -13,6 +13,8 @@ export interface Signals {
   oneShot: { anim: OneShot; until: number } | null;
   lastInputAt: number;
   lastActivity: Activity | null;
+  /** How long the last activity keeps the pet reacting; see typingReactMs. */
+  reactMs: number;
   sleepAfterMs: number;
 }
 
@@ -23,8 +25,25 @@ export function blockedBy(s: { permission: string; listening: boolean; secureInp
   return null;
 }
 
-/** How long a reaction lasts after the last input of that kind. */
+/** How long a reaction lasts after the last input of that kind. Keystrokes
+ * are special: see typingReactMs. */
 export const REACT_MS: Record<Activity, number> = { typing: 1500, scroll: 500, click: 300 };
+
+/** The longest the pet stays in typing after the last keystroke. */
+export const TYPING_HOLD_MAX_MS = 12_000;
+/** Extra hold per sqrt(second) of the current spell of typing. */
+const TYPING_HOLD_GROWTH = 800;
+
+/**
+ * How long keystrokes keep the pet in typing: the base time plus a term that
+ * grows with the square root of how long this spell of typing has lasted. A
+ * few keys tapped now and then end at once; a long session earns a longer
+ * pause before the laptop goes away.
+ */
+export function typingReactMs(sessionMs: number): number {
+  const seconds = Math.max(0, sessionMs) / 1000;
+  return Math.min(TYPING_HOLD_MAX_MS, REACT_MS.typing + TYPING_HOLD_GROWTH * Math.sqrt(seconds));
+}
 
 /** Highest priority first: blocked > dragged > celebrate > one-shot > sleep > react > idle. */
 export function pickAnim(s: Signals, now: number): AnimName {
@@ -33,7 +52,7 @@ export function pickAnim(s: Signals, now: number): AnimName {
   if (now < s.celebrateUntil) return "celebrate";
   if (s.oneShot && now < s.oneShot.until) return s.oneShot.anim;
   if (now - s.lastInputAt >= s.sleepAfterMs) return "sleep";
-  if (s.lastActivity && now - s.lastInputAt < REACT_MS[s.lastActivity]) return s.lastActivity;
+  if (s.lastActivity && now - s.lastInputAt < s.reactMs) return s.lastActivity;
   return "idle";
 }
 
@@ -41,7 +60,7 @@ export function pickAnim(s: Signals, now: number): AnimName {
 export function nextDeadline(s: Signals, now: number): number {
   const times = [s.celebrateUntil, s.sleepAfterMs + s.lastInputAt];
   if (s.oneShot) times.push(s.oneShot.until);
-  if (s.lastActivity) times.push(s.lastInputAt + REACT_MS[s.lastActivity]);
+  if (s.lastActivity) times.push(s.lastInputAt + s.reactMs);
   return Math.min(Infinity, ...times.filter((t) => t > now));
 }
 

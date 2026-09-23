@@ -6,7 +6,7 @@
   import { celebrationText, headValue } from "../lib/format";
   import { blockedBy } from "./machine";
   import {
-    SCALE,
+    PET_SCALE_DEFAULT,
     type ActionAnim,
     type IdleAnim,
     type MilestoneHit,
@@ -26,6 +26,8 @@
   /** Typing animation speed (keys per second) when live typing speed is turned off. */
   const FIXED_KPS = 2.5;
   const CELEBRATE_MS = 3500;
+  /** Gap between the top of the pet's box and whatever sits above it. */
+  const ABOVE_LIFT = 8;
 
   let rows = $state<string[]>([]);
   let settings = $state<Settings | null>(null);
@@ -42,7 +44,7 @@
   let bannerTimer: ReturnType<typeof setTimeout> | undefined;
   let spriteEl: HTMLDivElement;
 
-  const scale = $derived(settings ? SCALE[settings.petSize] : SCALE.medium);
+  const scale = $derived(settings?.petScale ?? PET_SCALE_DEFAULT);
   /** How far the pet's middle sits from the canvas's (the laptop side is wider). */
   const petOffset = $derived((PET_X + PET_W / 2 - GRID_W / 2) * scale);
   const head = $derived(settings?.headCounter);
@@ -147,7 +149,11 @@
 </script>
 
 <div class="stage">
-  <div class="above" style:bottom="{(GRID_H - PET_Y) * scale}px" style:translate="{petOffset}px 0">
+  <div
+    class="above"
+    style:bottom="{(GRID_H - PET_Y) * scale + ABOVE_LIFT}px"
+    style:translate="{petOffset}px 0"
+  >
     {#if hovering && settings?.bubble}
       <Bubble {tick} showSpeed={settings.typingSpeed} {paused} />
     {/if}

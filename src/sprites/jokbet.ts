@@ -109,7 +109,7 @@ const GLYPHS: Record<Effect, { x: number; y: number; rows: readonly string[] }> 
   sparkleB: { x: 32, y: 8, rows: [".Y.", "YYY", ".Y."] },
   heart: { x: 26, y: 2, rows: [".R.R.", "RRRRR", ".RRR.", "..R.."] },
   // A drop on the head's top right corner.
-  sweat: { x: 24, y: 9, rows: [".S.", "SSS", "SSS"] },
+  sweat: { x: 24, y: 9, rows: [".S.", "SSS"] },
   exclaim: { x: 30, y: 4, rows: ["R", "R", "R", ".", "R"] },
   question: { x: 29, y: 3, rows: ["ZZ.", "..Z", ".Z.", "...", ".Z."] },
   pause: { x: 29, y: 4, rows: ["Z.Z", "Z.Z", "Z.Z"] },

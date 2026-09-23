@@ -37,7 +37,7 @@ function fakeStats(days: number) {
 }
 
 let settings: Settings = {
-  petSize: "medium",
+  petScale: 5,
   petPosition: null,
   headCounter: { enabled: true, kind: "today", keyboard: true, mouse: false },
   idleAnim: "breathe",

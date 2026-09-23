@@ -4,25 +4,11 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
-#[serde(rename_all = "camelCase")]
-pub enum PetSize {
-    Small,
-    #[default]
-    Medium,
-    Large,
-}
-
-impl PetSize {
-    /// Pixels per sprite cell; Jokbet's body is 16 cells wide (64/96/128 px).
-    pub fn scale(self) -> f64 {
-        match self {
-            PetSize::Small => 4.0,
-            PetSize::Medium => 6.0,
-            PetSize::Large => 8.0,
-        }
-    }
-}
+/// Pixels per sprite cell: the pet's body is 24 cells wide. The window is
+/// sized from this, so the slider's range is what keeps it sane.
+pub const PET_SCALE_MIN: f64 = 3.0;
+pub const PET_SCALE_MAX: f64 = 7.0;
+pub const PET_SCALE_DEFAULT: f64 = 5.0;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
@@ -119,7 +105,8 @@ pub struct CustomMilestone {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Settings {
-    pub pet_size: PetSize,
+    /// Pixels per sprite cell, in `PET_SCALE_MIN..=PET_SCALE_MAX`.
+    pub pet_scale: f64,
     /// Top-left of the pet window in physical pixels; `None` means default placement.
     pub pet_position: Option<[i32; 2]>,
     pub head_counter: HeadCounter,
@@ -143,7 +130,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            pet_size: PetSize::Medium,
+            pet_scale: PET_SCALE_DEFAULT,
             pet_position: None,
             head_counter: HeadCounter::default(),
             idle_anim: IdleAnim::Breathe,
@@ -166,6 +153,12 @@ impl Settings {
         if !(1..=120).contains(&self.sleep_after_min) {
             return Err("sleepAfterMin must be between 1 and 120".into());
         }
+        if !self.pet_scale.is_finite() || !(PET_SCALE_MIN..=PET_SCALE_MAX).contains(&self.pet_scale)
+        {
+            return Err(format!(
+                "petScale must be between {PET_SCALE_MIN} and {PET_SCALE_MAX}"
+            ));
+        }
         for m in &self.custom_milestones {
             if !(m.threshold.is_finite() && m.threshold > 0.0) {
                 return Err(format!("milestone {}: threshold must be positive", m.id));
@@ -179,6 +172,24 @@ impl Settings {
             }
         }
         Ok(())
+    }
+}
+
+/// Carries settings from older versions over to the current shape.
+fn migrate(value: &mut serde_json::Value) {
+    let Some(obj) = value.as_object_mut() else {
+        return;
+    };
+    // Until 0.0.1 the size was one of three steps; keep the closest scale.
+    if let Some(size) = obj.remove("petSize") {
+        if !obj.contains_key("petScale") {
+            let scale = match size.as_str() {
+                Some("small") => 4.0,
+                Some("large") => 8.0,
+                _ => 6.0,
+            };
+            obj.insert("petScale".into(), serde_json::json!(scale));
+        }
     }
 }
 
@@ -210,7 +221,11 @@ impl SettingsStore {
     pub fn load(path: PathBuf) -> Self {
         let settings = std::fs::read(&path)
             .ok()
-            .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+            .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+            .map(|mut value| {
+                migrate(&mut value);
+                serde_json::from_value(value).unwrap_or_default()
+            })
             .unwrap_or_default();
         Self {
             path,
@@ -275,12 +290,12 @@ mod tests {
         let store = SettingsStore::load(path.clone());
         store
             .update(|s| {
-                s.pet_size = PetSize::Large;
+                s.pet_scale = 6.5;
                 s.pet_position = Some([10, -20]);
             })
             .unwrap();
         let reloaded = SettingsStore::load(path);
-        assert_eq!(reloaded.get().pet_size, PetSize::Large);
+        assert_eq!(reloaded.get().pet_scale, 6.5);
         assert_eq!(reloaded.get().pet_position, Some([10, -20]));
     }
 
@@ -349,12 +364,33 @@ mod tests {
     }
 
     #[test]
+    fn pet_scale_outside_the_slider_is_rejected() {
+        let at = |pet_scale: f64| Settings {
+            pet_scale,
+            ..Default::default()
+        };
+        assert!(at(PET_SCALE_MIN - 0.1).validate().is_err());
+        assert!(at(f64::NAN).validate().is_err());
+        assert!(at(PET_SCALE_MIN).validate().is_ok());
+        assert!(at(PET_SCALE_MAX).validate().is_ok());
+    }
+
+    #[test]
+    fn the_scale_is_kept_when_the_file_already_has_one() {
+        let path = temp_path("both");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, br#"{"petSize":"large","petScale":3.5}"#).unwrap();
+        assert_eq!(SettingsStore::load(path).get().pet_scale, 3.5);
+    }
+
+    #[test]
     fn unknown_and_missing_fields_fall_back_to_defaults() {
         let path = temp_path("partial");
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(&path, br#"{"petSize":"small","future":1}"#).unwrap();
         let store = SettingsStore::load(path);
-        assert_eq!(store.get().pet_size, PetSize::Small);
+        // The old three-step size is carried over to the closest scale.
+        assert_eq!(store.get().pet_scale, 4.0);
         assert_eq!(store.get().pet_position, None);
     }
 }

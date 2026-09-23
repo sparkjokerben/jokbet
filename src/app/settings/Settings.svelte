@@ -4,7 +4,7 @@
   import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
   import { onMount } from "svelte";
   import { t } from "../../lib/i18n";
-  import type { ActionAnim, IdleAnim, PetSize, Settings } from "../../lib/types";
+  import { PET_SCALE_MAX, PET_SCALE_MIN, type ActionAnim, type IdleAnim, type Settings } from "../../lib/types";
   import Segmented from "../ui/Segmented.svelte";
   import Toggle from "../ui/Toggle.svelte";
   import MilestoneEditor from "./MilestoneEditor.svelte";
@@ -57,21 +57,22 @@
   <main>
     <section class="card">
       <h2>{t("sectionPet")}</h2>
-      <div class="field">
+      <label class="field">
         <span>{t("petSize")}</span>
-        <Segmented
-          label={t("petSize")}
-          bind:value={
-            () => s!.petSize,
-            (v: PetSize) => update({ petSize: v })
-          }
-          options={[
-            { value: "small", label: t("sizeSmall") },
-            { value: "medium", label: t("sizeMedium") },
-            { value: "large", label: t("sizeLarge") },
-          ]}
-        />
-      </div>
+        <span class="size">
+          <input
+            type="range"
+            min={PET_SCALE_MIN}
+            max={PET_SCALE_MAX}
+            step="0.5"
+            aria-label={t("petSize")}
+            title={t("sizeHint")}
+            value={s.petScale}
+            oninput={(e) => update({ petScale: Number(e.currentTarget.value) })}
+          />
+          <output>{s.petScale}×</output>
+        </span>
+      </label>
       <label class="field">
         <span>{t("sleepAfter")}</span>
         <input
@@ -208,6 +209,21 @@
   }
   .field.off {
     opacity: 0.5;
+  }
+  .size {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .size input[type="range"] {
+    width: 132px;
+    accent-color: var(--accent, #d97757);
+  }
+  .size output {
+    width: 34px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-secondary);
   }
   .field input[type="number"] {
     width: 70px;

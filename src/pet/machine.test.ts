@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { ANIMS } from "../sprites/jokbet";
-import { REACT_MS, blockedBy, frameAt, introDuration, nextDeadline, pickAnim, typingFrameMs, type Signals } from "./machine";
+import {
+  REACT_MS,
+  TYPING_HOLD_MAX_MS,
+  blockedBy,
+  frameAt,
+  introDuration,
+  nextDeadline,
+  pickAnim,
+  typingFrameMs,
+  typingReactMs,
+  type Signals,
+} from "./machine";
 
 const base = (over: Partial<Signals> = {}): Signals => ({
   blocked: null,
@@ -9,6 +20,7 @@ const base = (over: Partial<Signals> = {}): Signals => ({
   oneShot: null,
   lastInputAt: 0,
   lastActivity: null,
+  reactMs: REACT_MS.typing,
   sleepAfterMs: 60_000,
   ...over,
 });
@@ -38,9 +50,22 @@ describe("pickAnim priorities", () => {
     const s = base({ lastInputAt: 1000, lastActivity: "typing" });
     expect(pickAnim(s, 2499)).toBe("typing");
     expect(pickAnim(s, 2500)).toBe("idle");
-    const c = base({ lastInputAt: 1000, lastActivity: "click" });
+    const c = base({ lastInputAt: 1000, lastActivity: "click", reactMs: REACT_MS.click });
     expect(pickAnim(c, 1299)).toBe("click");
     expect(pickAnim(c, 1300)).toBe("idle");
+  });
+});
+
+describe("typingReactMs", () => {
+  it("grows with the spell of typing and stops growing", () => {
+    expect(typingReactMs(0)).toBe(REACT_MS.typing);
+    expect(typingReactMs(1000)).toBeGreaterThan(REACT_MS.typing);
+    expect(typingReactMs(10_000)).toBeGreaterThan(typingReactMs(1000));
+    expect(typingReactMs(10 * 60_000)).toBe(TYPING_HOLD_MAX_MS);
+    // Growth is sub-linear: ten times the typing is well under ten times the hold.
+    expect(typingReactMs(10_000) - REACT_MS.typing).toBeLessThan(
+      10 * (typingReactMs(1000) - REACT_MS.typing),
+    );
   });
 });
 

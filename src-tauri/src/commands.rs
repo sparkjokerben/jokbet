@@ -22,9 +22,9 @@ pub fn apply_patch<R: Runtime>(
     if next.paused != before.paused {
         app.state::<AppMenu<R>>().sync_paused(next.paused);
     }
-    if next.pet_size != before.pet_size {
+    if next.pet_scale != before.pet_scale {
         if let Some(window) = app.get_webview_window(pet_window::PET_LABEL) {
-            pet_window::apply_size(&window, before.pet_size, next.pet_size)
+            pet_window::apply_size(&window, before.pet_scale, next.pet_scale)
                 .map_err(|e| e.to_string())?;
         }
     }

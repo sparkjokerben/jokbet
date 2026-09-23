@@ -1,6 +1,6 @@
 //! The always-on-top transparent pet window: geometry, creation and placement.
 
-use crate::settings::{PetSize, SettingsStore};
+use crate::settings::SettingsStore;
 use serde::{Deserialize, Serialize};
 use tauri::{
     AppHandle, LogicalSize, Manager, PhysicalPosition, Runtime, WebviewUrl, WebviewWindow,
@@ -20,15 +20,14 @@ const TOP_PAD: f64 = 130.0;
 const MIN_WIDTH: f64 = 220.0;
 const EDGE_MARGIN: f64 = 16.0;
 
-/// Logical window size for a pet size.
-pub fn window_size(size: PetSize) -> (f64, f64) {
-    let s = size.scale();
-    ((GRID_W * s).max(MIN_WIDTH), GRID_H * s + TOP_PAD)
+/// Logical window size for a scale (pixels per sprite cell).
+pub fn window_size(scale: f64) -> (f64, f64) {
+    ((GRID_W * scale).max(MIN_WIDTH), GRID_H * scale + TOP_PAD)
 }
 
 /// Logical x of the pet's middle in the window (the canvas is centered in it).
-fn pet_center_x(size: PetSize) -> f64 {
-    window_size(size).0 / 2.0 + (PET_CENTER_X - GRID_W / 2.0) * size.scale()
+fn pet_center_x(scale: f64) -> f64 {
+    window_size(scale).0 / 2.0 + (PET_CENTER_X - GRID_W / 2.0) * scale
 }
 
 /// Axis-aligned rectangle in physical pixels.
@@ -73,8 +72,8 @@ pub fn default_position(win: (i32, i32), work_area: Rect, margin: i32) -> (i32, 
 }
 
 pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>> {
-    let size = app.state::<SettingsStore>().get().pet_size;
-    let (w, h) = window_size(size);
+    let scale = app.state::<SettingsStore>().get().pet_scale;
+    let (w, h) = window_size(scale);
     let window = WebviewWindowBuilder::new(app, PET_LABEL, WebviewUrl::App("pet.html".into()))
         .title("jokerben-desktop-pet")
         .inner_size(w, h)
@@ -112,9 +111,10 @@ pub fn place<R: Runtime>(window: &WebviewWindow<R>) -> tauri::Result<()> {
     let app = window.app_handle();
     let settings = app.state::<SettingsStore>();
     let sf = window.scale_factor()?;
-    let (w, h) = window_size(settings.get().pet_size);
+    let scale = settings.get().pet_scale;
+    let (w, h) = window_size(scale);
     let win = ((w * sf).round() as i32, (h * sf).round() as i32);
-    let top_pad = ((h - GRID_H * settings.get().pet_size.scale()) * sf).round() as i32;
+    let top_pad = ((h - GRID_H * scale) * sf).round() as i32;
 
     let monitors = monitor_rects(window)?;
     let saved = settings
@@ -141,11 +141,7 @@ pub fn place<R: Runtime>(window: &WebviewWindow<R>) -> tauri::Result<()> {
 }
 
 /// Resizes the window for a new pet size, keeping the pet's feet in place.
-pub fn apply_size<R: Runtime>(
-    window: &WebviewWindow<R>,
-    from: PetSize,
-    to: PetSize,
-) -> tauri::Result<()> {
+pub fn apply_size<R: Runtime>(window: &WebviewWindow<R>, from: f64, to: f64) -> tauri::Result<()> {
     let sf = window.scale_factor()?;
     let pos = window.outer_position()?;
     let (w1, h1) = window_size(to);
@@ -161,8 +157,8 @@ pub fn apply_size<R: Runtime>(
 /// Clamps the window after a drag and remembers where it ended up.
 pub fn save_position<R: Runtime>(window: &WebviewWindow<R>) -> tauri::Result<()> {
     let pos = window.outer_position()?;
-    let pet_size = window.app_handle().state::<SettingsStore>().get().pet_size;
-    remember_position(window, (pos.x, pos.y), pet_size)
+    let scale = window.app_handle().state::<SettingsStore>().get().pet_scale;
+    remember_position(window, (pos.x, pos.y), scale)
 }
 
 /// Clamps a window position for a pet size, moves the window if that changed
@@ -170,12 +166,12 @@ pub fn save_position<R: Runtime>(window: &WebviewWindow<R>) -> tauri::Result<()>
 fn remember_position<R: Runtime>(
     window: &WebviewWindow<R>,
     pos: (i32, i32),
-    pet_size: PetSize,
+    scale: f64,
 ) -> tauri::Result<()> {
     let sf = window.scale_factor()?;
-    let (w, h) = window_size(pet_size);
+    let (w, h) = window_size(scale);
     let win = ((w * sf).round() as i32, (h * sf).round() as i32);
-    let top_pad = ((h - GRID_H * pet_size.scale()) * sf).round() as i32;
+    let top_pad = ((h - GRID_H * scale) * sf).round() as i32;
     let (x, y) = clamp_position(pos, win, top_pad, &monitor_rects(window)?).unwrap_or(pos);
     if (x, y) != pos {
         window.set_position(PhysicalPosition::new(x, y))?;
@@ -207,17 +203,18 @@ mod tests {
 
     #[test]
     fn window_size_leaves_room_for_bubble() {
-        assert_eq!(window_size(PetSize::Small), (220.0, 234.0));
-        assert_eq!(window_size(PetSize::Medium), (240.0, 286.0));
-        assert_eq!(window_size(PetSize::Large), (320.0, 338.0));
+        // Small enough that the window keeps its minimum width.
+        assert_eq!(window_size(4.0), (220.0, 234.0));
+        assert_eq!(window_size(5.0), (220.0, 260.0));
+        assert_eq!(window_size(7.0), (280.0, 312.0));
     }
 
     #[test]
     fn pet_sits_left_of_the_window_middle() {
-        // The canvas is centered; the pet's box is 2 cells left of its middle.
-        assert_eq!(pet_center_x(PetSize::Small), 110.0 - 8.0);
-        assert_eq!(pet_center_x(PetSize::Medium), 120.0 - 12.0);
-        assert_eq!(pet_center_x(PetSize::Large), 160.0 - 16.0);
+        // The canvas is centered; the pet's middle is 2 cells left of its own.
+        assert_eq!(pet_center_x(4.0), 110.0 - 8.0);
+        assert_eq!(pet_center_x(5.0), 110.0 - 10.0);
+        assert_eq!(pet_center_x(7.0), 140.0 - 14.0);
     }
 
     #[test]

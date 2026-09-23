@@ -1,6 +1,9 @@
 // Mirrors the Rust types serialized over IPC (camelCase).
 
-export type PetSize = "small" | "medium" | "large";
+/** Pixels per sprite cell; the slider covers the same range as PET_SCALE_* in Rust. */
+export const PET_SCALE_MIN = 3;
+export const PET_SCALE_MAX = 7;
+export const PET_SCALE_DEFAULT = 5;
 export type CounterKind = "today" | "rate";
 export type Period = "daily" | "lifetime";
 export type Metric = "keys" | "clicks" | "scrolls" | "distance";
@@ -25,7 +28,7 @@ export interface CustomMilestone {
 }
 
 export interface Settings {
-  petSize: PetSize;
+  petScale: number;
   petPosition: [number, number] | null;
   headCounter: HeadCounter;
   idleAnim: IdleAnim;
@@ -65,7 +68,7 @@ export interface Status {
   paused: boolean;
 }
 
-export const SCALE: Record<PetSize, number> = { small: 4, medium: 6, large: 8 };
+
 
 export interface MilestoneHit {
   id: string;
