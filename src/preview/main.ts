@@ -44,6 +44,7 @@ let settings: Settings = {
   clickAnim: "poke",
   doubleClickAnim: "hearts",
   bubble: true,
+  liquidGlass: true,
   typingSpeed: true,
   milestones: true,
   customMilestones: [{ id: "a", period: "daily", metric: "keys", threshold: 30000, repeat: false }],
@@ -63,6 +64,25 @@ mockIPC(
       return fakeStats(a.days as number);
     case "get_settings":
       return settings;
+    case "glass_support":
+      return "liquidGlass";
+    case "set_glass_bubble": {
+      // Where the page thinks the bubble is; drawn on screen for a look.
+      const r = a.rect as [number, number, number, number] | null;
+      const tag = document.getElementById("glass-rect");
+      if (tag) {
+        tag.textContent = r ? r.map((v) => Math.round(v)).join(" ") : "none";
+        tag.style.display = r ? "block" : "none";
+        if (r) {
+          tag.style.left = `${r[0]}px`;
+          tag.style.top = `${r[1]}px`;
+          tag.style.width = `${r[2]}px`;
+          tag.style.height = `${r[3]}px`;
+          tag.style.borderRadius = `${a.radius}px`;
+        }
+      }
+      return null;
+    }
     case "get_status":
       return { permission: "denied", listening: false, secureInput: false, paused: false };
     case "plugin:autostart|is_enabled":
@@ -79,7 +99,7 @@ mockIPC(
 
 if (view === "pet") {
   // A frame the size of the real pet window, over a mid-gray "desktop".
-  document.body.style.cssText = "margin:0;background:#8a8d93";
+  document.body.style.cssText = "margin:0;background:#8a8d93;position:relative";
   const frame = document.createElement("iframe");
   frame.src = "/preview.html?view=pet-frame";
   // The size of the real pet window at the scale in the fake settings below.
@@ -89,6 +109,16 @@ if (view === "pet") {
   // pet.html has no theme; undo the one imported for the app views.
   document.documentElement.style.background = "transparent";
   document.body.style.background = "transparent";
+  // With ?glassdebug, outlines the reported glass rect: the native material is
+  // placed from it, so a wrong rect is worth seeing.
+  if (new URLSearchParams(location.search).has("glassdebug")) {
+    const tag = document.createElement("div");
+    tag.id = "glass-rect";
+    tag.style.cssText =
+      "position:fixed;border:1px solid #0f0;color:#0f0;font:11px monospace;" +
+      "background:rgba(0,255,0,0.08);pointer-events:none;display:none";
+    document.body.append(tag);
+  }
   mount(Pet, { target: document.getElementById("root")! });
   setTimeout(async () => {
     const today = fakeStats(1).days[0];

@@ -22,6 +22,11 @@ pub fn apply_patch<R: Runtime>(
     if next.paused != before.paused {
         app.state::<AppMenu<R>>().sync_paused(next.paused);
     }
+    if before.liquid_glass && !next.liquid_glass {
+        // The bubble is told to take it away too, but it must not stay if the
+        // setting flips while it is up.
+        clear_glass(app);
+    }
     if next.pet_scale != before.pet_scale {
         if let Some(window) = app.get_webview_window(pet_window::PET_LABEL) {
             pet_window::apply_size(&window, before.pet_scale, next.pet_scale)
@@ -30,6 +35,16 @@ pub fn apply_patch<R: Runtime>(
     }
     let _ = app.emit("settings://changed", &next);
     Ok(next)
+}
+
+/// Takes the bubble's material away.
+fn clear_glass<R: Runtime>(app: &AppHandle<R>) {
+    let handle = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        if let Some(window) = handle.get_webview_window(pet_window::PET_LABEL) {
+            crate::platform::set_glass(&window, None, 0.0);
+        }
+    });
 }
 
 #[tauri::command]
@@ -45,6 +60,31 @@ pub fn update_settings(app: AppHandle, patch: serde_json::Value) -> Result<Setti
 #[tauri::command]
 pub fn set_hit_rect(rect: HitRect, hover: State<'_, HoverState>) {
     *hover.hit_rect.lock().unwrap() = Some(rect);
+}
+
+/// Which system glass the hover bubble can use, or `"none"` where there is none.
+#[tauri::command]
+pub fn glass_support() -> &'static str {
+    crate::platform::glass().map_or("none", |glass| glass.name())
+}
+
+/// Where the hover bubble is, in logical pixels from the window's top left;
+/// `None` takes the material away again. The material is a native view behind
+/// the page, so the page has to say where to put it.
+#[tauri::command]
+pub fn set_glass_bubble(app: AppHandle, rect: Option<[f64; 4]>, radius: f64) {
+    let wanted = app.state::<SettingsStore>().get().liquid_glass;
+    let rect = if wanted {
+        rect.map(|[x, y, w, h]| (x, y, w, h))
+    } else {
+        None
+    };
+    let handle = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        if let Some(window) = handle.get_webview_window(pet_window::PET_LABEL) {
+            crate::platform::set_glass(&window, rect, radius);
+        }
+    });
 }
 
 /// The pet starts a native window drag; the hover thread reports its end.

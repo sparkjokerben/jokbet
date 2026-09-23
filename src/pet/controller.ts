@@ -82,7 +82,6 @@ export class PetController {
       this.signals.oneShot = null;
       this.resumeTyping = t - this.animStart < LAPTOP_OUT_MS;
     }
-    if (activity === "click") this.animStart = t;
     if (activity === "typing") {
       // A pause longer than the hold, or a different kind of input, ends the
       // spell; the next keystroke starts a fresh one.
@@ -190,9 +189,8 @@ export class PetController {
 
     let wakeAt = Math.min(t + nextIn, nextDeadline(this.signals, t));
     if (showing) wakeAt = Math.min(wakeAt, t < this.idleShowUntil ? this.idleShowUntil : this.idleShowAt);
-    if (pose && (this.anim === "idle" || this.anim === "click")) {
-      // Whatever the idle animation does, and on clicks too, the eyes stay on
-      // the cursor.
+    if (pose && this.anim === "idle") {
+      // Whatever the idle animation does, the eyes stay on the cursor.
       pose.gaze = this.gaze;
       if (t >= this.blinkAt + BLINK_MS) this.blinkAt = t + blinkGap();
       if (t >= this.blinkAt) pose.eyes = "closed";

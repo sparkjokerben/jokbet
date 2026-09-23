@@ -7,7 +7,7 @@ export const PET_SCALE_DEFAULT = 5;
 export type CounterKind = "today" | "rate";
 export type Period = "daily" | "lifetime";
 export type Metric = "keys" | "clicks" | "scrolls" | "distance";
-export type Activity = "typing" | "click";
+export type Activity = "typing";
 export type Permission = "granted" | "denied" | "notRequired" | "unsupported";
 export type IdleAnim = "breathe" | "soccer" | "lookAround";
 export type ActionAnim = "poke" | "hearts" | "soccer" | "wave";
@@ -35,6 +35,8 @@ export interface Settings {
   clickAnim: ActionAnim;
   doubleClickAnim: ActionAnim;
   bubble: boolean;
+  /** Draw the hover bubble with the system's glass material. */
+  liquidGlass: boolean;
   typingSpeed: boolean;
   milestones: boolean;
   customMilestones: CustomMilestone[];

@@ -28,6 +28,8 @@
   const CELEBRATE_MS = 3500;
   /** Gap between the top of the pet's box and whatever sits above it. */
   const ABOVE_LIFT = 8;
+  /** How far the bubble's tail sticks out below its box. */
+  const BUBBLE_TAIL = 6;
 
   let rows = $state<string[]>([]);
   let settings = $state<Settings | null>(null);
@@ -40,6 +42,11 @@
   let paused = $state(false);
   let blocked = $state<ReturnType<typeof blockedBy>>(null);
   let hovering = $state(false);
+  let bubbleEl: HTMLDivElement | undefined = $state();
+  /** What the system can put behind the bubble, from Rust; "none" where there is none. */
+  let glassSupport = $state("none");
+  /** Bumped on window resize so the glass follows the bubble. */
+  let resized = $state(0);
   let banner = $state("");
   let bannerTimer: ReturnType<typeof setTimeout> | undefined;
   let spriteEl: HTMLDivElement;
@@ -49,6 +56,33 @@
   const petOffset = $derived((PET_X + PET_W / 2 - GRID_W / 2) * scale);
   const head = $derived(settings?.headCounter);
   const showCounter = $derived(!!head?.enabled && (head.keyboard || head.mouse));
+  const glassBubble = $derived(glassSupport !== "none" && !!settings?.bubble && !!settings?.liquidGlass);
+
+  /** Tells Rust where the bubble is; the material is native, behind the page. */
+  function reportGlassRect() {
+    if (!glassBubble || !hovering || !bubbleEl) {
+      void invoke("set_glass_bubble", { rect: null, radius: 0 });
+      return;
+    }
+    const box = bubbleEl.getBoundingClientRect();
+    const radius = parseFloat(getComputedStyle(bubbleEl).borderTopLeftRadius) || 0;
+    void invoke("set_glass_bubble", {
+      rect: [box.left, box.top, box.width, box.height + BUBBLE_TAIL],
+      radius,
+    });
+  }
+
+  $effect(() => {
+    // Re-runs when the bubble comes and goes, changes size, or the window moves.
+    void glassBubble;
+    void hovering;
+    void resized;
+    reportGlassRect();
+    if (!glassBubble || !hovering || !bubbleEl) return;
+    const observer = new ResizeObserver(reportGlassRect);
+    observer.observe(bubbleEl);
+    return () => observer.disconnect();
+  });
 
   const pet = new PetController((r) => (rows = r));
 
@@ -107,7 +141,10 @@
     const win = getCurrentWindow();
     // A new pet size resizes the window after the new scale is drawn; measure
     // the hit rect again once the page has the window's new size.
-    window.addEventListener("resize", reportHitRect);
+    window.addEventListener("resize", () => {
+      reportHitRect();
+      resized++;
+    });
 
     const detach = attachGestures(spriteEl, {
       click: () => react(settings?.clickAnim),
@@ -132,6 +169,7 @@
       listen("pet://drag-end", () => pet.setDragging(false)),
     ];
 
+    invoke<string>("glass_support").then((name) => (glassSupport = name));
     invoke<Settings>("get_settings").then(async (s) => {
       applySettings(s);
       await Promise.all(unlisteners);
@@ -155,7 +193,9 @@
     style:translate="{petOffset}px 0"
   >
     {#if hovering && settings?.bubble}
-      <Bubble {tick} showSpeed={settings.typingSpeed} {paused} />
+      <div bind:this={bubbleEl}>
+        <Bubble {tick} showSpeed={settings.typingSpeed} {paused} glass={glassBubble} />
+      </div>
     {/if}
     {#if banner}
       <div class="banner" role="status">{banner}</div>

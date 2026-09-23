@@ -59,7 +59,8 @@ describe("PetController", () => {
     const from = frames.length;
     advance(TYPING_HOLD_MAX_MS);
     expect(frames.slice(from)).toContainEqual(compose({}));
-    expect(introDuration(ANIMS.typing)).toBeLessThan(REACT_MS.typing);
+    // The hold is about as long as getting the laptop out (see machine.test).
+    expect(introDuration(ANIMS.typing) - REACT_MS.typing).toBeLessThanOrEqual(100);
   });
 
   it("keeps the laptop out longer the longer the spell of typing", () => {

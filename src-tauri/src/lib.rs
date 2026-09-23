@@ -33,6 +33,8 @@ pub fn run() {
             commands::get_settings,
             commands::update_settings,
             commands::set_hit_rect,
+            commands::glass_support,
+            commands::set_glass_bubble,
             commands::pet_drag_start,
             commands::show_context_menu,
             commands::pet_ready,

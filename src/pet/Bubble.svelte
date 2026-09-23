@@ -3,12 +3,17 @@
   import { t } from "../lib/i18n";
   import type { Tick } from "../lib/types";
 
-  let { tick, showSpeed, paused }: { tick: Tick; showSpeed: boolean; paused: boolean } = $props();
+  let {
+    tick,
+    showSpeed,
+    paused,
+    glass = false,
+  }: { tick: Tick; showSpeed: boolean; paused: boolean; glass?: boolean } = $props();
 
   const d = $derived(tick.today);
 </script>
 
-<div class="bubble">
+<div class="bubble" class:glass>
   <div class="title">{paused ? t("paused") : t("today")}</div>
   <dl>
     <dt>{t("keys")}</dt>
@@ -30,6 +35,15 @@
 </div>
 
 <style>
+  /* With the system material behind the card, the page only tints it. */
+  .bubble.glass {
+    --bg: rgba(245, 240, 232, 0.34);
+  }
+  @media (prefers-color-scheme: dark) {
+    .bubble.glass {
+      --bg: rgba(38, 38, 36, 0.42);
+    }
+  }
   .bubble {
     --bg: #f5f0e8;
     --fg: #1f1e1d;

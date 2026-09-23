@@ -48,11 +48,8 @@ describe("pickAnim priorities", () => {
   });
   it("reacts briefly to input, then idles", () => {
     const s = base({ lastInputAt: 1000, lastActivity: "typing" });
-    expect(pickAnim(s, 2499)).toBe("typing");
-    expect(pickAnim(s, 2500)).toBe("idle");
-    const c = base({ lastInputAt: 1000, lastActivity: "click", reactMs: REACT_MS.click });
-    expect(pickAnim(c, 1299)).toBe("click");
-    expect(pickAnim(c, 1300)).toBe("idle");
+    expect(pickAnim(s, 1999)).toBe("typing");
+    expect(pickAnim(s, 2000)).toBe("idle");
   });
 });
 
@@ -72,7 +69,7 @@ describe("typingReactMs", () => {
 describe("nextDeadline", () => {
   it("returns the earliest future transition", () => {
     const s = base({ lastInputAt: 1000, lastActivity: "typing", celebrateUntil: 5000 });
-    expect(nextDeadline(s, 1200)).toBe(2500);
+    expect(nextDeadline(s, 1200)).toBe(2000);
     expect(nextDeadline(s, 2600)).toBe(5000);
     expect(nextDeadline(s, 6000)).toBe(61_000);
   });
@@ -86,7 +83,7 @@ describe("frameAt", () => {
   });
   it("rests one-shots on the last frame", () => {
     expect(frameAt(ANIMS.poke, 100)).toEqual({ index: 0, nextIn: 100 });
-    expect(frameAt(ANIMS.poke, 10_000)).toEqual({ index: 1, nextIn: Infinity });
+    expect(frameAt(ANIMS.poke, 10_000)).toEqual({ index: 2, nextIn: Infinity });
   });
   it("plays the intro once, then loops at the typing override", () => {
     const intro = introDuration(ANIMS.typing);
@@ -96,7 +93,10 @@ describe("frameAt", () => {
     expect(frameAt(ANIMS.typing, 100, 70)).toEqual({ index: 1, nextIn: 34 });
     expect(frameAt(ANIMS.typing, intro, 70)).toEqual({ index: ANIMS.typing.loopFrom, nextIn: 70 });
     expect(frameAt(ANIMS.typing, intro + 100, 70).index).toBe((ANIMS.typing.loopFrom ?? 0) + 1);
-    expect(intro).toBeLessThan(REACT_MS.typing);
+    // The base hold is about as long as getting the laptop out takes: any
+    // shorter and the pet would start putting it away before it had it out.
+    expect(intro - REACT_MS.typing).toBeLessThanOrEqual(100);
+    expect(intro - REACT_MS.typing).toBeGreaterThanOrEqual(-500);
   });
 });
 

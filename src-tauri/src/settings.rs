@@ -115,6 +115,8 @@ pub struct Settings {
     pub double_click_anim: ActionAnim,
     /// Show today's stats in a bubble while hovering the pet.
     pub bubble: bool,
+    /// Draw the hover bubble with the system's glass material, where there is one.
+    pub liquid_glass: bool,
     /// Live typing speed: shown in the bubble and drives the typing animation.
     pub typing_speed: bool,
     pub milestones: bool,
@@ -137,6 +139,7 @@ impl Default for Settings {
             click_anim: ActionAnim::Poke,
             double_click_anim: ActionAnim::Hearts,
             bubble: true,
+            liquid_glass: true,
             typing_speed: true,
             milestones: true,
             custom_milestones: Vec::new(),

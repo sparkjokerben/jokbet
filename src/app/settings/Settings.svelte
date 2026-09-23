@@ -12,6 +12,8 @@
   let s = $state<Settings | null>(null);
   let error = $state("");
   let autostart = $state<boolean | null>(null);
+  /** Which system glass is available: "none" hides the switch. */
+  let glass = $state("none");
   const isMac = navigator.userAgent.includes("Mac");
 
   const IDLE_OPTIONS: { value: IdleAnim; label: string }[] = [
@@ -46,6 +48,7 @@
 
   onMount(() => {
     invoke<Settings>("get_settings").then((v) => (s = v));
+    invoke<string>("glass_support").then((v) => (glass = v));
     isEnabled().then((v) => (autostart = v), () => {});
     const un = listen<Settings>("settings://changed", (e) => (s = e.payload));
     return () => un.then((f) => f());
@@ -162,6 +165,16 @@
     <section class="card">
       <h2>{t("sectionDisplay")}</h2>
       <Toggle label={t("bubbleEnabled")} checked={s.bubble} onchange={(v) => update({ bubble: v })} />
+      {#if glass !== "none"}
+        <!-- Only where the system has a material to put behind the bubble. -->
+        <Toggle
+          label={t("liquidGlass")}
+          checked={s.liquidGlass}
+          disabled={!s.bubble}
+          onchange={(v) => update({ liquidGlass: v })}
+        />
+        <p class="muted small">{t("liquidGlassBody")}</p>
+      {/if}
       <Toggle label={t("typingSpeedEnabled")} checked={s.typingSpeed} onchange={(v) => update({ typingSpeed: v })} />
     </section>
 

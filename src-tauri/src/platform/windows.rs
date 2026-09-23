@@ -1,8 +1,10 @@
 use crate::engine::distance::Display;
 use windows::core::BOOL;
 use windows::Win32::Foundation::{LPARAM, RECT};
+use windows::Win32::Foundation::HWND;
 use windows::Win32::Graphics::Gdi::{
-    EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITORINFO,
+    CreateRectRgn, DeleteObject, EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, HRGN,
+    MONITORINFO,
 };
 use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_RAW_DPI};
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_RBUTTON};
@@ -35,6 +37,38 @@ unsafe extern "system" fn collect(monitor: HMONITOR, _: HDC, _: *mut RECT, data:
         ));
     }
     true.into()
+}
+
+/// Blurs the desktop behind the bubble.
+///
+/// Windows has no per-panel acrylic: the acrylic and mica backdrops cover the
+/// whole window, which would put a frosted slab under the pet too. The one
+/// material that can be clipped to a rectangle is the blur behind a region, so
+/// that is what the bubble gets. `rect` is in physical pixels, client-area
+/// coordinates; `None` clears it.
+pub fn set_glass(hwnd: HWND, rect: Option<(i32, i32, i32, i32)>) {
+    use windows::Win32::Graphics::Dwm::{
+        DwmEnableBlurBehindWindow, DWM_BLURBEHIND, DWM_BB_BLURREGION, DWM_BB_ENABLE,
+    };
+    let (enabled, region) = match rect {
+        Some((x, y, w, h)) => {
+            let region = unsafe { CreateRectRgn(x, y, x + w, y + h) };
+            (true, region)
+        }
+        None => (false, HRGN::default()),
+    };
+    let blur = DWM_BLURBEHIND {
+        dwFlags: DWM_BB_ENABLE | DWM_BB_BLURREGION,
+        fEnable: enabled.into(),
+        hRgnBlur: region,
+        fTransitionOnMaximized: false.into(),
+    };
+    unsafe {
+        let _ = DwmEnableBlurBehindWindow(hwnd, &blur);
+        if !region.is_invalid() {
+            let _ = DeleteObject(region);
+        }
+    }
 }
 
 /// Monitors in physical pixels (the space low-level mouse hooks report).

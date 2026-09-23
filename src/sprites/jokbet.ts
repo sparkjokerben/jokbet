@@ -29,7 +29,17 @@ export const PET_H = 16;
 export type ArmPose = "rest" | "up" | "high" | "down";
 export type EyeState = "open" | "closed" | "wide" | "happy" | "x";
 export type Side = -1 | 1;
-export type Effect = "zzz1" | "zzz2" | "sparkleA" | "sparkleB" | "heart" | "sweat" | "exclaim" | "question" | "pause";
+export type Effect =
+  | "zzz1"
+  | "zzz2"
+  | "sparkleA"
+  | "sparkleB"
+  | "heart"
+  | "sweat1"
+  | "sweat2"
+  | "exclaim"
+  | "question"
+  | "pause";
 
 export interface Pose {
   /** Whole-body offset in cells; negative dy jumps up. */
@@ -108,8 +118,10 @@ const GLYPHS: Record<Effect, { x: number; y: number; rows: readonly string[] }> 
   sparkleA: { x: 1, y: 9, rows: [".Y.", "YYY", ".Y."] },
   sparkleB: { x: 32, y: 8, rows: [".Y.", "YYY", ".Y."] },
   heart: { x: 26, y: 2, rows: [".R.R.", "RRRRR", ".RRR.", "..R.."] },
-  // A drop perched on the head's top right corner.
-  sweat: { x: 24, y: 9, rows: [".S", "SS", "SS"] },
+  // A drop perched on the head's top right corner, in two shapes so it can
+  // swell and settle while the pet struggles.
+  sweat1: { x: 24, y: 9, rows: [".S", "SS", "SS"] },
+  sweat2: { x: 24, y: 9, rows: [".S", "SS"] },
   exclaim: { x: 30, y: 4, rows: ["R", "R", "R", ".", "R"] },
   question: { x: 29, y: 3, rows: ["ZZ.", "..Z", ".Z.", "...", ".Z."] },
   pause: { x: 29, y: 4, rows: ["Z.Z", "Z.Z", "Z.Z"] },
@@ -185,7 +197,6 @@ export type AnimName =
   | "idle"
   | "typing"
   | "typingEnd"
-  | "click"
   | "sleep"
   | "wake"
   | "celebrate"
@@ -217,13 +228,6 @@ export const ANIMS: Record<AnimName, Anim> = {
     frames: [...TYPING_INTRO.map(raw), ...TYPING_LOOP.map(raw)],
   },
   typingEnd: { loop: false, frames: TYPING_OUTRO.map(raw) },
-  click: {
-    loop: false,
-    frames: [
-      { ms: 120, pose: { ...UP } },
-      { ms: 160, pose: { squash: 1 } },
-    ],
-  },
   sleep: {
     loop: true,
     frames: [
@@ -248,7 +252,8 @@ export const ANIMS: Record<AnimName, Anim> = {
     loop: false,
     frames: [
       { ms: 200, pose: { squash: 1, eyes: "closed", armL: "down", armR: "down" } },
-      { ms: 350, pose: { eyes: "wide", fx: ["sweat"] } },
+      { ms: 200, pose: { eyes: "wide", fx: ["sweat1"] } },
+      { ms: 150, pose: { eyes: "wide", fx: ["sweat2"] } },
     ],
   },
   hearts: {
@@ -288,10 +293,10 @@ export const ANIMS: Record<AnimName, Anim> = {
   dragged: {
     loop: true,
     frames: [
-      // The drop stays for the whole struggle; blinking it on and off read as
-      // a glitch.
-      { ms: 160, pose: { ...UP, legs: [2, 4, 2, 4], eyes: "wide", fx: ["sweat"] } },
-      { ms: 160, pose: { ...UP, legs: [4, 2, 4, 2], eyes: "wide", fx: ["sweat"] } },
+      // The drop stays for the whole struggle, swelling and settling rather
+      // than blinking on and off, which read as a glitch.
+      { ms: 160, pose: { ...UP, legs: [2, 4, 2, 4], eyes: "wide", fx: ["sweat1"] } },
+      { ms: 160, pose: { ...UP, legs: [4, 2, 4, 2], eyes: "wide", fx: ["sweat2"] } },
     ],
   },
   noperm: {
