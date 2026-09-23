@@ -15,7 +15,7 @@
     type Tick,
   } from "../lib/types";
   import type { AnimName } from "../sprites/jokbet";
-  import { GRID_H, GRID_W } from "../sprites/jokbet";
+  import { GRID_H, GRID_W, PET_H, PET_W, PET_X, PET_Y } from "../sprites/jokbet";
   import Bubble from "./Bubble.svelte";
   import { PetController } from "./controller";
   import Counter from "./Counter.svelte";
@@ -49,10 +49,15 @@
   const pet = new PetController((r) => (rows = r));
 
   function reportHitRect() {
-    // Jokbet's body spans grid columns 4..19 and rows 3..15 (room for jumps).
+    // Jokbet fills the middle of the canvas: his box is 24x16 cells at (PET_X, PET_Y).
     const box = spriteEl.getBoundingClientRect();
     invoke("set_hit_rect", {
-      rect: { x: box.left + 4 * scale, y: box.top + 3 * scale, w: 16 * scale, h: 13 * scale },
+      rect: {
+        x: box.left + PET_X * scale,
+        y: box.top + PET_Y * scale,
+        w: PET_W * scale,
+        h: PET_H * scale,
+      },
     });
   }
 
@@ -136,7 +141,7 @@
 </script>
 
 <div class="stage">
-  <div class="above" style:bottom="{(GRID_H - 2) * scale}px">
+  <div class="above" style:bottom="{(GRID_H - PET_Y) * scale}px">
     {#if hovering && settings?.bubble}
       <Bubble {tick} showSpeed={settings.typingSpeed} {paused} />
     {/if}

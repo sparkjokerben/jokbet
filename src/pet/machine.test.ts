@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ANIMS } from "../sprites/jokbet";
-import { blockedBy, frameAt, introDuration, nextDeadline, pickAnim, typingFrameMs, type Signals } from "./machine";
+import { REACT_MS, blockedBy, frameAt, introDuration, nextDeadline, pickAnim, typingFrameMs, type Signals } from "./machine";
 
 const base = (over: Partial<Signals> = {}): Signals => ({
   blocked: null,
@@ -65,11 +65,13 @@ describe("frameAt", () => {
   });
   it("plays the intro once, then loops at the typing override", () => {
     const intro = introDuration(ANIMS.typing);
-    expect(intro).toBe(460);
-    expect(frameAt(ANIMS.typing, 100, 70)).toEqual({ index: 0, nextIn: 60 });
-    expect(frameAt(ANIMS.typing, intro, 70)).toEqual({ index: 3, nextIn: 70 });
-    expect(frameAt(ANIMS.typing, intro + 100, 70)).toEqual({ index: 4, nextIn: 40 });
-    expect(frameAt(ANIMS.typing, intro + 140, 70)).toEqual({ index: 3, nextIn: 70 });
+    const loop = ANIMS.typing.frames.length - (ANIMS.typing.loopFrom ?? 0);
+    expect(intro).toBe(1028);
+    expect(loop).toBe(3);
+    expect(frameAt(ANIMS.typing, 100, 70)).toEqual({ index: 1, nextIn: 32 });
+    expect(frameAt(ANIMS.typing, intro, 70)).toEqual({ index: ANIMS.typing.loopFrom, nextIn: 70 });
+    expect(frameAt(ANIMS.typing, intro + 100, 70).index).toBe((ANIMS.typing.loopFrom ?? 0) + 1);
+    expect(intro).toBeLessThan(REACT_MS.typing);
   });
 });
 

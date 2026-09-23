@@ -5,7 +5,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { deflateSync } from "node:zlib";
-import { ANIMS, GRID_H, GRID_W, compose, type Pose } from "../src/sprites/jokbet.ts";
+import { ANIMS, GRID_H, GRID_W, PET_H, PET_W, PET_X, PET_Y, compose, frameRows } from "../src/sprites/jokbet.ts";
 import { PALETTE, TRANSPARENT } from "../src/sprites/palette.ts";
 
 type RGBA = [number, number, number, number];
@@ -88,25 +88,25 @@ function renderSheet(out: string) {
   const cols = Math.max(...entries.map(([, a]) => a.frames.length)) + 2; // + gaze demos
   const c = new Canvas(cols * cellW + pad, entries.length * cellH + pad);
   c.fill(0, 0, c.w, c.h, [200, 200, 205, 255]);
-  const draw = (pose: Pose, col: number, row: number) => {
+  const draw = (rows: readonly string[], col: number, row: number) => {
     const x = pad + col * cellW;
     const y = pad + row * cellH;
     c.fill(x, y, GRID_W * scale, GRID_H * scale, [236, 236, 240, 255]);
-    c.sprite(compose(pose), x, y, scale, paletteColor);
+    c.sprite(rows, x, y, scale, paletteColor);
   };
   entries.forEach(([name, anim], row) => {
-    anim.frames.forEach((f, col) => draw(f.pose, col, row));
+    anim.frames.forEach((f, col) => draw(frameRows(f), col, row));
     if (name === "idle") {
-      draw({ gaze: [-1, -1] }, cols - 2, row);
-      draw({ gaze: [1, 1] }, cols - 1, row);
+      draw(compose({ gaze: [-1, -1] }), cols - 2, row);
+      draw(compose({ gaze: [1, 1] }), cols - 1, row);
     }
   });
   writeFileSync(out, encodePng(c));
   console.log(`sheet: ${entries.map(([n]) => n).join(", ")} -> ${out}`);
 }
 
-/** Tight bounds of Jokbet's body in the idle pose (grid columns 4..19, rows 6..15). */
-const BODY = { x: 4, y: 6, w: 16, h: 10 };
+/** Jokbet's own box inside the canvas (a 24x16 sprite at the canvas centre). */
+const BODY = { x: PET_X, y: PET_Y, w: PET_W, h: PET_H };
 const bodyRows = () =>
   compose()
     .slice(BODY.y, BODY.y + BODY.h)
@@ -129,13 +129,13 @@ function renderIcons(dir: string) {
       if (dx * dx + dy * dy <= radius * radius) icon.set(x, y, cream);
     }
   }
-  const s = 40;
+  const s = 24;
   icon.sprite(rows, (size - BODY.w * s) / 2, (size - BODY.h * s) / 2 + 20, s, paletteColor);
   writeFileSync(join(dir, "icon-source.png"), encodePng(icon));
 
   // Tray icons at @2x: macOS template (black silhouette, eyes cut out) and a colored one.
   const tray = (colorOf: (ch: string) => RGBA | null) => {
-    const t = new Canvas(36, 24);
+    const t = new Canvas(BODY.w * 2 + 4, BODY.h * 2 + 4);
     t.sprite(rows, 2, 2, 2, colorOf);
     return encodePng(t);
   };
@@ -144,10 +144,30 @@ function renderIcons(dir: string) {
   console.log(`icons -> ${dir}`);
 }
 
-const [mode, out] = process.argv.slice(2);
-if (mode === "sheet" && out) renderSheet(out);
-else if (mode === "icons" && out) renderIcons(out);
+/** One animation, every frame, big enough to read. */
+function renderAnim(name: string, out: string, cols: number, scale: number) {
+  const anim = ANIMS[name as keyof typeof ANIMS];
+  const pad = 4;
+  const cellW = GRID_W * scale + pad;
+  const cellH = GRID_H * scale + pad;
+  const rows = Math.ceil(anim.frames.length / cols);
+  const c = new Canvas(cols * cellW + pad, rows * cellH + pad);
+  c.fill(0, 0, c.w, c.h, [32, 32, 34, 255]);
+  anim.frames.forEach((f, i) => {
+    const x = pad + (i % cols) * cellW;
+    const y = pad + Math.floor(i / cols) * cellH;
+    c.sprite(frameRows(f), x, y, scale, paletteColor);
+  });
+  writeFileSync(out, encodePng(c));
+  console.log(`${name}: ${anim.frames.length} frames -> ${out}`);
+}
+
+const [mode, ...rest] = process.argv.slice(2);
+const [a, b, c, d] = rest;
+if (mode === "sheet" && a) renderSheet(a);
+else if (mode === "icons" && a) renderIcons(a);
+else if (mode === "anim" && a && b) renderAnim(a, b, Number(c) || 8, Number(d) || 6);
 else {
-  console.error("usage: node scripts/render-sprites.ts sheet <out.png> | icons <dir>");
+  console.error("usage: node scripts/render-sprites.ts sheet <out.png> | icons <dir> | anim <name> <out.png> [cols] [scale]");
   process.exit(1);
 }

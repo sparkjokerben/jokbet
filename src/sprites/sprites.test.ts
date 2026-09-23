@@ -1,32 +1,47 @@
 import { describe, expect, it } from "vitest";
-import { ANIMS, GRID_H, GRID_W, compose } from "./jokbet";
+import { ANIMS, GRID_H, GRID_W, PET_Y, compose, frameRows } from "./jokbet";
+import { SOCCER_IDLE_BEFORE } from "./frames/soccer";
+import { TYPING_INTRO } from "./frames/typing";
 import { compileGrid } from "./compile";
 import { PALETTE, TRANSPARENT } from "./palette";
 
 const valid = new Set([TRANSPARENT, ...Object.keys(PALETTE)]);
 
+/** The pet's box in the canvas, as recovered from the reference videos. */
+const IDLE = [
+  "..........OOOOOOOOOOOOOOOO..........",
+  "..........OOOOOOOOOOOOOOOO..........",
+  "..........OOEEOOOOOOOOEEOO..........",
+  "..........OOEEOOOOOOOOEEOO..........",
+  "......OOOOOOOOOOOOOOOOOOOOOOOO......",
+  "......OOOOOOOOOOOOOOOOOOOOOOOO......",
+  "......OOOOOOOOOOOOOOOOOOOOOOOO......",
+  "......OOOOOOOOOOOOOOOOOOOOOOOO......",
+  "..........OOOOOOOOOOOOOOOO..........",
+  "..........OOOOOOOOOOOOOOOO..........",
+  "..........OOOOOOOOOOOOOOOO..........",
+  "..........OOOOOOOOOOOOOOOO..........",
+  "..........OO..OO....OO..OO..........",
+  "..........OO..OO....OO..OO..........",
+  "..........OO..OO....OO..OO..........",
+  "..........OO..OO....OO..OO..........",
+];
+
 describe("jokbet sprite", () => {
-  it("matches the Claude Code logo in the idle pose", () => {
-    expect(compose().slice(6)).toEqual([
-      "......OOOOOOOOOOOO......",
-      "......OOOOOOOOOOOO......",
-      "......OOEOOOOOOEOO......",
-      "......OOEOOOOOOEOO......",
-      "....OOOOOOOOOOOOOOOO....",
-      "....OOOOOOOOOOOOOOOO....",
-      "......OOOOOOOOOOOO......",
-      "......OOOOOOOOOOOO......",
-      ".......O.O....O.O.......",
-      ".......O.O....O.O.......",
-    ]);
+  it("draws the reference's idle pose", () => {
+    expect(compose().slice(PET_Y, PET_Y + 16)).toEqual(IDLE);
+  });
+
+  it("agrees with the idle frame recovered from the video", () => {
+    expect(compose()).toEqual(SOCCER_IDLE_BEFORE[0].rows);
   });
 
   for (const [name, anim] of Object.entries(ANIMS)) {
-    it(`"${name}" frames fit the grid and use palette colors`, () => {
+    it(`"${name}" frames fit the canvas and use palette colors`, () => {
       expect(anim.frames.length).toBeGreaterThan(0);
       for (const frame of anim.frames) {
         expect(frame.ms).toBeGreaterThan(0);
-        const rows = compose(frame.pose);
+        const rows = frameRows(frame);
         expect(rows).toHaveLength(GRID_H);
         for (const row of rows) {
           expect(row).toHaveLength(GRID_W);
@@ -35,6 +50,13 @@ describe("jokbet sprite", () => {
       }
     });
   }
+
+  it("keeps the typing intro inside the canvas too", () => {
+    for (const frame of TYPING_INTRO) {
+      expect(frame.rows).toHaveLength(GRID_H);
+      for (const row of frame.rows) expect(row).toHaveLength(GRID_W);
+    }
+  });
 });
 
 describe("compileGrid", () => {

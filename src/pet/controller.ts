@@ -1,7 +1,7 @@
 // Drives the pet's animation: tracks signals, applies blink/gaze/pause
 // overlays and schedules the next frame with plain timers (no rAF loop).
 
-import { ANIMS, compose, type AnimName, type Effect, type Pose } from "../sprites/jokbet";
+import { ANIMS, compose, frameRows, type AnimName, type Effect, type Frame, type Pose } from "../sprites/jokbet";
 import {
   animDuration,
   frameAt,
@@ -137,24 +137,28 @@ export class PetController {
       t - this.animStart,
       this.anim === "typing" ? typingFrameMs(this.keysPerSecond) : undefined,
     );
-    const pose: Pose = { ...anim.frames[index].pose };
+    const frame: Frame = anim.frames[index];
+    // Frames recovered from the reference videos are pixels; the rest are poses
+    // the overlays below can still bend.
+    const pose: Pose | null = frame.rows ? null : { ...frame.pose };
 
     let wakeAt = Math.min(t + nextIn, nextDeadline(this.signals, t));
-    if (this.anim === "idle" || this.anim === "scroll") {
+    if (pose && (this.anim === "idle" || this.anim === "scroll")) {
       // Whatever the idle animation does, the eyes stay on the cursor.
       if (this.anim === "idle") pose.gaze = this.gaze;
       if (t >= this.blinkAt + BLINK_MS) this.blinkAt = t + blinkGap();
       if (t >= this.blinkAt) pose.eyes = "closed";
       wakeAt = Math.min(wakeAt, t >= this.blinkAt ? this.blinkAt + BLINK_MS : this.blinkAt);
     }
-    if (this.paused && !this.signals.blocked) {
+    if (pose && this.paused && !this.signals.blocked) {
       pose.fx = [...(pose.fx ?? []), "pause" as Effect];
     }
 
-    const key = JSON.stringify(pose);
+    const rows = pose ? compose(pose) : frameRows(frame);
+    const key = rows.join("\n");
     if (key !== this.lastKey) {
       this.lastKey = key;
-      this.onRender(compose(pose));
+      this.onRender([...rows]);
     }
     if (Number.isFinite(wakeAt)) {
       this.timer = setTimeout(() => this.update(), Math.max(0, wakeAt - t));

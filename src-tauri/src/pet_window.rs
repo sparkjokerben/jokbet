@@ -9,11 +9,12 @@ use tauri::{
 
 pub const PET_LABEL: &str = "pet";
 
-/// Sprite grid in cells (see src/sprites/jokbet.ts).
-const GRID_W: f64 = 24.0;
-const GRID_H: f64 = 16.0;
-/// Room above the sprite for the head counter and the hover bubble.
-const TOP_PAD: f64 = 170.0;
+/// Sprite canvas in cells (see src/sprites/jokbet.ts); the pet's own box is
+/// 24x16 inside it, leaving room for the ball it juggles.
+const GRID_W: f64 = 36.0;
+const GRID_H: f64 = 26.0;
+/// Room above the canvas for the head counter and the hover bubble.
+const TOP_PAD: f64 = 130.0;
 const MIN_WIDTH: f64 = 220.0;
 const EDGE_MARGIN: f64 = 16.0;
 
@@ -193,8 +194,8 @@ mod tests {
     #[test]
     fn window_size_leaves_room_for_bubble() {
         assert_eq!(window_size(PetSize::Small), (220.0, 234.0));
-        assert_eq!(window_size(PetSize::Medium), (220.0, 266.0));
-        assert_eq!(window_size(PetSize::Large), (220.0, 298.0));
+        assert_eq!(window_size(PetSize::Medium), (220.0, 286.0));
+        assert_eq!(window_size(PetSize::Large), (288.0, 338.0));
     }
 
     #[test]

@@ -15,6 +15,7 @@ Jokbet 是一个轻量级桌宠，画风取自 Claude Code 的像素吉祥物。
 - Hover the pet for today's stats; right-click (or use the tray icon) for the menu
 - Jokbet gets out a laptop and types along with you, reacts to clicks and scrolling, follows your cursor with its eyes, falls asleep when you're away, and likes being poked
 - Pick what it does when idle (breathe, juggle a soccer ball, look around; its eyes keep following the cursor) and when you click or double-click it (flinch, hearts, soccer, wave)
+- The soccer and typing animations are recovered frame by frame from recordings of Anthropic's own mascot, so they move the way Clawd does; see `tools/extract-reference-frames`
 - 中英双语，跟随系统语言
 
 ## Privacy / 隐私
@@ -81,7 +82,9 @@ npm test              # frontend tests
 npm run check         # type check
 cd src-tauri && cargo test
 npm run sprites       # render every animation frame to sprites.png
+node scripts/render-sprites.ts anim soccer out.png 8 4   # one animation, larger
 npm run icons         # regenerate app and tray icons from the sprite
+python3 tools/extract-reference-frames/build-frames.py --help  # re-derive the video frames
 ```
 
 With `npm run dev` running, `http://localhost:1420/preview.html?view=stats` (or `settings`, `onboarding`, `pet`) renders a window in a normal browser with fake data, which is handy for layout work.

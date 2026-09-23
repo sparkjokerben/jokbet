@@ -31,12 +31,13 @@ describe("PetController", () => {
 
   it("puts the laptop away when typing stops, and resumes without getting it out again", () => {
     pet.input("typing");
-    expect(last()).toEqual(compose(ANIMS.typing.frames[0].pose));
+    expect(last()).toEqual(ANIMS.typing.frames[0].rows);
     advance(REACT_MS.typing);
-    expect(last()).toEqual(compose(ANIMS.typingEnd.frames[0].pose));
+    expect(last()).toEqual(ANIMS.typingEnd.frames[0].rows);
     pet.input("typing");
-    expect(last()).toEqual(compose(ANIMS.typing.frames[3].pose));
+    expect(last()).toEqual(ANIMS.typing.frames[ANIMS.typing.loopFrom ?? 0].rows);
     advance(REACT_MS.typing + animDuration(ANIMS.typingEnd));
+    // The laptop is away and the pet is back to breathing.
     expect(last()).toEqual(compose({}));
     expect(introDuration(ANIMS.typing)).toBeLessThan(REACT_MS.typing);
   });
