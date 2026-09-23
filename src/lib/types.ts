@@ -4,6 +4,8 @@
 export const PET_SCALE_MIN = 3;
 export const PET_SCALE_MAX = 7;
 export const PET_SCALE_DEFAULT = 5;
+/** The tint slider's range, in percent; matches GLASS_TINT_MAX in Rust. */
+export const GLASS_TINT_MAX = 60;
 export type CounterKind = "today" | "rate";
 export type Period = "daily" | "lifetime";
 export type Metric = "keys" | "clicks" | "scrolls" | "distance";
@@ -37,6 +39,8 @@ export interface Settings {
   bubble: boolean;
   /** Draw the hover bubble with the system's glass material. */
   liquidGlass: boolean;
+  /** How much the card tints that material, in percent. */
+  glassTint: number;
   typingSpeed: boolean;
   milestones: boolean;
   customMilestones: CustomMilestone[];

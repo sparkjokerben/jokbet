@@ -8,12 +8,13 @@
     showSpeed,
     paused,
     glass = false,
-  }: { tick: Tick; showSpeed: boolean; paused: boolean; glass?: boolean } = $props();
+    tint = 0.18,
+  }: { tick: Tick; showSpeed: boolean; paused: boolean; glass?: boolean; tint?: number } = $props();
 
   const d = $derived(tick.today);
 </script>
 
-<div class="bubble" class:glass>
+<div class="bubble" class:glass style:--tint={String(tint)}>
   <div class="title">{paused ? t("paused") : t("today")}</div>
   <dl>
     <dt>{t("keys")}</dt>
@@ -35,14 +36,15 @@
 </div>
 
 <style>
-  /* The material is the fill; the page only steadies it a little for the text. */
+  /* The material is the fill; the page only tints it, by as much as the
+     settings slider asks for. */
   .bubble.glass {
-    --bg: rgba(250, 247, 242, 0.16);
+    background: rgba(250, 247, 242, var(--tint));
     --line: rgba(255, 255, 255, 0.34);
   }
   @media (prefers-color-scheme: dark) {
     .bubble.glass {
-      --bg: rgba(20, 20, 19, 0.2);
+      background: rgba(20, 20, 19, var(--tint));
       --line: rgba(255, 255, 255, 0.14);
     }
   }

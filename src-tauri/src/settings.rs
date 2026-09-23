@@ -9,6 +9,8 @@ use std::sync::Mutex;
 pub const PET_SCALE_MIN: f64 = 3.0;
 pub const PET_SCALE_MAX: f64 = 7.0;
 pub const PET_SCALE_DEFAULT: f64 = 5.0;
+/// The tint slider's range, in percent of the card colour.
+pub const GLASS_TINT_MAX: u32 = 60;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
@@ -117,6 +119,9 @@ pub struct Settings {
     pub bubble: bool,
     /// Draw the hover bubble with the system's glass material, where there is one.
     pub liquid_glass: bool,
+    /// How much the page tints that material, in percent: 0 is the bare
+    /// material, and the maximum is enough to read as a solid card.
+    pub glass_tint: u32,
     /// Live typing speed: shown in the bubble and drives the typing animation.
     pub typing_speed: bool,
     pub milestones: bool,
@@ -140,6 +145,7 @@ impl Default for Settings {
             double_click_anim: ActionAnim::Hearts,
             bubble: true,
             liquid_glass: false,
+            glass_tint: 18,
             typing_speed: true,
             milestones: true,
             custom_milestones: Vec::new(),
@@ -155,6 +161,9 @@ impl Settings {
     pub fn validate(&self) -> Result<(), String> {
         if !(1..=120).contains(&self.sleep_after_min) {
             return Err("sleepAfterMin must be between 1 and 120".into());
+        }
+        if self.glass_tint > GLASS_TINT_MAX {
+            return Err(format!("glassTint must be at most {GLASS_TINT_MAX}"));
         }
         if !self.pet_scale.is_finite() || !(PET_SCALE_MIN..=PET_SCALE_MAX).contains(&self.pet_scale)
         {
@@ -376,6 +385,17 @@ mod tests {
         assert!(at(f64::NAN).validate().is_err());
         assert!(at(PET_SCALE_MIN).validate().is_ok());
         assert!(at(PET_SCALE_MAX).validate().is_ok());
+    }
+
+    #[test]
+    fn glass_tint_stays_within_its_slider() {
+        let at = |glass_tint: u32| Settings {
+            glass_tint,
+            ..Default::default()
+        };
+        assert!(at(0).validate().is_ok());
+        assert!(at(GLASS_TINT_MAX).validate().is_ok());
+        assert!(at(GLASS_TINT_MAX + 1).validate().is_err());
     }
 
     #[test]

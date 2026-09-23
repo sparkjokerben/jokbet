@@ -4,7 +4,14 @@
   import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
   import { onMount } from "svelte";
   import { t } from "../../lib/i18n";
-  import { PET_SCALE_MAX, PET_SCALE_MIN, type ActionAnim, type IdleAnim, type Settings } from "../../lib/types";
+  import {
+    GLASS_TINT_MAX,
+    PET_SCALE_MAX,
+    PET_SCALE_MIN,
+    type ActionAnim,
+    type IdleAnim,
+    type Settings,
+  } from "../../lib/types";
   import Segmented from "../ui/Segmented.svelte";
   import Toggle from "../ui/Toggle.svelte";
   import MilestoneEditor from "./MilestoneEditor.svelte";
@@ -173,6 +180,23 @@
           disabled={!s.bubble}
           onchange={(v) => update({ liquidGlass: v })}
         />
+        {#if s.liquidGlass}
+          <label class="field">
+            <span>{t("glassTint")}</span>
+            <span class="size">
+              <input
+                type="range"
+                min="0"
+                max={GLASS_TINT_MAX}
+                step="1"
+                aria-label={t("glassTint")}
+                value={s.glassTint}
+                oninput={(e) => update({ glassTint: Number(e.currentTarget.value) })}
+              />
+              <output>{s.glassTint}%</output>
+            </span>
+          </label>
+        {/if}
         <p class="muted small">{t("liquidGlassBody")}</p>
       {/if}
       <Toggle label={t("typingSpeedEnabled")} checked={s.typingSpeed} onchange={(v) => update({ typingSpeed: v })} />

@@ -149,6 +149,7 @@
     });
 
     const detach = attachGestures(spriteEl, {
+      press: () => pet.pressed(),
       click: () => react(settings?.clickAnim),
       doubleClick: () => react(settings?.doubleClickAnim),
       dragStart: async () => {
@@ -196,7 +197,13 @@
   >
     {#if hovering && settings?.bubble}
       <div bind:this={bubbleEl}>
-        <Bubble {tick} showSpeed={settings.typingSpeed} {paused} glass={glassBubble} />
+        <Bubble
+          {tick}
+          showSpeed={settings.typingSpeed}
+          {paused}
+          glass={glassBubble}
+          tint={(settings.glassTint ?? 18) / 100}
+        />
       </div>
     {/if}
     {#if banner}

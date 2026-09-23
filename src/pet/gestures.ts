@@ -4,6 +4,8 @@ export const DRAG_THRESHOLD_PX = 4;
 export const DOUBLE_CLICK_MS = 250;
 
 export interface GestureHandlers {
+  /** The primary button went down on the pet. */
+  press(): void;
   click(): void;
   doubleClick(): void;
   dragStart(): void;
@@ -18,6 +20,7 @@ export function attachGestures(el: HTMLElement, h: GestureHandlers): () => void 
   const onDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
     down = { x: e.screenX, y: e.screenY };
+    h.press();
   };
   const onMove = (e: PointerEvent) => {
     if (!down) return;

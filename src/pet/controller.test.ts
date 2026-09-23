@@ -32,6 +32,19 @@ describe("PetController", () => {
     expect(last()).toEqual(compose({ armL: "up", armR: "up" }));
   });
 
+  it("leaves the pet alone when the click landed on it", () => {
+    pet.pressed(); // the pointer went down on the pet
+    pet.input("click"); // and the engine reports that click a moment later
+    expect(last()).not.toEqual(compose({ armL: "up", armR: "up" }));
+  });
+
+  it("stops a flinch the engine reported just before the press", () => {
+    pet.input("click");
+    expect(last()).toEqual(compose({ armL: "up", armR: "up" }));
+    pet.pressed();
+    expect(last()).not.toEqual(compose({ armL: "up", armR: "up" }));
+  });
+
   it("does not let that flinch cut the pet's own reaction short", () => {
     // Clicking the pet plays one of its reactions; the click the engine sees
     // a moment later must leave it alone.

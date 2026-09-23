@@ -45,6 +45,7 @@ let settings: Settings = {
   doubleClickAnim: "hearts",
   bubble: true,
   liquidGlass: true,
+  glassTint: 18,
   typingSpeed: true,
   milestones: true,
   customMilestones: [{ id: "a", period: "daily", metric: "keys", threshold: 30000, repeat: false }],

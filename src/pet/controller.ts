@@ -22,6 +22,10 @@ const blinkGap = () => 3000 + Math.random() * 3000;
 /** Idle time before the idle animation plays, and again between plays. */
 const idleShowGap = () => 20_000 + Math.random() * 40_000;
 
+/** How long a press on the pet counts as an interaction. Long enough to
+ * cover the press, the release and the wait for a second click. */
+const PRESS_MS = 700;
+
 /** How long the laptop stays in sight while it is being put away. */
 const LAPTOP_OUT_MS = (() => {
   let ms = 0;
@@ -47,6 +51,8 @@ export class PetController {
   private keysPerSecond = 0;
   /** When the current spell of typing started (see typingReactMs). */
   private typingSince: number | null = null;
+  /** Until when a press on the pet makes clicks its own, not the flinch. */
+  private pressedUntil = 0;
   /** Typing resumed while the laptop was still out: skip getting it out again. */
   private resumeTyping = false;
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -82,18 +88,23 @@ export class PetController {
       this.signals.oneShot = null;
       this.resumeTyping = t - this.animStart < LAPTOP_OUT_MS;
     }
-    // A click restarts the flinch so that repeated clicks each show it, but
-    // not a click that landed on the pet: that one is an interaction, and its
-    // own animation is playing.
-    if (activity === "click" && !this.interacting(t)) this.animStart = t;
+    if (activity === "click") {
+      // A click away from the pet restarts the flinch, so that repeated clicks
+      // each show it. A click on the pet is an interaction instead: it earns
+      // no flinch at all, however the two signals are ordered.
+      if (this.interacting(t)) {
+        this.signals.reactMs = 0;
+      } else {
+        this.signals.reactMs = REACT_MS.click;
+        this.animStart = t;
+      }
+    }
     if (activity === "typing") {
       // A pause longer than the hold, or a different kind of input, ends the
       // spell; the next keystroke starts a fresh one.
       const gap = t - this.signals.lastInputAt;
       if (this.signals.lastActivity !== "typing" || gap > this.signals.reactMs) this.typingSince = t;
       this.signals.reactMs = typingReactMs(t - (this.typingSince ?? t));
-    } else {
-      this.signals.reactMs = REACT_MS[activity];
     }
     this.signals.lastInputAt = t;
     this.signals.lastActivity = activity;
@@ -136,9 +147,23 @@ export class PetController {
     this.keysPerSecond = kps;
   }
 
-  /** True while a reaction the user asked for (a click on the pet) plays. */
+  /** The pointer went down on the pet: from here on, what the engine reports
+   * about this click is an interaction, not a stray click to flinch at. */
+  pressed() {
+    const t = this.now();
+    this.pressedUntil = t + PRESS_MS;
+    // The engine may have reported the click already, and its flinch may be
+    // showing: stop it rather than leave it flickering under the reaction.
+    if (this.signals.lastActivity === "click") this.signals.reactMs = 0;
+    this.update();
+  }
+
+  /** True while a click is the pet's own business: its reaction is playing, or
+   * the pointer is on it. */
   private interacting(now: number): boolean {
-    return this.signals.oneShot !== null && now < this.signals.oneShot.until;
+    return (
+      (this.signals.oneShot !== null && now < this.signals.oneShot.until) || now < this.pressedUntil
+    );
   }
 
   /** Picks the idle animation, and shows it once right away if idling. */
