@@ -72,6 +72,7 @@ impl DayCounters {
 #[serde(rename_all = "camelCase")]
 pub enum Activity {
     Typing,
+    Click,
 }
 
 #[derive(Default)]
@@ -130,8 +131,7 @@ impl Aggregator {
                     self.today.apply(bump);
                     self.pending.apply(bump);
                 }
-                // Clicks are counted but do not change what the pet is doing.
-                None
+                Some(Activity::Click)
             }
             RawEvent::Button { down: false, .. } => None,
             RawEvent::Scroll { momentum: true } => None,

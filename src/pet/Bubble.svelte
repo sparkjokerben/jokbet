@@ -35,13 +35,15 @@
 </div>
 
 <style>
-  /* With the system material behind the card, the page only tints it. */
+  /* The material is the fill; the page only steadies it a little for the text. */
   .bubble.glass {
-    --bg: rgba(245, 240, 232, 0.34);
+    --bg: rgba(250, 247, 242, 0.16);
+    --line: rgba(255, 255, 255, 0.34);
   }
   @media (prefers-color-scheme: dark) {
     .bubble.glass {
-      --bg: rgba(38, 38, 36, 0.42);
+      --bg: rgba(20, 20, 19, 0.2);
+      --line: rgba(255, 255, 255, 0.14);
     }
   }
   .bubble {
@@ -59,6 +61,10 @@
     font: 12px/1.45 -apple-system, "Segoe UI", system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  }
+  /* The material has no tail to match, so the card goes without one. */
+  .bubble.glass::after {
+    display: none;
   }
   .bubble::after {
     content: "";

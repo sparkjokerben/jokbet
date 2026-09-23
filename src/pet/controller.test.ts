@@ -27,6 +27,21 @@ describe("PetController", () => {
     vi.restoreAllMocks();
   });
 
+  it("flinches when the mouse is clicked away from the pet", () => {
+    pet.input("click");
+    expect(last()).toEqual(compose({ armL: "up", armR: "up" }));
+  });
+
+  it("does not let that flinch cut the pet's own reaction short", () => {
+    // Clicking the pet plays one of its reactions; the click the engine sees
+    // a moment later must leave it alone.
+    pet.oneShot("wave");
+    advance(300); // into the second frame of the wave
+    const waving = last();
+    pet.input("click");
+    expect(last()).toEqual(waving);
+  });
+
   it("keeps looking at the cursor whatever the idle animation", () => {
     pet.setGaze([1, 0]);
     expect(last()).toEqual(compose({ gaze: [1, 0] }));

@@ -82,6 +82,10 @@ export class PetController {
       this.signals.oneShot = null;
       this.resumeTyping = t - this.animStart < LAPTOP_OUT_MS;
     }
+    // A click restarts the flinch so that repeated clicks each show it, but
+    // not a click that landed on the pet: that one is an interaction, and its
+    // own animation is playing.
+    if (activity === "click" && !this.interacting(t)) this.animStart = t;
     if (activity === "typing") {
       // A pause longer than the hold, or a different kind of input, ends the
       // spell; the next keystroke starts a fresh one.
@@ -130,6 +134,11 @@ export class PetController {
 
   setKeysPerSecond(kps: number) {
     this.keysPerSecond = kps;
+  }
+
+  /** True while a reaction the user asked for (a click on the pet) plays. */
+  private interacting(now: number): boolean {
+    return this.signals.oneShot !== null && now < this.signals.oneShot.until;
   }
 
   /** Picks the idle animation, and shows it once right away if idling. */
@@ -189,8 +198,9 @@ export class PetController {
 
     let wakeAt = Math.min(t + nextIn, nextDeadline(this.signals, t));
     if (showing) wakeAt = Math.min(wakeAt, t < this.idleShowUntil ? this.idleShowUntil : this.idleShowAt);
-    if (pose && this.anim === "idle") {
-      // Whatever the idle animation does, the eyes stay on the cursor.
+    if (pose && (this.anim === "idle" || this.anim === "click")) {
+      // Whatever the idle animation does, and on clicks too, the eyes stay on
+      // the cursor.
       pose.gaze = this.gaze;
       if (t >= this.blinkAt + BLINK_MS) this.blinkAt = t + blinkGap();
       if (t >= this.blinkAt) pose.eyes = "closed";

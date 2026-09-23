@@ -197,6 +197,7 @@ export type AnimName =
   | "idle"
   | "typing"
   | "typingEnd"
+  | "click"
   | "sleep"
   | "wake"
   | "celebrate"
@@ -228,6 +229,13 @@ export const ANIMS: Record<AnimName, Anim> = {
     frames: [...TYPING_INTRO.map(raw), ...TYPING_LOOP.map(raw)],
   },
   typingEnd: { loop: false, frames: TYPING_OUTRO.map(raw) },
+  click: {
+    loop: false,
+    frames: [
+      { ms: 120, pose: { ...UP } },
+      { ms: 160, pose: { squash: 1 } },
+    ],
+  },
   sleep: {
     loop: true,
     frames: [

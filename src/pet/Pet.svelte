@@ -28,8 +28,6 @@
   const CELEBRATE_MS = 3500;
   /** Gap between the top of the pet's box and whatever sits above it. */
   const ABOVE_LIFT = 8;
-  /** How far the bubble's tail sticks out below its box. */
-  const BUBBLE_TAIL = 6;
 
   let rows = $state<string[]>([]);
   let settings = $state<Settings | null>(null);
@@ -68,8 +66,10 @@
     const card = bubbleEl.querySelector<HTMLElement>(".bubble") ?? bubbleEl;
     const box = card.getBoundingClientRect();
     const radius = parseFloat(getComputedStyle(card).borderTopLeftRadius) || 0;
+    // Exactly the card: anything larger would show the material's own edge
+    // around it, which reads as a second panel behind the card.
     void invoke("set_glass_bubble", {
-      rect: [box.left, box.top, box.width, box.height + BUBBLE_TAIL],
+      rect: [box.left, box.top, box.width, box.height],
       radius,
     });
   }
