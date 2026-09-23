@@ -58,4 +58,23 @@ describe("PetController", () => {
     expect(last()).toEqual(compose({}));
     expect(introDuration(ANIMS.typing)).toBeLessThan(REACT_MS.typing);
   });
+
+  it("gets the laptop out again if it was already put away", () => {
+    pet.input("typing");
+    advance(REACT_MS.typing);
+    expect(last()).toEqual(ANIMS.typingEnd.frames[0].rows);
+    advance(animDuration(ANIMS.typingEnd) - 1);
+    pet.input("typing");
+    expect(last()).toEqual(ANIMS.typing.frames[0].rows);
+  });
+
+  it("keeps its eyes on the cursor while scrolling", () => {
+    pet.setGaze([0, 1]);
+    pet.input("scroll");
+    expect(last()).toEqual(compose({ gaze: [0, 1] }));
+    advance(300);
+    pet.input("scroll");
+    advance(300);
+    expect(last()).toEqual(compose({ gaze: [0, 1] }));
+  });
 });

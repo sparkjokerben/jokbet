@@ -20,6 +20,17 @@ const blinkGap = () => 3000 + Math.random() * 3000;
 /** Idle time before the idle animation plays, and again between plays. */
 const idleShowGap = () => 20_000 + Math.random() * 40_000;
 
+/** How long the laptop stays in sight while it is being put away. */
+const LAPTOP_OUT_MS = (() => {
+  let ms = 0;
+  let out = 0;
+  for (const frame of ANIMS.typingEnd.frames) {
+    ms += frame.ms;
+    if (frameRows(frame).some((row) => row.includes("G"))) out = ms;
+  }
+  return out;
+})();
+
 export class PetController {
   private signals: Signals;
   private anim: AnimName = "idle";
@@ -32,7 +43,7 @@ export class PetController {
   private blinkAt: number;
   private paused = false;
   private keysPerSecond = 0;
-  /** Typing resumed while the laptop was being put away: skip getting it out again. */
+  /** Typing resumed while the laptop was still out: skip getting it out again. */
   private resumeTyping = false;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private lastKey = "";
@@ -60,8 +71,10 @@ export class PetController {
     const t = this.now();
     if (this.anim === "sleep") this.oneShot("wake");
     if (activity === "typing" && this.signals.oneShot?.anim === "typingEnd") {
+      // Back to it while the laptop is still out: sit straight back down.
+      // Once it is away, get it out again from the start.
       this.signals.oneShot = null;
-      this.resumeTyping = true;
+      this.resumeTyping = t - this.animStart < LAPTOP_OUT_MS;
     }
     if (activity === "click") this.animStart = t;
     this.signals.lastInputAt = t;
@@ -163,8 +176,9 @@ export class PetController {
     let wakeAt = Math.min(t + nextIn, nextDeadline(this.signals, t));
     if (showing) wakeAt = Math.min(wakeAt, t < this.idleShowUntil ? this.idleShowUntil : this.idleShowAt);
     if (pose && (this.anim === "idle" || this.anim === "scroll")) {
-      // Whatever the idle animation does, the eyes stay on the cursor.
-      if (this.anim === "idle") pose.gaze = this.gaze;
+      // Whatever the idle animation does, and while scrolling, the eyes stay
+      // on the cursor.
+      pose.gaze = this.gaze;
       if (t >= this.blinkAt + BLINK_MS) this.blinkAt = t + blinkGap();
       if (t >= this.blinkAt) pose.eyes = "closed";
       wakeAt = Math.min(wakeAt, t >= this.blinkAt ? this.blinkAt + BLINK_MS : this.blinkAt);

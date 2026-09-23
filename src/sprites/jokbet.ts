@@ -108,7 +108,8 @@ const GLYPHS: Record<Effect, { x: number; y: number; rows: readonly string[] }> 
   sparkleA: { x: 1, y: 9, rows: [".Y.", "YYY", ".Y."] },
   sparkleB: { x: 32, y: 8, rows: [".Y.", "YYY", ".Y."] },
   heart: { x: 26, y: 2, rows: [".R.R.", "RRRRR", ".RRR.", "..R.."] },
-  sweat: { x: 29, y: 15, rows: ["S", "S"] },
+  // A drop beside the top of the head, clear of the raised arm.
+  sweat: { x: 27, y: 8, rows: [".S.", "SSS", "SSS"] },
   exclaim: { x: 30, y: 4, rows: ["R", "R", "R", ".", "R"] },
   question: { x: 29, y: 3, rows: ["ZZ.", "..Z", ".Z.", "...", ".Z."] },
   pause: { x: 29, y: 4, rows: ["Z.Z", "Z.Z", "Z.Z"] },
@@ -224,13 +225,9 @@ export const ANIMS: Record<AnimName, Anim> = {
       { ms: 160, pose: { squash: 1 } },
     ],
   },
-  scroll: {
-    loop: true,
-    frames: [
-      { ms: 220, pose: { gaze: [0, -1] } },
-      { ms: 220, pose: { gaze: [0, 1] } },
-    ],
-  },
+  // Holds still while you scroll; the controller keeps its eyes on the cursor,
+  // on whatever you are reading.
+  scroll: { loop: true, frames: [{ ms: 1000, pose: {} }] },
   sleep: {
     loop: true,
     frames: [

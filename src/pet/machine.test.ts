@@ -36,8 +36,8 @@ describe("pickAnim priorities", () => {
   });
   it("reacts briefly to input, then idles", () => {
     const s = base({ lastInputAt: 1000, lastActivity: "typing" });
-    expect(pickAnim(s, 2499)).toBe("typing");
-    expect(pickAnim(s, 2500)).toBe("idle");
+    expect(pickAnim(s, 3999)).toBe("typing");
+    expect(pickAnim(s, 4000)).toBe("idle");
     const c = base({ lastInputAt: 1000, lastActivity: "click" });
     expect(pickAnim(c, 1299)).toBe("click");
     expect(pickAnim(c, 1300)).toBe("idle");
@@ -47,8 +47,8 @@ describe("pickAnim priorities", () => {
 describe("nextDeadline", () => {
   it("returns the earliest future transition", () => {
     const s = base({ lastInputAt: 1000, lastActivity: "typing", celebrateUntil: 5000 });
-    expect(nextDeadline(s, 1200)).toBe(2500);
-    expect(nextDeadline(s, 2600)).toBe(5000);
+    expect(nextDeadline(s, 1200)).toBe(4000);
+    expect(nextDeadline(s, 4100)).toBe(5000);
     expect(nextDeadline(s, 6000)).toBe(61_000);
   });
 });

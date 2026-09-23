@@ -23,8 +23,9 @@ export function blockedBy(s: { permission: string; listening: boolean; secureInp
   return null;
 }
 
-/** How long a reaction lasts after the last input of that kind. */
-export const REACT_MS: Record<Activity, number> = { typing: 1500, scroll: 500, click: 300 };
+/** How long a reaction lasts after the last input of that kind. Typing lasts
+ * long enough to keep the laptop out through a pause to think. */
+export const REACT_MS: Record<Activity, number> = { typing: 3000, scroll: 500, click: 300 };
 
 /** Highest priority first: blocked > dragged > celebrate > one-shot > sleep > react > idle. */
 export function pickAnim(s: Signals, now: number): AnimName {
