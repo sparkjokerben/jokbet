@@ -139,7 +139,7 @@ impl Default for Settings {
             click_anim: ActionAnim::Poke,
             double_click_anim: ActionAnim::Hearts,
             bubble: true,
-            liquid_glass: true,
+            liquid_glass: false,
             typing_speed: true,
             milestones: true,
             custom_milestones: Vec::new(),

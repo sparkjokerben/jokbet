@@ -105,12 +105,10 @@ pub fn glass() -> Option<crate::platform::Glass> {
     })
 }
 
-/// Marks the material view so it can be found again in the content view.
-const GLASS_TAG: isize = 0x4A6F_6B31;
-
 const VIBRANCY_POPOVER: isize = 6;
 const BLENDING_BEHIND_WINDOW: isize = 0;
 const STATE_ACTIVE: isize = 1;
+const WINDOW_BELOW: isize = -1;
 
 pub fn set_glass(
     ns_window: *mut std::ffi::c_void,
@@ -118,7 +116,7 @@ pub fn set_glass(
     radius: f64,
 ) {
     use objc2::msg_send;
-    use objc2::runtime::{AnyClass, AnyObject};
+    use objc2::runtime::AnyObject;
     // SAFETY: the NSWindow is alive and this runs on the main thread.
     unsafe {
         let window = &*(ns_window as *const AnyObject);
@@ -126,53 +124,108 @@ pub fn set_glass(
         if content.is_null() {
             return;
         }
-        let existing = find_glass(content);
-        let Some((x, y, w, h)) = rect else {
-            if let Some(view) = existing {
+        let Some(class) = view_class() else { return };
+        let view = match find_glass(content, class) {
+            Some(view) => view,
+            None => match make_glass(content, class) {
+                Some(view) => view,
+                None => return,
+            },
+        };
+        match rect {
+            Some(rect) => {
+                let frame = frame_in_view(rect, bounds(content).size.height, is_flipped(content));
+                let _: () = msg_send![view, setFrame: frame];
+                let has_radius: objc2::runtime::Bool =
+                    msg_send![view, respondsToSelector: objc2::sel!(setCornerRadius:),];
+                if has_radius.as_bool() {
+                    let _: () = msg_send![view, setCornerRadius: radius];
+                }
+                let _: () = msg_send![view, setHidden: false];
+            }
+            // Away with the bubble it was behind.
+            None => {
                 let _: () = msg_send![view, setHidden: true];
             }
-            return;
-        };
-
-        let view = match existing {
-            Some(view) => view,
-            None => {
-                let Some(class) = view_class() else { return };
-                let frame: NSRect = bounds(content);
-                let alloc: *mut AnyObject = msg_send![class, alloc];
-                let view: *mut AnyObject = msg_send![alloc, initWithFrame: frame];
-                if view.is_null() {
-                    return;
-                }
-                let _: () = msg_send![view, setTag: GLASS_TAG];
-                let is_vibrancy: objc2::runtime::Bool = match AnyClass::get(c"NSVisualEffectView") {
-                    Some(class) => msg_send![view, isKindOfClass: class],
-                    None => false.into(),
-                };
-                if is_vibrancy.as_bool() {
-                    let _: () = msg_send![view, setMaterial: VIBRANCY_POPOVER];
-                    let _: () = msg_send![view, setBlendingMode: BLENDING_BEHIND_WINDOW];
-                    let _: () = msg_send![view, setState: STATE_ACTIVE];
-                }
-                // Under everything else, so the webview draws on top of it.
-                let _: () = msg_send![content, insertSubview: view, atIndex: 0usize];
-                view
-            }
-        };
-
-        let frame = frame_in_view(
-            (x, y, w, h),
-            bounds(content).size.height,
-            msg_send![content, isFlipped],
-        );
-        let _: () = msg_send![view, setFrame: frame];
-        let has_radius: objc2::runtime::Bool =
-            msg_send![view, respondsToSelector: objc2::sel!(setCornerRadius:),];
-        if has_radius.as_bool() {
-            let _: () = msg_send![view, setCornerRadius: radius];
         }
-        let _: () = msg_send![view, setHidden: false];
     }
+}
+
+/// Builds the material view and puts it behind the page. `None` if the view
+/// could not be made.
+unsafe fn make_glass(
+    content: *mut objc2::runtime::AnyObject,
+    class: &objc2::runtime::AnyClass,
+) -> Option<*mut objc2::runtime::AnyObject> {
+    use objc2::msg_send;
+    use objc2::runtime::{AnyObject, Bool};
+    let view: *mut AnyObject = msg_send![class, alloc];
+    let view: *mut AnyObject = msg_send![view, initWithFrame: bounds(content)];
+    if view.is_null() {
+        return None;
+    }
+    // A vibrancy view needs telling what to be; a glass view is already glass.
+    let is_vibrancy: Bool = match objc2::runtime::AnyClass::get(c"NSVisualEffectView") {
+        Some(veil) => msg_send![view, isKindOfClass: veil],
+        None => false.into(),
+    };
+    if is_vibrancy.as_bool() {
+        let _: () = msg_send![view, setMaterial: VIBRANCY_POPOVER];
+        let _: () = msg_send![view, setBlendingMode: BLENDING_BEHIND_WINDOW];
+        let _: () = msg_send![view, setState: STATE_ACTIVE];
+    }
+    // Behind whatever is already there (the page), so it draws on top of it.
+    let subviews: *mut AnyObject = msg_send![content, subviews];
+    let subview_count: usize = if subviews.is_null() {
+        0
+    } else {
+        msg_send![subviews, count]
+    };
+    if subview_count == 0 {
+        let _: () = msg_send![content, addSubview: view];
+    } else {
+        let page: *mut AnyObject = msg_send![subviews, objectAtIndex: 0usize];
+        let _: () =
+            msg_send![content, addSubview: view, positioned: WINDOW_BELOW, relativeTo: page];
+    }
+    Some(view)
+}
+
+/// The material view, if one has been made already. It cannot be tagged:
+/// `NSGlassEffectView` has no `setTag:`, so it is known by its class.
+unsafe fn find_glass(
+    content: *mut objc2::runtime::AnyObject,
+    class: &objc2::runtime::AnyClass,
+) -> Option<*mut objc2::runtime::AnyObject> {
+    use objc2::msg_send;
+    use objc2::runtime::{AnyObject, Bool};
+    let subviews: *mut AnyObject = msg_send![content, subviews];
+    if subviews.is_null() {
+        return None;
+    }
+    let count: usize = msg_send![subviews, count];
+    for i in 0..count {
+        let view: *mut AnyObject = msg_send![subviews, objectAtIndex: i];
+        let is_glass: Bool = msg_send![view, isKindOfClass: class];
+        if is_glass.as_bool() {
+            return Some(view);
+        }
+    }
+    None
+}
+
+/// The class of the material view for this system.
+fn view_class() -> Option<&'static objc2::runtime::AnyClass> {
+    use objc2::runtime::AnyClass;
+    AnyClass::get(c"NSGlassEffectView").or_else(|| AnyClass::get(c"NSVisualEffectView"))
+}
+
+unsafe fn bounds(view: *mut objc2::runtime::AnyObject) -> NSRect {
+    objc2::msg_send![view, bounds]
+}
+
+unsafe fn is_flipped(view: *mut objc2::runtime::AnyObject) -> objc2::runtime::Bool {
+    objc2::msg_send![view, isFlipped]
 }
 
 /// Turns a rectangle the page reports (logical pixels from the window's top
@@ -189,36 +242,6 @@ fn frame_in_view(rect: (f64, f64, f64, f64), height: f64, flipped: objc2::runtim
         objc2_foundation::NSPoint::new(x, top),
         objc2_foundation::NSSize::new(w, h),
     )
-}
-
-/// The class of the material view for this system.
-fn view_class() -> Option<&'static objc2::runtime::AnyClass> {
-    use objc2::runtime::AnyClass;
-    AnyClass::get(c"NSGlassEffectView").or_else(|| AnyClass::get(c"NSVisualEffectView"))
-}
-
-unsafe fn bounds(view: *mut objc2::runtime::AnyObject) -> NSRect {
-    objc2::msg_send![view, bounds]
-}
-
-unsafe fn find_glass(
-    content: *mut objc2::runtime::AnyObject,
-) -> Option<*mut objc2::runtime::AnyObject> {
-    use objc2::msg_send;
-    use objc2::runtime::AnyObject;
-    let subviews: *mut AnyObject = msg_send![content, subviews];
-    if subviews.is_null() {
-        return None;
-    }
-    let count: usize = msg_send![subviews, count];
-    for i in 0..count {
-        let view: *mut AnyObject = msg_send![subviews, objectAtIndex: i];
-        let tag: isize = msg_send![view, tag];
-        if tag == GLASS_TAG {
-            return Some(view);
-        }
-    }
-    None
 }
 
 const COMBINED_SESSION_STATE: i32 = 0;

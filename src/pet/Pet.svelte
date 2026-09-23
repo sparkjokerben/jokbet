@@ -64,8 +64,10 @@
       void invoke("set_glass_bubble", { rect: null, radius: 0 });
       return;
     }
-    const box = bubbleEl.getBoundingClientRect();
-    const radius = parseFloat(getComputedStyle(bubbleEl).borderTopLeftRadius) || 0;
+    // The card, not the plain wrapper around it: the radius lives on the card.
+    const card = bubbleEl.querySelector<HTMLElement>(".bubble") ?? bubbleEl;
+    const box = card.getBoundingClientRect();
+    const radius = parseFloat(getComputedStyle(card).borderTopLeftRadius) || 0;
     void invoke("set_glass_bubble", {
       rect: [box.left, box.top, box.width, box.height + BUBBLE_TAIL],
       radius,
