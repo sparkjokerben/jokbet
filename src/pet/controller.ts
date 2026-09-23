@@ -70,9 +70,10 @@ export class PetController {
   input(activity: Activity) {
     const t = this.now();
     if (this.anim === "sleep") this.oneShot("wake");
-    if (activity === "typing" && this.signals.oneShot?.anim === "typingEnd") {
+    if (activity === "typing" && this.anim === "typingEnd") {
       // Back to it while the laptop is still out: sit straight back down.
-      // Once it is away, get it out again from the start.
+      // Once it is away, get it out again from the start. (The finished
+      // one-shot stays in `signals`, so check what is actually playing.)
       this.signals.oneShot = null;
       this.resumeTyping = t - this.animStart < LAPTOP_OUT_MS;
     }

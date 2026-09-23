@@ -59,6 +59,13 @@ describe("PetController", () => {
     expect(introDuration(ANIMS.typing)).toBeLessThan(REACT_MS.typing);
   });
 
+  it("gets the laptop out again after a long pause", () => {
+    pet.input("typing");
+    advance(REACT_MS.typing + animDuration(ANIMS.typingEnd) + 10_000);
+    pet.input("typing");
+    expect(last()).toEqual(ANIMS.typing.frames[0].rows);
+  });
+
   it("gets the laptop out again if it was already put away", () => {
     pet.input("typing");
     advance(REACT_MS.typing);
