@@ -4,7 +4,9 @@ import type { Anim, AnimName } from "../sprites/jokbet";
 
 export type Blocked = "noperm" | "secure";
 export type Activity = "typing" | "click";
-export type OneShot = "poke" | "hearts" | "soccer" | "wave" | "wake" | "typingEnd";
+/** Animations the controller can play once and end. The ones a user may pick for
+ * a click or double-click are a narrower set (ActionAnim, src/lib/types.ts). */
+export type OneShot = "poke" | "hearts" | "soccer" | "wave" | "wake" | "typingEnd" | "lookAround";
 
 export interface Signals {
   blocked: Blocked | null;
