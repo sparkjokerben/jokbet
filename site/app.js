@@ -475,11 +475,13 @@ async function wirePet() {
 
 // --- language ---------------------------------------------------------------
 
-/** @param {Lang} next */
-function setLang(next) {
+/** @param {Lang} next @param {boolean} [chosen] the visitor picked it */
+function setLang(next, chosen = false) {
   html.dataset.lang = next;
   html.lang = next === "zh" ? "zh-Hans" : "en";
-  document.title = T[next].title;
+  // The title in the markup is bilingual, which is what a crawler should see;
+  // it follows the language only once someone actually picks one.
+  if (chosen) document.title = T[next].title;
   try {
     localStorage.setItem("jokbet.lang", next);
   } catch {
@@ -497,7 +499,7 @@ function setLang(next) {
 
 async function main() {
   for (const button of document.querySelectorAll("[data-set-lang]")) {
-    button.addEventListener("click", () => setLang(/** @type {Lang} */ (button.getAttribute("data-set-lang"))));
+    button.addEventListener("click", () => setLang(/** @type {Lang} */ (button.getAttribute("data-set-lang")), true));
   }
   setLang(lang());
   // The pet and the list are fetched together; neither waits for the other.

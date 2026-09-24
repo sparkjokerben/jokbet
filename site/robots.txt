@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
 
+# The installers, and the JSON the page reads: nothing here is a page.
+Disallow: /dl/
+Disallow: /latest
+Disallow: /changelog.json
+
 Sitemap: https://jokbet.jokerben.top/sitemap.xml

@@ -3,16 +3,21 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Jokbet — 屏幕角落的像素桌宠</title>
-    <meta
-      name="description"
-      content="Jokbet 是一只住在屏幕角落的像素桌宠：你打字、点鼠标，它跟着做动作，并把次数数给你看。macOS / Windows / Linux，数据只存本机，以 MIT 协议开源。"
-    />
+    <title>Jokbet — 屏幕角落的像素桌宠 · a pixel desktop pet</title>
+    <meta name="description" content="Jokbet 是一只住在屏幕角落的像素桌宠：你打字、点鼠标，它跟着做动作，并把键盘和鼠标的次数数给你看。macOS / Windows / Linux，数据只存本机，以 MIT 协议开源。" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <meta name="theme-color" content="#f5f4f0" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#141413" media="(prefers-color-scheme: dark)" />
     <link rel="canonical" href="https://jokbet.jokerben.top/" />
     <link rel="icon" href="/assets/favicon.ico" sizes="any" />
     <link rel="icon" href="/assets/favicon-32.png" sizes="32x32" type="image/png" />
     <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+    <!-- The headline's own face, so the first paint is the final one. -->
+    <link rel="preload" href="/assets/fonts/silkscreen-700.woff2" as="font" type="font/woff2" crossorigin />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Jokbet" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:locale:alternate" content="en_US" />
     <meta property="og:url" content="https://jokbet.jokerben.top/" />
     <meta property="og:title" content="Jokbet — 屏幕角落的像素桌宠" />
     <meta
@@ -20,7 +25,55 @@
       content="轻量级像素桌宠：你打字、点鼠标，它跟着做动作，并把次数数给你看。macOS / Windows / Linux，MIT 开源，数据只存本机。"
     />
     <meta property="og:image" content="https://jokbet.jokerben.top/assets/og.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Jokbet 的像素形象，站在一条屏幕边线上" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Jokbet — 屏幕角落的像素桌宠" />
+    <meta name="twitter:description" content="轻量级像素桌宠，会跟着你打字和点击做出反应，并统计键盘和鼠标操作。MIT 开源，数据只存本机。" />
+    <meta name="twitter:image" content="https://jokbet.jokerben.top/assets/og.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://jokbet.jokerben.top/#website",
+            "url": "https://jokbet.jokerben.top/",
+            "name": "Jokbet",
+            "description": "A pixel desktop pet that counts your keyboard and mouse activity.",
+            "inLanguage": ["zh-Hans", "en"]
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://jokbet.jokerben.top/#app",
+            "name": "Jokbet",
+            "url": "https://jokbet.jokerben.top/",
+            "downloadUrl": "https://jokbet.jokerben.top/#download",
+            "applicationCategory": "UtilitiesApplication",
+            "applicationSubCategory": "Desktop pet",
+            "operatingSystem": "macOS 11+, Windows, Linux (X11)",
+            "isAccessibleForFree": true,
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CNY" },
+            "license": "https://github.com/sparkjokerben/jokbet/blob/main/LICENSE",
+            "screenshot": "https://jokbet.jokerben.top/assets/og.png",
+            "sameAs": ["https://github.com/sparkjokerben/jokbet"],
+            "author": { "@type": "Person", "name": "sparkjokerben", "url": "https://github.com/sparkjokerben" },
+            "inLanguage": ["zh-Hans", "en"]
+          },
+          {
+            "@type": "SoftwareSourceCode",
+            "@id": "https://jokbet.jokerben.top/#source",
+            "name": "Jokbet",
+            "codeRepository": "https://github.com/sparkjokerben/jokbet",
+            "programmingLanguage": ["Rust", "TypeScript"],
+            "license": "https://github.com/sparkjokerben/jokbet/blob/main/LICENSE",
+            "author": { "@type": "Person", "name": "sparkjokerben", "url": "https://github.com/sparkjokerben" }
+          }
+        ]
+      }
+    </script>
     <link rel="stylesheet" href="/styles.css" />
     <script src="/lang-boot.js"></script>
     <script type="module" src="/app.js"></script>
