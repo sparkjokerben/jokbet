@@ -1,52 +1,52 @@
 {
  "schema": 1,
- "version": "0.1.2",
- "tag": "v0.1.2",
- "pubDate": "2026-09-24T14:18:26Z",
+ "version": "0.2.0",
+ "tag": "v0.2.0",
+ "pubDate": "2026-09-24T22:15:57Z",
  "draft": false,
- "notes": "这一版让 macOS 安装不再被拦两次，也让它的两个数字对得上。\n\n- **macOS 一行装好，系统不拦。** 浏览器下载的安装包会被 macOS 拦下：dmg 打开时拦一次，里面的 app 再拦一次。在终端运行 `curl -fsSL https://jokbet.jokerben.top/install.sh | sh` 就没有这一步——它下载最新版、核对校验值、装进「应用程序」并打开；再跑一次就是更新。\n- **macOS 多了一个 zip。** 不想用终端的话，zip 只会被拦一次（dmg 是两次）。下载页两个都列着，并写明各会被拦几次。\n- **不再戴眼罩。** 之前开着「安全键盘输入」时它会戴上眼罩，但那时候点击、鼠标和修饰键其实还在计数——眼罩在说谎。现在只有真的什么都看不到（没给「输入监控」权限）才会一脸问号。安全输入期间普通按键确实不计数，这点在 [关于](https://jokbet.jokerben.top/about) 里写明了。\n- **里程碑和头顶计数的口径一致。** 内置的当天／累计里程碑原来只数按键，而头顶计数默认是「按键+点击」，两个数字会打架；现在两者用同一个设置。统计页也多了一个「按键+点击」的选项。\n\n---\n\nThis release gets macOS past Gatekeeper's two stops, and makes the pet's two numbers agree.\n\n- **One line on a Mac, and nothing stops it.** A browser download is stopped twice by macOS: once for the disk image, once for the app inside it. `curl -fsSL https://jokbet.jokerben.top/install.sh | sh` in Terminal skips all of it — it downloads the newest release, checks its SHA-256, installs it in Applications and opens it; run it again to update.\n- **macOS also ships as a zip.** If you would rather not use Terminal, a zip is stopped once (a disk image twice). The download page lists both and says how many stops each costs.\n- **The blindfold is gone.** The pet used to wear one while macOS Secure Keyboard Entry was on, yet clicks, the mouse and the modifier keys were still being counted — the blindfold was lying. Now it only looks baffled when it really cannot see anything (no Input Monitoring permission). Ordinary keys typed during Secure Input are still not counted, which [About](https://jokbet.jokerben.top/about) says plainly.\n- **Milestones count what the head counter counts.** The built-in daily and all-time milestones used to count key presses only while the head counter defaulted to keys + clicks, so the two numbers disagreed; they now come from the same setting. The stats page gained the same keys + clicks option.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见 [下载页](https://jokbet.jokerben.top/download)。",
- "releaseUrl": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.1.2",
- "downloadBase": "https://github.com/sparkjokerben/jokbet/releases/download/v0.1.2",
+ "notes": "这一版让它懂得在全屏时让开，能用快捷键叫出来，热力图也照着你手上那把键盘来画。\n\n- **全屏时自动让开。** 别的应用全屏播放、演示或者打游戏时，它会先藏起来，结束后再回来。不想要的话可以在设置里关掉。\n- **全局快捷键。** 可以设一个显示/隐藏桌宠的快捷键，再设一个暂停/继续计数的，在任何应用里都能用。默认不占用任何组合键，到「设置 › 快捷键」里自己录。\n- **界面语言可以自己选。** 跟随系统、中文或 English，菜单和各个窗口一起切换。\n- **设置里多了「关于」。** 这里能看到版本号，可以手动检查更新；新版本下载好后能看更新说明，点一下就重启更新。下载完成时桌宠也会说一声。\n- **热力图照着你的键盘画。** Mac 上画 Apple 键盘（MacBook 那种紧凑版，用过数字小键盘就换成全尺寸版），Windows 和 Linux 上画 PC 键盘；欧洲常见的 ISO 键盘也认得出。配色默认是 Jokbet 橙，也可以换成黄到红的热度色，深浅色模式各有一套。\n- **托盘菜单多了「把桌宠移回角落」。** 桌宠被拖到找不到的地方时，一下就能拿回来。\n- **出了问题会说出来。** 统计读不出来、数据库打不开、设置文件损坏，这些情况以前都悄悄失败；现在会明确提示，损坏的设置文件也会保留能读的部分。新增了日志文件，报 bug 时可以从「设置 › 关于 › 打开日志文件夹」附上。\n\n---\n\nThis release teaches the pet to step aside for full-screen apps, answer to a shortcut, and draw its heatmap on the keyboard you actually have.\n\n- **It steps aside in full screen.** While another app plays video, presents or runs a game full screen, the pet hides, and comes back after. A setting turns this off.\n- **Global shortcuts.** One shows or hides the pet, one pauses and resumes counting, from any app. None is set until you record one under **Settings › Shortcuts**, so no combination is taken from other apps.\n- **Choose the interface language.** Follow the system, 中文 or English; the menu and every window switch together.\n- **An About section in Settings.** The version, a Check for Updates button, the release notes once an update is downloaded, and Restart and Update. The pet also tells you when a download finishes.\n- **A heatmap on your keyboard.** An Apple board on a Mac (the compact MacBook one, or the full-size one once you use a numeric keypad), a PC board on Windows and Linux, and European ISO boards recognised. It comes in the pet's orange, or on a yellow-to-red heat scale, each with its own light and dark shades.\n- **Move Pet Back to Corner** in the tray menu, for when it has been dragged somewhere you cannot find.\n- **It says when something goes wrong.** Stats that cannot be loaded, a database that cannot be opened, or a damaged settings file used to fail silently; now each is reported, and a damaged settings file keeps what can still be read. A log file is new too: attach it to a bug report from **Settings › About › Open Logs Folder**.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见 [下载页](https://jokbet.jokerben.top/download)。",
+ "releaseUrl": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.2.0",
+ "downloadBase": "https://github.com/sparkjokerben/jokbet/releases/download/v0.2.0",
  "files": {
   "macos-aarch64-zip": {
-   "name": "Jokbet_0.1.2_aarch64.app.zip",
-   "size": 3073247,
-   "sha256": "cbe370d6352d95c62f3b783d755b22ac575bf556b9375e9d3badd7468139ed4f"
+   "name": "Jokbet_0.2.0_aarch64.app.zip",
+   "size": 3234037,
+   "sha256": "5c7212d8e184c602e03cb8fd9ba250d0ffd4427c7d29df38dbdd8beaa1e3161f"
   },
   "macos-aarch64": {
-   "name": "Jokbet_0.1.2_aarch64.dmg",
-   "size": 3115564,
-   "sha256": "975a28da0ca1e489d643bcdd8b6f380e69b1ce9c55ac7b87ff6815aef16585f9"
+   "name": "Jokbet_0.2.0_aarch64.dmg",
+   "size": 3275093,
+   "sha256": "e7ac8352d17b5027498814097d896fd24eaad0f3d355ad2db83bc5629f38c36d"
   },
   "macos-x64-zip": {
-   "name": "Jokbet_0.1.2_x64.app.zip",
-   "size": 3375929,
-   "sha256": "287e0cd310165465778d82a461d34571d4be7d99e5c844a01afbda8ff58b9002"
+   "name": "Jokbet_0.2.0_x64.app.zip",
+   "size": 3550825,
+   "sha256": "f8a19b29bdae8a961cdd7c512b6c85dc85227644a7b582f39a8705bb22be11b4"
   },
   "macos-x64": {
-   "name": "Jokbet_0.1.2_x64.dmg",
-   "size": 3409358,
-   "sha256": "b75a9185204214db6438661a4d44d3221f6490464565c6e25b7e70befbd36454"
+   "name": "Jokbet_0.2.0_x64.dmg",
+   "size": 3584759,
+   "sha256": "a9bb6fa54ae642be8dd75f52d2091f6a1326a5816d71a9d597a64357e9da3666"
   },
   "windows-x64": {
-   "name": "Jokbet_0.1.2_x64-setup.exe",
-   "size": 2565670,
-   "sha256": "9aaa899dd0f3098b925ada94d28b27ab84f51c82e8b63bb86fc6d8160866aa9c"
+   "name": "Jokbet_0.2.0_x64-setup.exe",
+   "size": 2667173,
+   "sha256": "72266639c3f534c0a04215245bca94dff38ee44c7051aa5f10f7919f45bffa90"
   },
   "windows-x64-msi": {
-   "name": "Jokbet_0.1.2_x64_en-US.msi",
-   "size": 3399680,
-   "sha256": "ab78c030a1ffa73f1b6af7a1754a902da098bfbae16f4e15e8a13fc8b5ec85c6"
+   "name": "Jokbet_0.2.0_x64_en-US.msi",
+   "size": 3551232,
+   "sha256": "725d1ce8e8fabbad4d89008d64740f97dec436df231ba3ab0c1b89bc24940cd3"
   },
   "linux-appimage": {
-   "name": "Jokbet_0.1.2_amd64.AppImage",
-   "size": 81844728,
-   "sha256": "75314fe6e021a67791b99b75f1f4667cb357a396ab676fffc4fc4fccba23769f"
+   "name": "Jokbet_0.2.0_amd64.AppImage",
+   "size": 82364920,
+   "sha256": "9207c891c9f2855bf6f50a00f950d1d454b61cd711916aeb49b6a14975be4018"
   },
   "linux-deb": {
-   "name": "Jokbet_0.1.2_amd64.deb",
-   "size": 3405244,
-   "sha256": "8f6591a0c59c93722457dd8f263538f38ba6db5406efabc3ba8010c9ee501d03"
+   "name": "Jokbet_0.2.0_amd64.deb",
+   "size": 3967394,
+   "sha256": "7a551e940254d4463ecda62195bd5d3706884d87fce7776c41cb4528532798b2"
   }
  }
 }
