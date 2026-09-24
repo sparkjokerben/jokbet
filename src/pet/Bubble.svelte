@@ -7,14 +7,26 @@
     tick,
     showSpeed,
     paused,
+    storage = true,
     glass = false,
     tint = 0.18,
-  }: { tick: Tick; showSpeed: boolean; paused: boolean; glass?: boolean; tint?: number } = $props();
+  }: {
+    tick: Tick;
+    showSpeed: boolean;
+    paused: boolean;
+    /** False when counts cannot be saved: said above everything else. */
+    storage?: boolean;
+    glass?: boolean;
+    tint?: number;
+  } = $props();
 
   const d = $derived(tick.today);
 </script>
 
 <div class="bubble" class:glass style:--tint={String(tint)}>
+  {#if !storage}
+    <div class="warn">{t("storageWarning")}</div>
+  {/if}
   <div class="title">{paused ? t("paused") : t("today")}</div>
   <dl>
     <dt>{t("keys")}</dt>
@@ -86,6 +98,16 @@
       --fg: #f5f0e8;
       --muted: #a8a59e;
       --line: rgba(245, 240, 232, 0.16);
+    }
+  }
+  .warn {
+    margin-bottom: 4px;
+    font-weight: 600;
+    color: #c7362f;
+  }
+  @media (prefers-color-scheme: dark) {
+    .warn {
+      color: #e66767;
     }
   }
   .title {

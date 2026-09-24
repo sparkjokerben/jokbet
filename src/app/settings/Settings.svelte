@@ -54,7 +54,10 @@
   }
 
   onMount(() => {
-    invoke<Settings>("get_settings").then((v) => (s = v));
+    invoke<Settings>("get_settings").then(
+      (v) => (s = v),
+      (e) => (error = t("loadFailed", { error: String(e) })),
+    );
     invoke<string>("glass_support").then((v) => (glass = v));
     isEnabled().then((v) => (autostart = v), () => {});
     const un = listen<Settings>("settings://changed", (e) => (s = e.payload));
@@ -228,6 +231,8 @@
       <p class="error" role="alert">{error}</p>
     {/if}
   </main>
+{:else if error}
+  <main><p class="error" role="alert">{error}</p></main>
 {/if}
 
 <style>

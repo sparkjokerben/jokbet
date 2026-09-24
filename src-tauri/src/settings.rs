@@ -243,16 +243,21 @@ pub struct SettingsStore {
 }
 
 impl SettingsStore {
-    /// Loads settings, falling back to defaults when the file is missing or unreadable.
+    /// Loads settings, falling back to defaults when the file is missing or
+    /// unreadable. A file that is damaged, or holds values this version
+    /// rejects, keeps what it can: the rest goes back to the defaults, and the
+    /// original is set aside next to it for whoever wants to look.
     pub fn load(path: PathBuf) -> Self {
-        let settings = std::fs::read(&path)
-            .ok()
-            .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
-            .map(|mut value| {
-                migrate(&mut value);
-                serde_json::from_value(value).unwrap_or_default()
-            })
-            .unwrap_or_default();
+        let settings = match std::fs::read(&path) {
+            Ok(bytes) => {
+                let (settings, dropped) = parse(&bytes);
+                if !dropped.is_empty() {
+                    set_aside(&path, &settings, &dropped);
+                }
+                settings
+            }
+            Err(_) => Settings::default(),
+        };
         Self {
             path,
             inner: Mutex::new(settings),
@@ -282,6 +287,61 @@ impl SettingsStore {
         write_atomic(&self.path, &bytes).map_err(|e| e.to_string())?;
         *guard = next.clone();
         Ok(next)
+    }
+}
+
+/// What the file says, and the top-level fields that had to be dropped
+/// (`"*"` when the file is not a settings object at all).
+fn parse(bytes: &[u8]) -> (Settings, Vec<String>) {
+    use serde_json::Value;
+    let Ok(mut value) = serde_json::from_slice::<Value>(bytes) else {
+        return (Settings::default(), vec!["*".into()]);
+    };
+    migrate(&mut value);
+    let Value::Object(fields) = value else {
+        return (Settings::default(), vec!["*".into()]);
+    };
+    if let Ok(settings) = serde_json::from_value::<Settings>(Value::Object(fields.clone())) {
+        if settings.validate().is_ok() {
+            return (settings, Vec::new());
+        }
+    }
+    // Something in it is wrong: take the fields one at a time, and keep each
+    // only if the whole still reads and validates with it.
+    let mut good = serde_json::to_value(Settings::default()).unwrap_or(Value::Null);
+    let mut dropped = Vec::new();
+    for (key, field) in fields {
+        let mut next = good.clone();
+        next[&key] = field;
+        match serde_json::from_value::<Settings>(next.clone()) {
+            Ok(settings) if settings.validate().is_ok() => good = next,
+            _ => dropped.push(key),
+        }
+    }
+    (serde_json::from_value(good).unwrap_or_default(), dropped)
+}
+
+/// Keeps a copy of a damaged file as `settings.bad-<time>.json`, and writes
+/// what was salvaged in its place so the next start reads the same.
+fn set_aside(path: &Path, salvaged: &Settings, dropped: &[String]) {
+    let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
+    let backup = path.with_file_name(format!("settings.bad-{stamp}.json"));
+    match std::fs::copy(path, &backup) {
+        Ok(_) => eprintln!(
+            "settings: dropped {} and kept the original as {}",
+            dropped.join(", "),
+            backup.display()
+        ),
+        Err(e) => eprintln!(
+            "settings: dropped {}; keeping a copy failed: {e}",
+            dropped.join(", ")
+        ),
+    }
+    let written = serde_json::to_vec_pretty(salvaged)
+        .map_err(std::io::Error::other)
+        .and_then(|bytes| write_atomic(path, &bytes));
+    if let Err(e) = written {
+        eprintln!("settings: writing the salvaged file failed: {e}");
     }
 }
 
@@ -432,6 +492,66 @@ mod tests {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(&path, br#"{"petSize":"large","petScale":3.5}"#).unwrap();
         assert_eq!(SettingsStore::load(path).get().pet_scale, 3.5);
+    }
+
+    fn backups(path: &Path) -> usize {
+        std::fs::read_dir(path.parent().unwrap())
+            .unwrap()
+            .filter(|e| {
+                e.as_ref()
+                    .unwrap()
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with("settings.bad-")
+            })
+            .count()
+    }
+
+    fn load_file(name: &str, contents: &[u8]) -> (SettingsStore, PathBuf) {
+        let path = temp_path(name);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, contents).unwrap();
+        (SettingsStore::load(path.clone()), path)
+    }
+
+    #[test]
+    fn a_damaged_file_is_set_aside_for_the_defaults() {
+        let (store, path) = load_file("garbage", b"{\"petScale\": 4,");
+        assert_eq!(store.get(), Settings::default());
+        assert_eq!(backups(&path), 1);
+    }
+
+    #[test]
+    fn one_bad_value_loses_only_that_field() {
+        let (store, path) = load_file(
+            "badenum",
+            br#"{"clickAnim":"moonwalk","petScale":5,"bubble":false}"#,
+        );
+        let s = store.get();
+        assert_eq!(s.click_anim, Settings::default().click_anim);
+        assert_eq!(s.pet_scale, 5.0);
+        assert!(!s.bubble);
+        assert_eq!(backups(&path), 1);
+        // What was salvaged is what the next start reads.
+        assert_eq!(SettingsStore::load(path).get(), s);
+    }
+
+    #[test]
+    fn an_out_of_range_value_is_dropped_and_patches_work_again() {
+        let (store, _) = load_file("range", br#"{"sleepAfterMin":500,"petScale":6}"#);
+        assert_eq!(
+            store.get().sleep_after_min,
+            Settings::default().sleep_after_min
+        );
+        assert_eq!(store.get().pet_scale, 6.0);
+        assert!(store.patch(&serde_json::json!({"bubble": false})).is_ok());
+    }
+
+    #[test]
+    fn a_sound_file_is_not_set_aside() {
+        let (store, path) = load_file("sound", br#"{"petScale":5}"#);
+        assert_eq!(store.get().pet_scale, 5.0);
+        assert_eq!(backups(&path), 0);
     }
 
     #[test]

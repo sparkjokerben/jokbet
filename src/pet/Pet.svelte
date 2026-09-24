@@ -38,6 +38,7 @@
     activity: null,
   });
   let paused = $state(false);
+  let storage = $state(true);
   let blocked = $state<ReturnType<typeof blockedBy>>(null);
   let hovering = $state(false);
   let bubbleEl: HTMLDivElement | undefined = $state();
@@ -110,6 +111,7 @@
 
   function applyStatus(s: Status) {
     paused = s.paused;
+    storage = s.storage;
     pet.setPaused(s.paused);
     blocked = blockedBy(s);
     pet.setBlocked(blocked);
@@ -143,10 +145,11 @@
     const win = getCurrentWindow();
     // A new pet size resizes the window after the new scale is drawn; measure
     // the hit rect again once the page has the window's new size.
-    window.addEventListener("resize", () => {
+    const onResize = () => {
       reportHitRect();
       resized++;
-    });
+    };
+    window.addEventListener("resize", onResize);
 
     const detach = attachGestures(spriteEl, {
       press: () => pet.pressed(),
@@ -180,7 +183,7 @@
     });
 
     return () => {
-      window.removeEventListener("resize", reportHitRect);
+      window.removeEventListener("resize", onResize);
       detach();
       pet.destroy();
       clearTimeout(bannerTimer);
@@ -201,6 +204,7 @@
           {tick}
           showSpeed={settings.typingSpeed}
           {paused}
+          {storage}
           glass={glassBubble}
           tint={(settings.glassTint ?? 18) / 100}
         />

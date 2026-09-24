@@ -128,6 +128,8 @@ pub struct Status {
     /// The hook is installed and delivering events.
     pub listening: bool,
     pub paused: bool,
+    /// The database is open; without it counts are only kept in memory.
+    pub storage: bool,
 }
 
 /// Starts the runtime thread; `db` is `None` if storage could not be opened.
@@ -287,6 +289,7 @@ impl<R: Runtime> Worker<R> {
             permission,
             listening,
             paused: self.agg.paused,
+            storage: self.db.is_some(),
         };
         if self.status != Some(status) {
             self.status = Some(status);

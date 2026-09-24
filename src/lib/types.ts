@@ -71,6 +71,8 @@ export interface Status {
   permission: Permission;
   listening: boolean;
   paused: boolean;
+  /** The database is open; without it counts are only kept in memory. */
+  storage: boolean;
 }
 
 

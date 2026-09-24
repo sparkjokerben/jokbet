@@ -4,7 +4,7 @@
   import { onMount } from "svelte";
   import { clicks, formatCount, formatDistance } from "../../lib/format";
   import { t, type MessageKey } from "../../lib/i18n";
-  import type { Metric, Totals } from "../../lib/types";
+  import type { Metric, Status, Totals } from "../../lib/types";
   import Segmented from "../ui/Segmented.svelte";
   import Heatmap from "./Heatmap.svelte";
   import Trend from "./Trend.svelte";
@@ -24,6 +24,9 @@
   let metric = $state<Metric>("keys");
   let data = $state<Stats | null>(null);
   let loading = $state(false);
+  let error = $state("");
+  /** False when the database could not be opened: counts live only in memory. */
+  let storage = $state(true);
 
   const METRIC_LABEL: Record<Metric, MessageKey> = {
     keys: "metricKeys",
@@ -60,6 +63,10 @@
     loading = true;
     try {
       data = await invoke<Stats>("get_stats", { days });
+      error = "";
+    } catch (e) {
+      // Keep whatever was on screen; say why it is not fresh.
+      error = t("loadFailed", { error: String(e) });
     } finally {
       loading = false;
     }
@@ -78,7 +85,12 @@
 
   async function clearData() {
     if (!(await ask(t("clearConfirm"), { kind: "warning" }))) return;
-    await invoke("clear_data");
+    try {
+      await invoke("clear_data");
+    } catch (e) {
+      await message(t("clearFailed", { error: String(e) }), { kind: "error" });
+      return;
+    }
     await load();
     await message(t("cleared"));
   }
@@ -89,6 +101,7 @@
   });
 
   onMount(() => {
+    invoke<Status>("get_status").then((s) => (storage = s.storage), () => {});
     const id = setInterval(load, REFRESH_MS);
     return () => clearInterval(id);
   });
@@ -115,6 +128,12 @@
       }))}
     />
   </div>
+
+  {#if !storage}
+    <p class="alert" role="alert">{t("storageUnavailable")}</p>
+  {:else if error}
+    <p class="alert" role="alert">{error}</p>
+  {/if}
 
   <div class="body" class:loading>
     <div class="tiles">
@@ -165,6 +184,13 @@
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
+  }
+  .alert {
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--danger);
+    color: var(--danger);
   }
   .body {
     display: flex;

@@ -55,7 +55,10 @@ let settings: Settings = {
   onboarded: true,
 };
 
-const view = new URLSearchParams(location.search).get("view");
+const params = new URLSearchParams(location.search);
+const view = params.get("view");
+/** With ?nostorage, the database "could not be opened". */
+const storage = !params.has("nostorage");
 
 mockWindows(view === "pet-frame" ? "pet" : "stats");
 mockIPC(
@@ -86,7 +89,7 @@ mockIPC(
       return null;
     }
     case "get_status":
-      return { permission: "denied", listening: false, paused: false };
+      return { permission: "denied", listening: false, paused: false, storage };
     case "plugin:autostart|is_enabled":
       return true;
     case "update_settings":
@@ -103,7 +106,7 @@ if (view === "pet") {
   // A frame the size of the real pet window, over a mid-gray "desktop".
   document.body.style.cssText = "margin:0;background:#8a8d93;position:relative";
   const frame = document.createElement("iframe");
-  frame.src = "/preview.html?view=pet-frame";
+  frame.src = `/preview.html?view=pet-frame${storage ? "" : "&nostorage"}`;
   // The size of the real pet window at the scale in the fake settings below.
   frame.style.cssText = "width:220px;height:271px;border:1px dashed #555;margin:20px";
   document.body.append(frame);
@@ -113,7 +116,7 @@ if (view === "pet") {
   document.body.style.background = "transparent";
   // With ?glassdebug, outlines the reported glass rect: the native material is
   // placed from it, so a wrong rect is worth seeing.
-  if (new URLSearchParams(location.search).has("glassdebug")) {
+  if (params.has("glassdebug")) {
     const tag = document.createElement("div");
     tag.id = "glass-rect";
     tag.style.cssText =
@@ -124,7 +127,7 @@ if (view === "pet") {
   mount(Pet, { target: document.getElementById("root")! });
   setTimeout(async () => {
     const today = fakeStats(1).days[0];
-    await emit("app://status", { permission: "granted", listening: true, paused: false });
+    await emit("app://status", { permission: "granted", listening: true, paused: false, storage });
     await emit("pet://tick", { today, kps: 3.1, cps: 0.2, activity: null });
     await emit("pet://hover", true);
     await emit("pet://celebrate", {
