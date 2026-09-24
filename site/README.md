@@ -1,9 +1,14 @@
 # The website
 
-`jokbet.jokerben.top` — four pages of static files, served by a Cloudflare
-Worker that also answers two namespaces: the manifests (`/api/`) and the
-release files (`/dl/`), both mirrored in an R2 bucket with GitHub behind them.
-There is no build step: what is in `site/` is what is deployed.
+[`jokbet.jokerben.top`](https://jokbet.jokerben.top) — four static pages, served
+by a Cloudflare Worker that also answers two namespaces: the manifests
+(`/api/`) and the release files (`/dl/`), both mirrored in an R2 bucket with
+GitHub behind them. There is no build step: what is in `site/` is what is
+deployed.
+
+This document covers the addresses, the pages and the release flow. The
+application itself is in the [root README](../README.md); the check that CI runs
+over this directory is in [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## Addresses
 

@@ -1,0 +1,58 @@
+Notices
+=======
+
+Jokbet
+Copyright (c) 2026 sparkjokerben
+
+
+Code
+----
+
+The source code in this repository is licensed under the MIT License; the full
+text is in LICENSE. That license covers the code and nothing else in this file.
+
+
+The pet's likeness
+------------------
+
+The character "Jokbet" is drawn in the pixel style of Clawd, the mascot of
+Anthropic's Claude Code, and two of its animations (the soccer loop and the
+typing loop) are derived from screen recordings of that mascot. None of that
+material — the character design, the sprite art in src/sprites/, or the
+animations built from it — is covered by the MIT License, which the copyright
+holder has no authority to grant for it.
+
+The same applies to the icon set, the poster, the pixel wordmark and the
+favicons under site/assets/ and src-tauri/icons/, which are generated from that
+sprite art.
+
+Jokbet is an unofficial fan project. It is not affiliated with, endorsed by,
+sponsored by, or approved by Anthropic. Do not present it, or a work derived
+from it, as an official Anthropic product, and do not use Anthropic's marks to
+promote it.
+
+
+Reference recordings
+--------------------
+
+The two recordings the animations were decoded from are not distributed with
+this repository, and are excluded by .gitignore. tools/extract-reference-frames
+documents how they were used, for anyone who wants to repeat or extend the work
+with material of their own.
+
+
+Bundled third-party material
+----------------------------
+
+Silkscreen font (site/assets/fonts/)
+    Copyright 2001 The Silkscreen Project Authors
+    Licensed under the SIL Open Font License, Version 1.1.
+    Full text: site/assets/fonts/OFL.txt
+    Source: https://github.com/googlefonts/silkscreen
+
+
+Trademarks
+----------
+
+Claude, Claude Code and Clawd are trademarks or characters of Anthropic.
+All other trademarks are the property of their respective owners.

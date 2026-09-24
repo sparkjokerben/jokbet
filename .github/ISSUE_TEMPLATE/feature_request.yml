@@ -1,0 +1,59 @@
+name: Feature request
+description: Suggest a change in how Jokbet behaves, looks, or counts
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Jokbet aims to stay small: a pet that counts key presses and clicks and nothing more.
+        Requests that fit that aim are the easiest to accept.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: The situation you are in, rather than the solution you have in mind.
+      placeholder: |
+        I work on a laptop and a desktop, and I would like the two machines' counts to end up in one place.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like Jokbet to do
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What else you considered
+      description: Other ways to solve it, including doing nothing, and why they are worse.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Where would this change live
+      description: A rough guess is fine; it helps route the issue.
+      options:
+        - The pet's behaviour or animations
+        - Counting or the database
+        - The stats or settings window
+        - The tray menu or native dialogs
+        - Installing or updating
+        - The website
+        - Not sure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Would you like to work on it?
+      options:
+        - label: I would like to open a pull request for this
+          required: false

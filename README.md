@@ -1,126 +1,202 @@
-# jokbet
+# Jokbet
 
-Jokbet is a lightweight desktop pet drawn in the pixel style of Claude Code's mascot. It sits in a corner of your screen, reacts while you type and click, and counts your keyboard and mouse activity.
+**English** · [简体中文](README.zh-CN.md)
 
-Jokbet 是一个轻量级桌宠，画风取自 Claude Code 的像素吉祥物。它待在屏幕角落，会跟着你打字和点击做出反应，并统计你的键盘和鼠标操作次数。
+[![CI](https://github.com/sparkjokerben/jokbet/actions/workflows/ci.yml/badge.svg)](https://github.com/sparkjokerben/jokbet/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/sparkjokerben/jokbet)](https://github.com/sparkjokerben/jokbet/releases/latest)
 
-> **Unofficial fan project.** This project is not affiliated with, endorsed by, or sponsored by Anthropic. Claude, Claude Code and Clawd are trademarks or characters of Anthropic.
->
-> **非官方同人作品**，与 Anthropic 无关，也未获其认可或赞助。Claude、Claude Code 和 Clawd 是 Anthropic 的商标或角色。
+Jokbet is a desktop pet that counts your keyboard and mouse activity. It sits in
+a corner of the screen in the pixel style of Claude Code's mascot, reacts while
+you type and click, and keeps a per-day tally of what you did — never of what
+you typed.
 
-## Features / 功能
+<img src="docs/screenshot.png" alt="The pet with 6,502 above its head, and a hover card listing today's keys, clicks, scrolls and mouse travel" width="440">
 
-- Counts key presses (per key), left/right/middle clicks, scroll gestures and mouse travel (in metres), stored per day
-- A number above the pet's head: today's count or live per-second speed, from the keyboard, the mouse, or both combined
-- Hover the pet for today's stats; right-click (or use the tray icon) for the menu
-- Jokbet gets out a laptop and types along with you, reacts to clicks and scrolling, follows your cursor with its eyes, falls asleep when you're away, and likes being poked
-- Pick what it does now and then while idle (juggle a soccer ball or look around; otherwise it just breathes, eyes on your cursor) and when you click or double-click it (flinch, hearts, soccer, wave)
-- The soccer and typing animations follow recordings of Anthropic's own mascot, so they move the way Clawd does: soccer is decoded from its recording frame by frame, and typing is drawn pose by pose after its recording; see `tools/extract-reference-frames`
-- 中英双语，跟随系统语言
+It runs on macOS 11+, Windows, and Linux (X11). The interface is in English and
+Simplified Chinese, following the system language.
 
-## Privacy / 隐私
+## Features
 
-Only counts are stored: how many times each key was pressed, clicks, scroll gestures, and how far the mouse moved. The app never records what you type or the order of your key presses. All data stays on your machine.
+- Counts key presses per key, left/right/middle clicks, scroll gestures, and
+  mouse travel in metres, stored per day
+- A number above its head: today's total or the live per-second rate, from the
+  keyboard, the mouse, or both added together
+- Hover it for today's figures; right-click it, or use the tray icon, for the menu
+- It types along on a laptop while you work, flinches when you click, follows
+  your cursor with its eyes, falls asleep when you are away, and can be dragged
+  anywhere on screen
+- Idle behaviour and click reactions are yours to choose: juggle a ball, look
+  around, wave, blush, or simply breathe
+- A stats window with a per-day trend, a keyboard heatmap, and CSV export
+- Milestones: it celebrates your thousandth key of the day, your millionth key
+  all time, and any threshold you set yourself
 
-只保存计数：每个键按了几次、点击、滚动手势和鼠标移动距离。不记录输入内容，也不记录按键顺序。所有数据只存在本机。
+## Install
 
-## Install / 安装
-
-Download the installer for your platform from **[jokbet.jokerben.top/download](https://jokbet.jokerben.top/download)** or from [Releases](https://github.com/sparkjokerben/jokbet/releases). The builds are not signed by Apple or Microsoft, so your system will warn you the first time.
-
-从 **[jokbet.jokerben.top/download](https://jokbet.jokerben.top/download)** 或 [Releases](https://github.com/sparkjokerben/jokbet/releases) 下载对应平台的安装包。安装包没有经过 Apple 或微软的签名，第一次打开时系统会拦截，按下面的步骤放行即可。
+Every installer is on the [download page](https://jokbet.jokerben.top/download)
+and on [Releases](https://github.com/sparkjokerben/jokbet/releases). The builds
+are not notarized or signed by a trusted authority, so your system warns you the
+first time; the steps below get past that.
 
 ### macOS
 
-The builds are not notarized, so Gatekeeper stops a build that a browser downloaded: a `.dmg` when it is opened, and then the app inside it once more. A build fetched with `curl` carries no quarantine flag and opens straight away, so the shortest way past all of it is one line in Terminal — it installs the newest release, and running it again updates to the newest:
-
 ```sh
 curl -fsSL https://jokbet.jokerben.top/install.sh | sh
 ```
 
-By hand instead (one stop for a zip, two for a disk image):
+That downloads the newest release for your Mac, checks it against the published
+SHA-256, installs it in `/Applications`, and opens it. Run it again to update.
+Reading [`site/install.sh`](site/install.sh) first is encouraged: it is a short
+script, and it is the same one that address serves.
 
-1. Open the zip and move `Jokbet.app` to Applications. The `aarch64` build is for Apple Silicon, `x64` for Intel Macs.
-2. Open it once. When macOS says it can't verify the developer, go to **System Settings → Privacy & Security** and click **Open Anyway**. (On macOS 15 and later, right-click → Open no longer works.)
-3. Allow **Input Monitoring** when asked (System Settings → Privacy & Security → Input Monitoring). Without it the pet shows a confused face and counts nothing.
+To install by hand instead, open the `.zip` and move `Jokbet.app` to
+Applications: `aarch64` for Apple Silicon, `x64` for Intel. Then open it once,
+and when macOS says it cannot verify the developer, go to **System Settings →
+Privacy & Security** and click **Open Anyway** (on macOS 15 and later,
+right-click → Open no longer works). Allow **Input Monitoring** when asked
+(**System Settings → Privacy & Security → Input Monitoring**): without it the
+pet shows a confused face and counts nothing.
 
-安装包没有 Apple 的公证，所以浏览器下载的版本会被拦：`.dmg` 在打开磁盘映像时拦一次，里面的 app 再拦一次。用 `curl` 抓下来的文件没有隔离标记，不会被拦——所以最省事的是在终端里一行命令装好，再运行一次就是更新：
-
-```sh
-curl -fsSL https://jokbet.jokerben.top/install.sh | sh
-```
-
-手动安装（zip 拦一次，dmg 拦两次）：解压后把 app 拖进「应用程序」（Apple 芯片选 `aarch64`，Intel 选 `x64`）；首次打开被拦时到「系统设置 → 隐私与安全性」点「仍要打开」（macOS 15 起右键「打开」已经不管用）；按提示授予「输入监控」权限，没有它桌宠会一脸问号，什么也统计不到。
-- If an update ever stops counting, remove the old entry from Input Monitoring and add the app again. 如果更新后不计数了，在「输入监控」里删掉旧条目再重新添加。
+A `.dmg` downloaded in a browser is stopped twice, once when the disk image is
+opened and once for the app inside it, which is why the `.zip` is the shorter
+path. If counting ever
+stops after an update, remove the old entry from Input Monitoring and add the
+app again.
 
 ### Windows
 
-Run the `.exe` installer. If SmartScreen says "Windows protected your PC", click **More info → Run anyway**. Some antivirus tools flag any program that listens to the keyboard; this app only counts key presses.
-
-运行 `.exe` 安装程序。SmartScreen 提示「Windows 已保护你的电脑」时，点「更多信息 → 仍要运行」。部分杀毒软件会把监听键盘的程序当成可疑程序；本程序只做计数。
+Run the `.exe` or the `.msi`. If SmartScreen says "Windows protected your PC",
+click **More info → Run anyway**. Some antivirus tools flag any program that
+listens to the keyboard; this one only counts presses.
 
 ### Linux (X11)
 
-Use the AppImage (auto-updates) or the `.deb`. Only X11 sessions are supported: Wayland does not let apps listen to global input. A compositor is needed for the transparent window and an AppIndicator-compatible tray for the menu.
+Use the AppImage, which updates itself, or the `.deb`. Only X11 sessions are
+supported — Wayland does not let an application observe global input. The
+transparent window needs a compositor, and the tray menu needs an
+AppIndicator-compatible host.
 
-使用 AppImage（支持自动更新）或 `.deb`。只支持 X11；Wayland 不允许程序监听全局输入。
+## Privacy
 
-## Known limitations / 已知限制
+Jokbet stores counts and nothing else:
 
-- macOS: keys typed while **Secure Keyboard Entry** is on (in password fields, or when enabled in Terminal or iTerm) are hidden from every other app, so they are not counted. Clicks, the mouse and the modifier keys still are.
-- Windows: input sent to windows running as administrator is not seen unless the pet also runs as administrator. The pet stays on the virtual desktop it was started on.
-- Linux: X11 only.
-- The pet stays on top of fullscreen apps too; hide it from the tray menu when it gets in the way.
+- how many times each key was pressed — no characters, no words, no order
+- how many clicks, by button
+- how many scroll gestures, and how far the mouse moved
 
-## Where the data lives / 数据位置
+There is no telemetry and no account, and no network request other than the
+update check. Everything goes into a local SQLite file, and the app works
+offline. The website at `jokbet.jokerben.top` counts visits with Cloudflare Web
+Analytics, which sets no cookies and does not identify anyone.
 
-- macOS: `~/Library/Application Support/io.github.sparkjokerben.jokbet/`
-- Windows: `%APPDATA%\io.github.sparkjokerben.jokbet\`
-- Linux: `~/.local/share/io.github.sparkjokerben.jokbet/`
+## Your data
 
-`stats.sqlite` holds the counts; `settings.json` (in the config directory) holds your settings. Upgrading from the old `jokerben-desktop-pet` name brings those two files across on the first run.
+`stats.sqlite` holds the counts, and `settings.json` holds your settings.
 
-## Development / 开发
+| Platform | Counts | Settings |
+|---|---|---|
+| macOS | `~/Library/Application Support/io.github.sparkjokerben.jokbet/` | same directory |
+| Windows | `%APPDATA%\io.github.sparkjokerben.jokbet\` | same directory |
+| Linux | `~/.local/share/io.github.sparkjokerben.jokbet/` | `~/.config/io.github.sparkjokerben.jokbet/` |
 
-Requires Node 24+ and Rust (stable).
+Deleting both files resets Jokbet to a first run. An install upgrading from the
+project's former name `jokerben-desktop-pet` brings them across on first launch.
+
+## Known limitations
+
+- **macOS** — keys typed while **Secure Keyboard Entry** is on (in a password
+  field, or when enabled in Terminal or iTerm) are hidden from every other
+  application, so they are not counted. Clicks, mouse movement, and the modifier
+  keys still are.
+- **Windows** — input going to a window running as administrator is not seen
+  unless Jokbet also runs as administrator, and the pet stays on the virtual
+  desktop it was started on.
+- **Linux** — X11 only.
+- It stays above other windows, fullscreen applications included; hide it from
+  the tray menu when it is in the way.
+
+## Development
+
+Node 24+ and a stable Rust toolchain are required.
 
 ```sh
 npm install
-npm run tauri dev     # run the app
-npm test              # frontend tests
-npm run check         # type check
+npm run tauri dev        # run the app
+npm test                 # frontend tests
+npm run check            # type check
 cd src-tauri && cargo test
-npm run sprites       # render every animation frame to sprites.png
-node scripts/render-sprites.ts anim soccer out.png 8 4   # one animation, larger
-npm run icons         # regenerate app and tray icons from the sprite
-python3 tools/extract-reference-frames/build-frames.py --help  # re-derive the video frames
 ```
 
-With `npm run dev` running, `http://localhost:1420/preview.html?view=stats` (or `settings`, `onboarding`, `pet`) renders a window in a normal browser with fake data, which is handy for layout work.
+Other commands worth knowing:
 
-The website in [`site/`](site/README.md) is four static pages served by a Cloudflare Worker, which also answers `/api/` (the manifests) and `/dl/` (every release file, mirrored in R2 with GitHub behind it). The pet on its pages is not a copy: it runs the app's own controller and sprites, bundled for the browser by `scripts/build-site-pet.ts`. `npm run site:assets` regenerates that bundle and the pixel art, `npm run site:pages` copies the shared header, footer and pet column into every page, and `npm run site:check` fails if any of it drifts; `npm test` covers the Worker; `site/README.md` has the addresses, the Cloudflare setup and the release flow.
+```sh
+npm run sprites          # render every animation frame to sprites.png
+node scripts/render-sprites.ts anim soccer out.png 8 4   # one animation, larger
+npm run icons            # regenerate the app and tray icons from the sprite
+npm run site:check       # fail if the website's generated files have drifted
+```
 
-On macOS, `tauri dev` runs the app as a child of your terminal, so grant Input Monitoring to the terminal app. To test the real permission flow, build a bundle with `npm run tauri build -- --debug --bundles app`. Every rebuild changes an ad-hoc signature, so clear the stale grant with:
+With `npm run dev` running, `http://localhost:1420/preview.html?view=stats`
+(`settings`, `onboarding`, `pet`) renders a window in a normal browser against
+fake data, which is handy for layout work without the Tauri shell. `npm run dev`
+is also the server `tauri dev` drives for hot reload.
+
+On macOS, `tauri dev` runs the app as a child of your terminal, so grant Input
+Monitoring to the terminal itself. To exercise the real permission flow, build a
+bundle with `npm run tauri build -- --debug --bundles app`. Every rebuild
+changes the ad-hoc signature, so clear the stale grant with:
 
 ```sh
 tccutil reset ListenEvent io.github.sparkjokerben.jokbet
 ```
 
-## Releasing / 发布
+[`CONTRIBUTING.md`](CONTRIBUTING.md) covers the project layout, the generated
+files that must be regenerated with their sources, and what a pull request
+should look like. The website in [`site/`](site/README.md) is four static pages
+served by a Cloudflare Worker that also mirrors every release file; the pet on
+those pages runs the app's own animation code, bundled for the browser.
 
-1. Bump `version` in `package.json` (the app reads it from there) and commit.
-2. Tag and push: `git tag v0.1.0 && git push origin v0.1.0`.
-3. The Release workflow builds macOS (arm64 and x64), Windows and Linux into a draft release with the updater manifest (`latest.json`).
-4. Check the draft and publish it. That runs the *Publish to R2* workflow, which mirrors every file of the release and the three manifests on the site (see `site/README.md`).
-5. Run `npm run site:fallback` and commit the result, so the Worker's fallback copies name the new release too.
+## Releasing
 
-Installed apps pick an update up within six hours and install it on restart. They ask the site's mirror (`/api/update.json`) first and GitHub second, and a download that fails on one host is retried on the other — every file lives at the same `<tag>/<name>` on both, and the signature travels with the manifest (`src-tauri/src/updater.rs`).
+1. Bump the version in `package.json` and `src-tauri/Cargo.toml`, commit, then
+   tag and push it:
 
-The updater signing key lives in the `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secrets. Keep a backup: without it, installed copies can never be updated again.
+   ```sh
+   git tag v0.1.2 && git push origin v0.1.2
+   ```
+
+2. CI builds macOS (Apple Silicon and Intel), Windows, and Linux into a **draft**
+   release.
+3. Check the draft, then publish it. That fires the *Publish to R2* workflow,
+   which mirrors every file of the release and the three manifests to the site.
+4. Run `npm run site:fallback` and commit the result, so the Worker's own copy
+   of the manifests names the new release too.
+
+Installed copies pick an update up within six hours and install it on restart.
+They ask the site's mirror first and GitHub second, and retry a failed download
+on the other host; the signature travels with the manifest, so either copy
+verifies. The updater signing key lives in the `TAURI_SIGNING_PRIVATE_KEY` and
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` repository secrets. Keep a backup: without
+it no installed copy can ever be updated again.
+
+## Contributing
+
+Issues and pull requests are welcome — please read
+[`CONTRIBUTING.md`](CONTRIBUTING.md) first. For anything larger than a bug fix,
+open an issue so the approach can be agreed on before you write code.
+
+## Security
+
+See [`SECURITY.md`](SECURITY.md) for how to report a vulnerability privately.
 
 ## License
 
-[MIT](LICENSE) — use it, change it, ship it, sell it. The one thing the licence
-does not cover is the pet's likeness: Jokbet is drawn in the pixel style of
-Claude Code's mascot, which belongs to Anthropic, and this remains an unofficial
-fan project (see the notice at the top).
+[MIT](LICENSE). Use it, change it, ship it, sell it.
+
+The license covers the code. It does not cover the pet's likeness or the
+reference material it was drawn from — see [`NOTICE`](NOTICE).
+
+Jokbet is an unofficial fan project, not affiliated with, endorsed by, or
+sponsored by Anthropic. Claude, Claude Code, and Clawd are trademarks or
+characters of Anthropic.

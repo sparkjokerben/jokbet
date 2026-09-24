@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/sparkjokerben/jokbet/security/advisories/new
+    about: Report it privately rather than in a public issue — see SECURITY.md before you do.
+  - name: Download the newest release
+    url: https://jokbet.jokerben.top/download
+    about: Installers, checksums, and the install steps for each platform.

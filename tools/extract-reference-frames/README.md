@@ -1,11 +1,12 @@
 # extract-reference-frames
 
-The soccer and typing animations in `src/sprites/frames/` follow two screen
-recordings of Anthropic's own Clawd mascot (a ball juggling loop and the
-laptop/typing loop), so they move the way it does. This directory holds the
-tooling that turns those recordings into pixel frames.
+The tooling that turned two screen recordings of Anthropic's own Clawd mascot —
+a ball-juggling loop and a laptop/typing loop — into the pixel frames in
+`src/sprites/frames/`, so that Jokbet moves the way that mascot does.
 
-The recordings themselves are not in the repository.
+The recordings themselves are not distributed with this repository; see
+[NOTICE](../../NOTICE) for why, and [`CONTRIBUTING.md`](../../CONTRIBUTING.md)
+for how the generated frames fit into the project.
 
 - `soccer.ts` is decoded from the recording frame by frame (`build-frames.py`).
 - `typing.ts` is drawn pose by pose (`draw-typing.py`). That recording is too

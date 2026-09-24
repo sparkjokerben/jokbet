@@ -1,0 +1,107 @@
+name: Bug report
+description: Something is broken, or the pet does not count what it should
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. For anything that could be a security problem, please use
+        [private vulnerability reporting](https://github.com/sparkjokerben/jokbet/security/advisories/new)
+        instead of an issue.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+      placeholder: |
+        The pet shows a confused face and today's count stays at 0, even though I am typing.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What you did, in order. If it happens only sometimes, say roughly how often.
+      placeholder: |
+        1. Open Jokbet
+        2. Type in any window
+        3. Watch the number above its head
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Jokbet version
+      description: Its version is in the tray menu, or in the filename you downloaded.
+      placeholder: "0.1.2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How it was installed
+      options:
+        - macOS — install.sh in Terminal
+        - macOS — .zip
+        - macOS — .dmg
+        - Windows — .exe installer
+        - Windows — .msi
+        - Linux — AppImage
+        - Linux — .deb
+        - Built it from source
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "macOS 15.3 (Apple Silicon) / Windows 11 24H2 / Ubuntu 22.04, X11"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: permission
+    attributes:
+      label: Is it allowed to observe input?
+      description: |
+        On macOS, **System Settings → Privacy & Security → Input Monitoring**. On Windows, whether
+        any antivirus software is installed that could be blocking it.
+      options:
+        - Yes, permission is granted and it still does not count
+        - Yes, and it counts some things but not others
+        - No, I have not granted it (the pet shows a confused face)
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: counting
+    attributes:
+      label: What is affected
+      options:
+        - Not counting at all
+        - Counting some things but not others
+        - The count is wrong (too high, too low, or reset)
+        - The animation or the pet window
+        - The stats or settings window
+        - Updating
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: |
+        Screenshots or a screen recording help a lot for anything visual. If counting is the
+        problem, say which keys or buttons are missed — and note that keys typed while macOS
+        Secure Keyboard Entry is on are not counted by design (see the README).
+    validations:
+      required: false
