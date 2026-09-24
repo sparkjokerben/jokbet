@@ -82,6 +82,8 @@ describe("celebrationText", () => {
     expect(celebrationText([hit({})], "en")).toBe("🎉 10,000 keys today!");
     expect(celebrationText([hit({ period: "lifetime", level: 1_000_000 })], "zh")).toBe("🎉 累计按键 100万！");
     expect(celebrationText([hit({ metric: "distance", level: 1000 })], "en")).toBe("🎉 1.00 km of mouse travel today!");
+    expect(celebrationText([hit({ metric: "inputs", level: 1000 })], "zh")).toBe("🎉 今天按键+点击 1,000！");
+    expect(celebrationText([hit({ metric: "inputs", level: 1000 })], "en")).toBe("🎉 1,000 keys + clicks today!");
   });
   it("leads with lifetime and the highest level, counting the rest", () => {
     const hits = [hit({ level: 1000 }), hit({ level: 5000 }), hit({ period: "lifetime", level: 100_000 })];

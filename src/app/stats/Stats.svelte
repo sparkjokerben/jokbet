@@ -28,12 +28,19 @@
   const METRIC_LABEL: Record<Metric, MessageKey> = {
     keys: "metricKeys",
     clicks: "metricClicks",
+    inputs: "metricInputs",
     scrolls: "metricScrolls",
     distance: "metricDistance",
   };
 
-  const valueOf = (x: Totals, m: Metric) =>
-    m === "keys" ? x.keys : m === "clicks" ? clicks(x) : m === "scrolls" ? x.scrolls : x.moveMm;
+  const VALUE: Record<Metric, (x: Totals) => number> = {
+    keys: (x) => x.keys,
+    clicks,
+    inputs: (x) => x.keys + clicks(x),
+    scrolls: (x) => x.scrolls,
+    distance: (x) => x.moveMm,
+  };
+  const valueOf = (x: Totals, m: Metric) => VALUE[m](x);
   const fmt = $derived((v: number) => (metric === "distance" ? formatDistance(v) : formatCount(Math.round(v))));
 
   const points = $derived(data?.days.map((d) => ({ date: d.date, value: valueOf(d, metric) })) ?? []);

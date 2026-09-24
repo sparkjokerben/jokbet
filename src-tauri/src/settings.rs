@@ -34,6 +34,18 @@ pub struct HeadCounter {
     pub mouse: bool,
 }
 
+impl HeadCounter {
+    /// What the count adds up: key presses, clicks, or both (also when
+    /// neither is picked, which hides the counter but still leaves a count).
+    pub fn metric(&self) -> Metric {
+        match (self.keyboard, self.mouse) {
+            (true, false) => Metric::Keys,
+            (false, true) => Metric::Clicks,
+            _ => Metric::Inputs,
+        }
+    }
+}
+
 impl Default for HeadCounter {
     fn default() -> Self {
         Self {
@@ -77,6 +89,8 @@ pub enum Period {
 pub enum Metric {
     Keys,
     Clicks,
+    /// Key presses and clicks together.
+    Inputs,
     Scrolls,
     /// Metres of mouse travel.
     Distance,
@@ -86,7 +100,7 @@ impl Metric {
     /// Smallest allowed step for a repeating milestone.
     pub fn min_repeat_step(self) -> f64 {
         match self {
-            Metric::Keys | Metric::Clicks => 500.0,
+            Metric::Keys | Metric::Clicks | Metric::Inputs => 500.0,
             Metric::Scrolls => 200.0,
             Metric::Distance => 50.0,
         }

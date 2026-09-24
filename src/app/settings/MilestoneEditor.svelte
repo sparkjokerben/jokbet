@@ -5,10 +5,11 @@
   let { items, onchange }: { items: CustomMilestone[]; onchange: (next: CustomMilestone[]) => void } = $props();
 
   /** Mirrors Metric::min_repeat_step in settings.rs. */
-  const MIN_STEP: Record<Metric, number> = { keys: 500, clicks: 500, scrolls: 200, distance: 50 };
+  const MIN_STEP: Record<Metric, number> = { keys: 500, clicks: 500, inputs: 500, scrolls: 200, distance: 50 };
   const METRICS: Array<[Metric, Parameters<typeof t>[0]]> = [
     ["keys", "metricKeys"],
     ["clicks", "metricClicks"],
+    ["inputs", "metricInputs"],
     ["scrolls", "metricScrolls"],
     ["distance", "metricDistance"],
   ];

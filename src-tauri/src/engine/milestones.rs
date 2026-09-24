@@ -2,7 +2,7 @@
 //! Pure; the caller supplies dates, totals and the clock.
 
 use super::aggregator::Totals;
-use crate::settings::{CustomMilestone, Metric, Period};
+use crate::settings::{CustomMilestone, HeadCounter, Metric, Period};
 use serde::Serialize;
 use std::collections::HashMap;
 
@@ -32,13 +32,18 @@ impl From<&CustomMilestone> for MilestoneDef {
     }
 }
 
+/// One built-in series. `name` goes into the ids, which are stored with what
+/// has been celebrated, so it must not change: the count series is still
+/// called "keys" from when it counted nothing else, and a new name would
+/// celebrate every threshold already passed all over again.
 fn fixed(
     period: Period,
     metric: Metric,
+    name: &'static str,
     thresholds: &'static [f64],
 ) -> impl Iterator<Item = MilestoneDef> {
     thresholds.iter().map(move |&threshold| MilestoneDef {
-        id: format!("builtin:{period:?}:{metric:?}:{threshold}").to_lowercase(),
+        id: format!("builtin:{period:?}:{name}:{threshold}").to_lowercase(),
         period,
         metric,
         threshold,
@@ -46,11 +51,18 @@ fn fixed(
     })
 }
 
-/// The built-in set, followed by the user's own.
-pub fn definitions(custom: &[CustomMilestone]) -> Vec<MilestoneDef> {
-    fixed(Period::Daily, Metric::Keys, &[1e3, 5e3, 1e4, 2e4, 5e4])
-        .chain(fixed(Period::Lifetime, Metric::Keys, &[1e5, 1e6, 1e7]))
-        .chain(fixed(Period::Daily, Metric::Distance, &[100.0, 1000.0]))
+/// The built-in set, followed by the user's own. The built-in counts add up
+/// what the head counter does, so a milestone lands when that number says so.
+pub fn definitions(custom: &[CustomMilestone], head: &HeadCounter) -> Vec<MilestoneDef> {
+    let counted = head.metric();
+    fixed(Period::Daily, counted, "keys", &[1e3, 5e3, 1e4, 2e4, 5e4])
+        .chain(fixed(Period::Lifetime, counted, "keys", &[1e5, 1e6, 1e7]))
+        .chain(fixed(
+            Period::Daily,
+            Metric::Distance,
+            "distance",
+            &[100.0, 1000.0],
+        ))
         .chain(custom.iter().map(MilestoneDef::from))
         .collect()
 }
@@ -58,10 +70,15 @@ pub fn definitions(custom: &[CustomMilestone]) -> Vec<MilestoneDef> {
 pub fn metric_value(t: &Totals, m: Metric) -> f64 {
     match m {
         Metric::Keys => t.keys as f64,
-        Metric::Clicks => (t.click_left + t.click_right + t.click_middle) as f64,
+        Metric::Clicks => clicks(t) as f64,
+        Metric::Inputs => (t.keys + clicks(t)) as f64,
         Metric::Scrolls => t.scrolls as f64,
         Metric::Distance => t.move_mm / 1000.0,
     }
+}
+
+fn clicks(t: &Totals) -> u64 {
+    t.click_left + t.click_right + t.click_middle
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -176,7 +193,7 @@ mod tests {
 
     #[test]
     fn builtins_have_unique_ids() {
-        let defs = definitions(&[]);
+        let defs = definitions(&[], &HeadCounter::default());
         let mut ids: Vec<_> = defs.iter().map(|d| d.id.clone()).collect();
         ids.sort();
         ids.dedup();
@@ -185,8 +202,54 @@ mod tests {
     }
 
     #[test]
+    fn builtin_counts_add_up_what_the_head_counter_does() {
+        let today = Totals {
+            keys: 600,
+            click_left: 300,
+            click_right: 100,
+            ..Default::default()
+        };
+        let head = |keyboard, mouse| HeadCounter {
+            keyboard,
+            mouse,
+            ..Default::default()
+        };
+        let first = |head: HeadCounter| {
+            let defs = definitions(&[], &head);
+            let mut r = Reached::default();
+            (
+                defs[0].metric,
+                levels(&r.check(&defs, "d", &today, &keys(0))),
+            )
+        };
+        assert_eq!(first(head(true, true)), (Metric::Inputs, vec![1000.0]));
+        assert_eq!(first(head(true, false)), (Metric::Keys, vec![]));
+        assert_eq!(first(head(false, true)), (Metric::Clicks, vec![]));
+        assert_eq!(first(head(false, false)), (Metric::Inputs, vec![1000.0]));
+    }
+
+    #[test]
+    fn builtin_ids_do_not_depend_on_what_is_counted() {
+        let ids = |keyboard, mouse| {
+            let head = HeadCounter {
+                keyboard,
+                mouse,
+                ..Default::default()
+            };
+            definitions(&[], &head)
+                .into_iter()
+                .map(|d| d.id)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(ids(true, true), ids(true, false));
+        assert_eq!(ids(true, true), ids(false, true));
+        assert_eq!(ids(true, true)[0], "builtin:daily:keys:1000");
+        assert_eq!(ids(true, true)[8], "builtin:daily:distance:100");
+    }
+
+    #[test]
     fn daily_fires_once_per_day_and_again_tomorrow() {
-        let defs = definitions(&[]);
+        let defs = definitions(&[], &HeadCounter::default());
         let mut r = Reached::default();
         let life = keys(0);
         assert_eq!(
@@ -206,7 +269,7 @@ mod tests {
 
     #[test]
     fn crossing_several_thresholds_at_once_reports_each() {
-        let defs = definitions(&[]);
+        let defs = definitions(&[], &HeadCounter::default());
         let mut r = Reached::default();
         let hits = r.check(&defs, "2026-09-23", &keys(12_000), &keys(0));
         assert_eq!(levels(&hits), [1000.0, 5000.0, 10_000.0]);
@@ -214,7 +277,7 @@ mod tests {
 
     #[test]
     fn lifetime_fires_once_ever() {
-        let defs = definitions(&[]);
+        let defs = definitions(&[], &HeadCounter::default());
         let mut r = Reached::default();
         let hits = r.check(&defs, "2026-09-23", &keys(0), &keys(100_000));
         assert_eq!(levels(&hits), [100_000.0]);
@@ -225,7 +288,10 @@ mod tests {
 
     #[test]
     fn repeating_milestone_skipping_steps_fires_once_at_the_highest() {
-        let defs = definitions(&[custom(500.0, true, Period::Daily)]);
+        let defs = definitions(
+            &[custom(500.0, true, Period::Daily)],
+            &HeadCounter::default(),
+        );
         let custom_only = &defs[10..];
         let mut r = Reached::default();
         assert!(r.check(custom_only, "d", &keys(499), &keys(0)).is_empty());
@@ -246,7 +312,7 @@ mod tests {
 
     #[test]
     fn distance_is_in_metres() {
-        let defs = definitions(&[]);
+        let defs = definitions(&[], &HeadCounter::default());
         let mut r = Reached::default();
         let today = Totals {
             move_mm: 100_000.0,
@@ -260,7 +326,13 @@ mod tests {
     #[test]
     fn raising_a_threshold_fires_again_but_lowering_does_not() {
         let mut r = Reached::default();
-        let at = |t| definitions(&[custom(t, false, Period::Lifetime)])[10..].to_vec();
+        let at = |t| {
+            definitions(
+                &[custom(t, false, Period::Lifetime)],
+                &HeadCounter::default(),
+            )[10..]
+                .to_vec()
+        };
         assert_eq!(
             levels(&r.check(&at(10_000.0), "d", &keys(0), &keys(12_000))),
             [10_000.0]
