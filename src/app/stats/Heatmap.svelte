@@ -11,7 +11,7 @@
   let {
     counts,
     everPressed = [],
-    palette = "heat",
+    palette = "brand",
   }: { counts: Record<string, number>; everPressed?: string[]; palette?: HeatmapPalette } = $props();
 
   const GAP = 3;

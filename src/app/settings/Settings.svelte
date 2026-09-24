@@ -255,8 +255,8 @@
           label={t("heatmapPalette")}
           bind:value={() => s!.heatmapPalette, (v: HeatmapPalette) => update({ heatmapPalette: v })}
           options={[
-            { value: "heat", label: t("paletteHeat") },
             { value: "brand", label: t("paletteBrand") },
+            { value: "heat", label: t("paletteHeat") },
           ]}
         />
       </div>

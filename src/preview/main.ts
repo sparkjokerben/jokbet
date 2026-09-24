@@ -63,7 +63,7 @@ let settings: Settings = {
   language: "system",
   hideInFullscreen: true,
   shortcuts: { togglePet: "Control+Alt+KeyJ", pause: null },
-  heatmapPalette: params.get("palette") === "brand" ? "brand" : "heat",
+  heatmapPalette: params.get("palette") === "heat" ? "heat" : "brand",
 };
 
 const view = params.get("view");

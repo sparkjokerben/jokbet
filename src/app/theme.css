@@ -44,9 +44,9 @@
 }
 
 /* Heatmap palettes, eight steps from least to most, chosen in the settings.
-   "heat" is ColorBrewer's YlOrRd on light (more is darker and redder) and
-   matplotlib's inferno on dark (more is brighter); "brand" is the pet's orange
-   in one hue, light to dark, flipped for dark. Each step's label ink is the
+   "brand", the default, is the pet's orange in one hue, light to dark, flipped
+   for dark; "heat" is ColorBrewer's YlOrRd on light (more is darker and
+   redder) and matplotlib's inferno on dark (more is brighter). Each step's label ink is the
    one of near-black and white with the higher contrast (4.2:1 at worst). */
 [data-heat="heat"] {
   --heat-0: #ffeda0;

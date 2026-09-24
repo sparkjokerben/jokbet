@@ -30,7 +30,7 @@
   let error = $state("");
   /** False when the database could not be opened: counts live only in memory. */
   let storage = $state(true);
-  let palette = $state<HeatmapPalette>("heat");
+  let palette = $state<HeatmapPalette>("brand");
 
   const METRIC_LABEL: Record<Metric, MessageKey> = {
     keys: "metricKeys",

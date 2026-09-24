@@ -94,9 +94,9 @@ pub fn parse_shortcut(accelerator: &str) -> Result<tauri_plugin_global_shortcut:
 #[serde(rename_all = "camelCase")]
 pub enum HeatmapPalette {
     /// Yellow to red on light, dark red to yellow on dark: the usual heat scale.
-    #[default]
     Heat,
     /// The pet's orange, in one hue.
+    #[default]
     Brand,
 }
 
@@ -217,7 +217,7 @@ impl Default for Settings {
             language: Language::System,
             hide_in_fullscreen: true,
             shortcuts: Shortcuts::default(),
-            heatmap_palette: HeatmapPalette::Heat,
+            heatmap_palette: HeatmapPalette::Brand,
         }
     }
 }
@@ -538,7 +538,7 @@ mod tests {
         assert!(!s.liquid_glass, "the material starts switched off");
         assert_eq!(s.language, Language::System);
         assert!(s.hide_in_fullscreen);
-        assert_eq!(s.heatmap_palette, HeatmapPalette::Heat);
+        assert_eq!(s.heatmap_palette, HeatmapPalette::Brand);
     }
 
     #[test]
