@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+  <head>
+    <!-- partial:head -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f4f0" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#141413" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/assets/favicon.ico" sizes="any" />
+    <link rel="icon" href="/assets/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+    <!-- The headlines' own face, so the first paint is the final one. -->
+    <link rel="preload" href="/assets/fonts/silkscreen-700.woff2" as="font" type="font/woff2" crossorigin />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Jokbet" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:image" content="https://jokbet.jokerben.top/assets/og.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Jokbet 的像素形象，站在一条屏幕边线上" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/boot.js"></script>
+    <script type="module" src="/app.js"></script>
+    <!-- /partial:head -->
+    <title>关于 — Jokbet · About</title>
+    <meta name="description" content="Jokbet 记录什么、不记录什么，各平台的已知限制，MIT 开源协议，以及非官方同人作品的声明。" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <link rel="canonical" href="https://jokbet.jokerben.top/about" />
+    <meta property="og:url" content="https://jokbet.jokerben.top/about" />
+    <meta property="og:title" content="关于 Jokbet" />
+    <meta property="og:description" content="隐私、已知限制、开源协议和声明。" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebPage",
+            "@id": "https://jokbet.jokerben.top/about#page",
+            "url": "https://jokbet.jokerben.top/about",
+            "name": "关于 Jokbet",
+            "isPartOf": { "@id": "https://jokbet.jokerben.top/#website" },
+            "inLanguage": ["zh-Hans", "en"]
+          },
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Jokbet", "item": "https://jokbet.jokerben.top/" },
+              { "@type": "ListItem", "position": 2, "name": "关于", "item": "https://jokbet.jokerben.top/about" }
+            ]
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body data-page="about">
+    <div class="page">
+      <!-- partial:header -->
+      <header class="top">
+        <a href="/" aria-label="Jokbet"><img class="mark" src="/assets/wordmark.svg" alt="JOKBET" width="116" height="28" /></a>
+        <nav class="nav" aria-label="网站 / Site">
+          <a href="/"><span data-lang="zh">首页</span><span data-lang="en" lang="en">Home</span></a>
+          <a href="/download"><span data-lang="zh">下载</span><span data-lang="en" lang="en">Download</span></a>
+          <a href="/changelog"><span data-lang="zh">更新日志</span><span data-lang="en" lang="en">Changelog</span></a>
+          <a href="/about" aria-current="page"><span data-lang="zh">关于</span><span data-lang="en" lang="en">About</span></a>
+          <a href="https://github.com/sparkjokerben/jokbet">GitHub</a>
+        </nav>
+        <div class="langs" role="group" aria-label="语言 / Language">
+          <button type="button" data-set-lang="zh" aria-pressed="false" lang="zh-Hans">中文</button>
+          <button type="button" data-set-lang="en" aria-pressed="false" lang="en">English</button>
+        </div>
+      </header>
+      <!-- /partial:header -->
+
+      <!-- partial:rail -->
+      <!-- The pet's column: on a wide screen it is sticky, and the creature stands on
+           the bottom edge of the window all the way down the page, the way it stands
+           on the bottom of your screen. -->
+      <div class="rail">
+        <div class="pet-host" id="pet">
+          <img class="pet-poster" src="/assets/jokbet-poster.png" width="240" height="156" alt="" />
+        </div>
+      </div>
+      <!-- /partial:rail -->
+
+      <main class="content">
+        <section class="page-head">
+          <h1>
+            <span data-lang="zh">关于</span>
+            <span data-lang="en" lang="en">About</span>
+          </h1>
+          <p class="lede">
+            <span data-lang="zh">它记下什么、做不到什么，以及以什么协议开源。</span>
+            <span data-lang="en" lang="en">What it keeps, what it cannot do, and the terms it is shared under.</span>
+          </p>
+        </section>
+
+        <section class="block" id="privacy">
+          <h2><span data-lang="zh">隐私</span><span data-lang="en" lang="en">Privacy</span></h2>
+          <p>
+            <span data-lang="zh"
+              >只保存计数：每个键按了几次、点击、滚动手势和鼠标移动距离。不记录输入内容，也不记录按键顺序。所有数据只存在本机，不上传。</span
+            >
+            <span data-lang="en" lang="en"
+              >Only counts are stored: how many times each key was pressed, clicks, scroll gestures, and how far the mouse moved. It
+              never records what you type or the order of your keys. Everything stays on your machine.</span
+            >
+          </p>
+          <p class="note">
+            <span data-lang="zh">数据在 <code>~/Library/Application Support/io.github.sparkjokerben.jokbet/</code>（Windows 在 <code>%APPDATA%</code> 下，Linux 在 <code>~/.local/share/</code> 下）。</span>
+            <span data-lang="en" lang="en"
+              >It lives in <code>~/Library/Application Support/io.github.sparkjokerben.jokbet/</code> (the same folder under
+              <code>%APPDATA%</code> on Windows and <code>~/.local/share/</code> on Linux).</span
+            >
+          </p>
+          <p class="note">
+            <span data-lang="zh">这个网站上的桌宠也一样：它只对你在页面里的操作做反应，纯粹用来演示，什么都不发送。</span>
+            <span data-lang="en" lang="en"
+              >The pet on this site works the same way: it only reacts to what you do on the page, as a demonstration, and
+              sends nothing.</span
+            >
+          </p>
+        </section>
+
+        <section class="block" id="limits">
+          <h2><span data-lang="zh">已知限制</span><span data-lang="en" lang="en">Known limits</span></h2>
+          <ul class="list-flat">
+            <li>
+              <span data-lang="zh"
+                >macOS：开了「安全键盘输入」时（终端设置或密码框里），按键对所有程序都不可见，它会戴上眼罩。</span
+              >
+              <span data-lang="en" lang="en"
+                >macOS: while Secure Keyboard Entry is on (a Terminal setting, or any password field), no app can see the keys — it
+                puts on a blindfold.</span
+              >
+              <button class="linkish" type="button" data-block="secure">
+                <span data-lang="zh">看看它戴眼罩的样子</span><span data-lang="en" lang="en">Show the blindfold</span>
+              </button>
+            </li>
+            <li>
+              <span data-lang="zh">macOS：没给「输入监控」权限时，它一脸问号，什么也数不到。</span>
+              <span data-lang="en" lang="en">macOS: without Input Monitoring permission it is baffled and cannot count a thing.</span>
+              <button class="linkish" type="button" data-block="noperm">
+                <span data-lang="zh">看看它一脸问号的样子</span><span data-lang="en" lang="en">Show the confused face</span>
+              </button>
+            </li>
+            <li>
+              <span data-lang="zh">Windows：管理员权限窗口里的输入看不到（除非它也以管理员运行）；它会留在启动时的那个虚拟桌面。</span>
+              <span data-lang="en" lang="en"
+                >Windows: input going to administrator windows is not seen unless it runs as administrator too, and it stays on the
+                virtual desktop it started on.</span
+              >
+            </li>
+            <li>
+              <span data-lang="zh">Linux：只支持 X11，Wayland 下无法工作。</span>
+              <span data-lang="en" lang="en">Linux: X11 only; it cannot work under Wayland.</span>
+            </li>
+            <li>
+              <span data-lang="zh">它会待在别的窗口上面，包括全屏应用；遮挡内容时可右键隐藏。</span>
+              <span data-lang="en" lang="en"
+                >It stays above other windows, fullscreen apps included; hide it from the tray menu when it gets in the way.</span
+              >
+            </li>
+          </ul>
+        </section>
+
+        <section class="block" id="license">
+          <h2><span data-lang="zh">开源协议</span><span data-lang="en" lang="en">License</span></h2>
+          <p>
+            <span data-lang="zh"
+              >以 <strong>MIT 协议</strong>开源：可以自由使用、修改、分发，包括商用。源码在
+              <a href="https://github.com/sparkjokerben/jokbet">GitHub</a>，问题和新想法都欢迎提到那里。</span
+            >
+            <span data-lang="en" lang="en"
+              >Released under the <strong>MIT license</strong>: use it, change it, ship it, sell it. The source is on
+              <a href="https://github.com/sparkjokerben/jokbet">GitHub</a>, which is also the place for bugs and ideas.</span
+            >
+          </p>
+        </section>
+
+        <section class="block" id="notices">
+          <h2><span data-lang="zh">声明</span><span data-lang="en" lang="en">Notices</span></h2>
+          <p>
+            <span data-lang="zh"
+              >Jokbet 是非官方同人作品，与 Anthropic 无关，也未获其认可或赞助。它的样子照着 Claude Code
+              的吉祥物画成：这份形象属于 Anthropic，不在 MIT 协议之内——协议管的是代码。</span
+            >
+            <span data-lang="en" lang="en"
+              >Jokbet is an unofficial fan project, not affiliated with, endorsed by or sponsored by Anthropic. It is drawn
+              after Claude Code's mascot; that likeness belongs to Anthropic and is not covered by the MIT license, which covers
+              the code.</span
+            >
+          </p>
+          <p>
+            <span data-lang="zh"
+              >安装包没有经过 Apple 或微软的签名，所以第一次打开时系统会拦一下；放行的步骤在<a href="/download#install"
+                >下载页</a
+              >。</span
+            >
+            <span data-lang="en" lang="en"
+              >The installers are not signed by Apple or Microsoft, so your system stops the first launch once;
+              <a href="/download#install">the download page</a> shows how to let it through.</span
+            >
+          </p>
+          <p class="note">
+            <span data-lang="zh"
+              >页面上的像素字体是 Silkscreen，以 <a href="/assets/fonts/OFL.txt">SIL Open Font License</a> 授权。</span
+            >
+            <span data-lang="en" lang="en"
+              >The pixel type on these pages is Silkscreen, under the <a href="/assets/fonts/OFL.txt">SIL Open Font License</a>.</span
+            >
+          </p>
+        </section>
+      </main>
+
+      <!-- partial:footer -->
+      <footer class="foot">
+        <p class="links">
+          <a href="https://github.com/sparkjokerben/jokbet">GitHub</a>
+          <a href="https://github.com/sparkjokerben/jokbet/releases">
+            <span data-lang="zh">GitHub 发布页</span><span data-lang="en" lang="en">GitHub releases</span>
+          </a>
+          <a href="https://github.com/sparkjokerben/jokbet/blob/main/LICENSE">
+            <span data-lang="zh">MIT 协议</span><span data-lang="en" lang="en">MIT license</span>
+          </a>
+        </p>
+        <div class="disclaimer">
+          <p lang="en">
+            <strong>Unofficial fan project.</strong> Not affiliated with, endorsed by, or sponsored by Anthropic. Claude, Claude Code
+            and Clawd are trademarks or characters of Anthropic.
+          </p>
+          <p lang="zh-Hans">
+            <strong>非官方同人作品</strong>，与 Anthropic 无关，也未获其认可或赞助。Claude、Claude Code 和 Clawd 是 Anthropic
+            的商标或角色。
+          </p>
+        </div>
+      </footer>
+      <!-- /partial:footer -->
+    </div>
+  </body>
+</html>

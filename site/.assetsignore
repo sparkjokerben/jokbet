@@ -2,6 +2,9 @@
 # this directory is published as-is (wrangler.toml uploads it as static assets).
 README.md
 
+# What every page shares, before scripts/site-pages.ts copies it into them.
+partials/
+
 # Local dev state: created by `wrangler dev` when it is run from this directory,
 # and never anything to publish.
 .wrangler/

@@ -1,7 +1,8 @@
-// The page's behaviour: the pet (which runs the app's own code, see
-// src/pet/web.ts), the language switch, the download list built from the
-// mirror's manifest, and the changelog built from the release list. Everything
-// else is in the HTML.
+// Every page's behaviour, keyed on <body data-page>: the pet (which runs the
+// app's own code, see src/pet/web.ts) and the language switch everywhere; the
+// download buttons on the home page, the installer list on /download and the
+// release list on /changelog, built from the Worker's /api/ manifests.
+// Everything else is in the HTML.
 
 /** @typedef {{ name: string, size: number | null, sha256: string | null }} ManifestFile */
 /** @typedef {{ schema: number, version: string | null, tag: string | null, pubDate: string | null,
@@ -18,7 +19,9 @@
 
 const html = document.documentElement;
 const RELEASES = "https://github.com/sparkjokerben/jokbet/releases";
-const isChangelog = !!document.getElementById("releases");
+const PAGES = /** @type {const} */ (["home", "download", "changelog", "about", "404"]);
+/** Which page this is: the body says so. */
+const page = PAGES.find((p) => p === document.body.dataset.page) ?? "home";
 
 /** @param {string} id */
 const $ = (id) => document.getElementById(id);
@@ -33,16 +36,24 @@ const el = (tag, text) => {
 /** The page's own words: everything the JS builds, in both languages. */
 const T = {
   zh: {
-    title: isChangelog ? "更新日志 — Jokbet" : "Jokbet — 屏幕角落的像素桌宠",
+    titles: {
+      home: "Jokbet — 屏幕角落的像素桌宠",
+      download: "下载 — Jokbet",
+      changelog: "更新日志 — Jokbet",
+      about: "关于 — Jokbet",
+      "404": "404 — Jokbet",
+    },
     platforms: "macOS 11+ · Windows · Linux（X11）",
     unreleased: "还没有正式发布的版本",
     primary: { "macos-aarch64": "下载 macOS 版", "windows-x64": "下载 Windows 版", "linux-appimage": "下载 Linux 版" },
     altMac: "Intel 版",
     releases: "去 GitHub 下载",
+    everyPlatform: "选择平台下载",
     released: "发布于",
     sourceR2: "下载由本站镜像提供",
     sourceGithub: "镜像暂时不可用，已改用 GitHub",
     empty: "还没有正式发布的版本",
+    unreachable: "暂时读不到版本信息，所有版本都在 GitHub 上。",
     emptyHome: "第一个版本发布后，这里会列出各平台的安装包。",
     emptyHint: "第一个版本发布后，这里会自动列出每个版本的改动和安装包。",
     github: "GitHub 下载",
@@ -53,16 +64,24 @@ const T = {
     linux: { "linux-appimage": "Linux · AppImage", "linux-deb": "Linux · deb" },
   },
   en: {
-    title: isChangelog ? "Changelog — Jokbet" : "Jokbet — a pixel pet in the corner of your screen",
+    titles: {
+      home: "Jokbet — a pixel pet in the corner of your screen",
+      download: "Download — Jokbet",
+      changelog: "Changelog — Jokbet",
+      about: "About — Jokbet",
+      "404": "404 — Jokbet",
+    },
     platforms: "macOS 11+ · Windows · Linux (X11)",
     unreleased: "no release yet",
     primary: { "macos-aarch64": "Download for macOS", "windows-x64": "Download for Windows", "linux-appimage": "Download for Linux" },
     altMac: "Intel build",
     releases: "Downloads on GitHub",
+    everyPlatform: "Pick your platform",
     released: "Released",
     sourceR2: "Downloads come from this site's own mirror",
     sourceGithub: "The mirror is unavailable — downloads go to GitHub",
     empty: "No releases yet",
+    unreachable: "The release list cannot be read right now; every version is on GitHub.",
     emptyHome: "The first release will list its installers here.",
     emptyHint: "The first release will list itself here, with its notes and its installers.",
     github: "On GitHub",
@@ -182,21 +201,26 @@ function guess() {
   return null;
 }
 
-/** The URL a download should use: our mirror, or GitHub when the mirror is out.
- * @param {ManifestFile | ReleaseFile} file
- * @param {string} [version]
- */
-function hrefFor(file, version) {
-  const v = version ?? manifest?.tag?.replace(/^v/, "") ?? "";
-  if (version === undefined && manifest && manifest.source !== "r2") return `${manifest.downloadBase ?? ""}/${file.name}`;
-  return `/dl/${file.name}?v=${v}`;
+/** A release file on this site's mirror, and the same file on GitHub.
+ * @param {string} tag @param {string} name */
+const mirrorHref = (tag, name) => `/dl/${tag}/${name}`;
+/** @param {string} tag @param {string} name */
+const githubHref = (tag, name) => `${RELEASES}/download/${tag}/${name}`;
+
+/** Where the newest release's buttons point: the mirror, unless the page has
+ * already been told the mirror is out — then straight to GitHub, one hop less.
+ * (The mirror would send the browser there anyway.)
+ * @param {ManifestFile} file */
+function latestHref(file) {
+  const tag = manifest?.tag ?? "";
+  return manifest?.source === "r2" ? mirrorHref(tag, file.name) : githubHref(tag, file.name);
 }
 
 /** One row of an installer list.
  * @param {string} platform @param {{ name: string, size: number | null, sha256?: string | null }} file
- * @param {string} href @param {string} mirror
+ * @param {string} href @param {string} github
  */
-function fileRow(platform, file, href, mirror) {
+function fileRow(platform, file, href, github) {
   const item = el("li");
   item.className = "file";
   const link = el("a");
@@ -211,7 +235,7 @@ function fileRow(platform, file, href, mirror) {
   link.append(label, meta);
   const from = el("a", T[lang()].github);
   from.className = "file-mirror";
-  from.href = mirror;
+  from.href = github;
   item.append(link, from);
   if (file.sha256) {
     const sha = el("details");
@@ -222,33 +246,45 @@ function fileRow(platform, file, href, mirror) {
   return item;
 }
 
-function renderDownloads() {
+/** Whatever of the newest release this page shows: the buttons and the line
+ * under them (home), the installer list (/download). */
+function renderRelease() {
+  if (!manifest) return;
+  renderCta();
+  renderReleaseLine();
+  renderFiles();
+}
+
+/** The installer list on /download. */
+function renderFiles() {
   const t = T[lang()];
   const list = $("files");
   const empty = $("release-empty");
   const head = $("release-head");
-  // Until the manifest arrives the markup's own "reading…" line stands.
   if (!list || !empty || !head || !manifest) return;
   list.replaceChildren();
 
   const version = manifest.version ?? null;
+  const tag = manifest.tag ?? "";
   const hasFiles = !!version && Object.keys(manifest.files ?? {}).length > 0;
 
   head.hidden = !hasFiles;
   empty.hidden = hasFiles;
   list.hidden = !hasFiles;
   if (!hasFiles) {
-    empty.replaceChildren(el("span", t.empty));
-    const hint = el("p", t.emptyHome);
-    hint.className = "note";
+    const unreachable = manifest.source === "unavailable";
+    empty.replaceChildren(el("span", unreachable ? t.unreachable : t.empty));
     const link = el("a", t.releases);
     link.href = RELEASES;
     const p = el("p");
     p.className = "note";
     p.append(link);
-    empty.append(hint, p);
-    renderCta();
-    renderReleaseLine();
+    if (!unreachable) {
+      const hint = el("p", t.emptyHome);
+      hint.className = "note";
+      empty.append(hint);
+    }
+    empty.append(p);
     return;
   }
 
@@ -272,35 +308,37 @@ function renderDownloads() {
     for (const id of group.ids) {
       const file = manifest.files?.[id];
       if (!file) continue;
-      list.append(fileRow(id, file, hrefFor(file), `${manifest.downloadBase ?? ""}/${file.name}`));
+      list.append(fileRow(id, file, latestHref(file), githubHref(tag, file.name)));
     }
   }
-  renderCta();
-  renderReleaseLine();
 }
 
-/** The hero button: what this visitor probably needs, and a way to everything. */
+/** The home page's buttons: the build this visitor probably needs, and a way
+ * to all of them. */
 function renderCta() {
   const cta = $("cta");
-  if (!cta) return;
+  if (!cta || !manifest) return;
   const t = T[lang()];
   cta.replaceChildren();
+  const hasFiles = !!manifest.version && Object.keys(manifest.files ?? {}).length > 0;
   const pick = guess();
-  const file = pick ? manifest?.files?.[pick] : undefined;
+  const file = pick ? manifest.files?.[pick] : undefined;
   if (!pick || !file) {
-    const link = el("a", t.releases);
+    // Nothing to guess from: the download page lists every platform, or, with
+    // no release at all, GitHub is where one will appear.
+    const link = el("a", hasFiles ? t.everyPlatform : t.releases);
     link.className = "btn btn-primary";
-    link.href = RELEASES;
+    link.href = hasFiles ? "/download" : RELEASES;
     cta.append(link);
     return;
   }
-  const ids = pick === "macos-aarch64" && manifest?.files?.["macos-x64"] ? ["macos-aarch64", "macos-x64"] : [pick];
+  const ids = pick === "macos-aarch64" && manifest.files?.["macos-x64"] ? ["macos-aarch64", "macos-x64"] : [pick];
   ids.forEach((id, index) => {
     const f = manifest?.files?.[id];
     if (!f) return;
     const link = el("a", index === 0 ? /** @type {Record<string, string>} */ (t.primary)[id] ?? id : t.altMac);
     link.className = index === 0 ? "btn btn-primary" : "btn";
-    link.href = hrefFor(f);
+    link.href = latestHref(f);
     link.setAttribute("download", "");
     link.dataset.platform = id;
     const size = el("span", bytes(f.size));
@@ -310,7 +348,7 @@ function renderCta() {
   });
 }
 
-/** The line under the buttons: what this build runs on, and which version. */
+/** The line under the buttons: which version, and what it runs on. */
 function renderReleaseLine() {
   const line = $("release-line");
   if (!line) return;
@@ -332,15 +370,19 @@ function renderChangelog() {
   empty.hidden = releases.length > 0;
 
   if (!releases.length) {
-    empty.replaceChildren(el("span", t.empty));
-    const hint = el("p", t.emptyHint);
-    hint.className = "note";
+    const unreachable = changelog.source === "unavailable";
+    empty.replaceChildren(el("span", unreachable ? t.unreachable : t.empty));
     const link = el("a", t.releases);
     link.href = RELEASES;
     const p = el("p");
     p.className = "note";
     p.append(link);
-    empty.append(hint, p);
+    if (!unreachable) {
+      const hint = el("p", t.emptyHint);
+      hint.className = "note";
+      empty.append(hint);
+    }
+    empty.append(p);
     return;
   }
 
@@ -380,7 +422,7 @@ function renderChangelog() {
       const list = el("ul");
       list.className = "files";
       for (const file of release.files) {
-        list.append(fileRow(file.platform, file, hrefFor(file, release.version), `${RELEASES}/download/${release.tag}/${file.name}`));
+        list.append(fileRow(file.platform, file, mirrorHref(release.tag, file.name), githubHref(release.tag, file.name)));
       }
       section.append(list);
     }
@@ -388,18 +430,17 @@ function renderChangelog() {
   }
 }
 
-/** @param {string[]} urls */
-async function loadJson(urls) {
-  for (const url of urls) {
-    try {
-      const response = await fetch(url, { cache: "no-store" });
-      if (!response.ok) continue;
-      return await response.json();
-    } catch {
-      // try the next one
-    }
+/** One of the Worker's manifests, or null if the Worker could not be reached.
+ * (The Worker has its own fallback for the bucket, so null means the site
+ * itself is having trouble.)
+ * @param {string} url */
+async function loadJson(url) {
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    return response.ok ? await response.json() : null;
+  } catch {
+    return null;
   }
-  return null;
 }
 
 // --- the pet ----------------------------------------------------------------
@@ -483,7 +524,7 @@ function setLang(next, chosen = false) {
   html.lang = next === "zh" ? "zh-Hans" : "en";
   // The title in the markup is bilingual, which is what a crawler should see;
   // it follows the language only once someone actually picks one.
-  if (chosen) document.title = T[next].title;
+  if (chosen) document.title = T[next].titles[page];
   try {
     localStorage.setItem("jokbet.lang", next);
   } catch {
@@ -493,7 +534,7 @@ function setLang(next, chosen = false) {
     button.setAttribute("aria-pressed", String(button.getAttribute("data-set-lang") === next));
   }
   pet?.setLang(next);
-  renderDownloads();
+  renderRelease();
   renderChangelog();
 }
 
@@ -504,14 +545,30 @@ async function main() {
     button.addEventListener("click", () => setLang(/** @type {Lang} */ (button.getAttribute("data-set-lang")), true));
   }
   setLang(lang());
-  // The pet and the list are fetched together; neither waits for the other.
+  // The pet and the data are fetched together; neither waits for the other.
   const petting = wirePet();
-  if (isChangelog) {
-    changelog = /** @type {Changelog | null} */ (await loadJson(["/changelog.json", "/releases.baked.json"]));
+  if (page === "changelog") {
+    changelog = /** @type {Changelog | null} */ (await loadJson("/api/releases.json")) ?? {
+      schema: 1,
+      generatedAt: null,
+      releases: [],
+      source: "unavailable",
+    };
     renderChangelog();
-  } else {
-    manifest = /** @type {Manifest | null} */ (await loadJson(["/latest", "/latest.baked.json"]));
-    renderDownloads();
+  } else if (page === "home" || page === "download") {
+    manifest = /** @type {Manifest | null} */ (await loadJson("/api/latest.json")) ?? {
+      schema: 1,
+      version: null,
+      tag: null,
+      pubDate: null,
+      draft: null,
+      notes: null,
+      releaseUrl: null,
+      downloadBase: null,
+      files: {},
+      source: "unavailable",
+    };
+    renderRelease();
   }
   await petting;
 }

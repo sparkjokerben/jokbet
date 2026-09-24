@@ -261,6 +261,15 @@ html[data-lang="en"] [data-lang="zh"] {
   color: var(--ink);
 }
 
+/* Where you are: ink instead of grey, and a rule under it — no colour, since
+   the only colour on the page is the pet's. */
+.nav a[aria-current="page"] {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 7px;
+}
+
 .langs {
   display: flex;
   border: 1px solid var(--line);
@@ -284,13 +293,20 @@ html[data-lang="en"] [data-lang="zh"] {
   color: var(--paper);
 }
 
-/* --- the hero ------------------------------------------------------------ */
+/* --- the top of each page ------------------------------------------------ */
 
+/* The home page opens with the hero; every other page with its name and one
+   line about what is on it. Same type, less room. */
 .hero {
   padding: 72px 0 56px;
 }
 
-.hero h1 {
+.page-head {
+  padding: 64px 0 8px;
+}
+
+.hero h1,
+.page-head h1 {
   margin: 0 0 20px;
   max-width: 24ch;
   font-family: var(--display);
@@ -301,7 +317,8 @@ html[data-lang="en"] [data-lang="zh"] {
   text-wrap: balance;
 }
 
-.hero .lede {
+.hero .lede,
+.page-head .lede {
   margin: 0 0 12px;
   max-width: 46ch;
   font-size: 17px;
@@ -361,6 +378,15 @@ html[data-lang="en"] [data-lang="zh"] {
   margin: 18px 0 0;
   color: var(--ink-mute);
   font-size: 13px;
+}
+
+.meta #release-line:not(:empty) {
+  margin-right: 12px;
+}
+
+.meta a {
+  color: var(--ink-soft);
+  white-space: nowrap;
 }
 
 .note {
@@ -625,6 +651,15 @@ code {
   word-break: break-all;
 }
 
+/* This release's notes, folded under its list. */
+#notes-details {
+  margin: 16px 0 10px;
+}
+
+#notes-details summary {
+  cursor: pointer;
+}
+
 .empty {
   border: 1px solid var(--line-hard);
   background: var(--surface);
@@ -750,6 +785,9 @@ code {
   .hero {
     padding: 40px 0 40px;
   }
+  .page-head {
+    padding: 40px 0 0;
+  }
   .rail {
     padding: 28px 0 0;
   }
@@ -760,7 +798,8 @@ code {
 }
 
 @media (max-width: 560px) {
-  .hero h1 {
+  .hero h1,
+  .page-head h1 {
     font-size: 21px;
     letter-spacing: 0;
   }

@@ -1,38 +1,40 @@
 <!doctype html>
 <html lang="en" data-lang="en">
   <head>
+    <!-- partial:head -->
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Jokbet — 屏幕角落的像素桌宠 · a pixel desktop pet</title>
-    <meta name="description" content="Jokbet 是一只住在屏幕角落的像素桌宠：你打字、点鼠标，它跟着做动作，并把键盘和鼠标的次数数给你看。macOS / Windows / Linux，数据只存本机，以 MIT 协议开源。" />
-    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
     <meta name="theme-color" content="#f5f4f0" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#141413" media="(prefers-color-scheme: dark)" />
-    <link rel="canonical" href="https://jokbet.jokerben.top/" />
     <link rel="icon" href="/assets/favicon.ico" sizes="any" />
     <link rel="icon" href="/assets/favicon-32.png" sizes="32x32" type="image/png" />
     <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
-    <!-- The headline's own face, so the first paint is the final one. -->
+    <!-- The headlines' own face, so the first paint is the final one. -->
     <link rel="preload" href="/assets/fonts/silkscreen-700.woff2" as="font" type="font/woff2" crossorigin />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Jokbet" />
     <meta property="og:locale" content="zh_CN" />
     <meta property="og:locale:alternate" content="en_US" />
-    <meta property="og:url" content="https://jokbet.jokerben.top/" />
-    <meta property="og:title" content="Jokbet — 屏幕角落的像素桌宠" />
-    <meta
-      property="og:description"
-      content="轻量级像素桌宠：你打字、点鼠标，它跟着做动作，并把次数数给你看。macOS / Windows / Linux，MIT 开源，数据只存本机。"
-    />
     <meta property="og:image" content="https://jokbet.jokerben.top/assets/og.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Jokbet 的像素形象，站在一条屏幕边线上" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Jokbet — 屏幕角落的像素桌宠" />
-    <meta name="twitter:description" content="轻量级像素桌宠，会跟着你打字和点击做出反应，并统计键盘和鼠标操作。MIT 开源，数据只存本机。" />
-    <meta name="twitter:image" content="https://jokbet.jokerben.top/assets/og.png" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/boot.js"></script>
+    <script type="module" src="/app.js"></script>
+    <!-- /partial:head -->
+    <title>Jokbet — 屏幕角落的像素桌宠 · a pixel desktop pet</title>
+    <meta name="description" content="Jokbet 是一只住在屏幕角落的像素桌宠：你打字、点鼠标，它跟着做动作，并把键盘和鼠标的次数数给你看。macOS / Windows / Linux，数据只存本机，以 MIT 协议开源。" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <link rel="canonical" href="https://jokbet.jokerben.top/" />
+    <meta property="og:url" content="https://jokbet.jokerben.top/" />
+    <meta property="og:title" content="Jokbet — 屏幕角落的像素桌宠" />
+    <meta
+      property="og:description"
+      content="轻量级像素桌宠：你打字、点鼠标，它跟着做动作，并把次数数给你看。macOS / Windows / Linux，MIT 开源，数据只存本机。"
+    />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -50,7 +52,7 @@
             "@id": "https://jokbet.jokerben.top/#app",
             "name": "Jokbet",
             "url": "https://jokbet.jokerben.top/",
-            "downloadUrl": "https://jokbet.jokerben.top/#download",
+            "downloadUrl": "https://jokbet.jokerben.top/download",
             "applicationCategory": "UtilitiesApplication",
             "applicationSubCategory": "Desktop pet",
             "operatingSystem": "macOS 11+, Windows, Linux (X11)",
@@ -74,19 +76,17 @@
         ]
       }
     </script>
-    <link rel="stylesheet" href="/styles.css" />
-    <script src="/lang-boot.js"></script>
-    <script type="module" src="/app.js"></script>
   </head>
-  <body>
+  <body data-page="home">
     <div class="page">
+      <!-- partial:header -->
       <header class="top">
         <a href="/" aria-label="Jokbet"><img class="mark" src="/assets/wordmark.svg" alt="JOKBET" width="116" height="28" /></a>
-        <nav class="nav">
-          <a href="#download"><span data-lang="zh">下载</span><span data-lang="en" lang="en">Download</span></a>
-          <a href="#features"><span data-lang="zh">它会什么</span><span data-lang="en" lang="en">What it does</span></a>
-          <a href="#install"><span data-lang="zh">安装</span><span data-lang="en" lang="en">Install</span></a>
+        <nav class="nav" aria-label="网站 / Site">
+          <a href="/" aria-current="page"><span data-lang="zh">首页</span><span data-lang="en" lang="en">Home</span></a>
+          <a href="/download"><span data-lang="zh">下载</span><span data-lang="en" lang="en">Download</span></a>
           <a href="/changelog"><span data-lang="zh">更新日志</span><span data-lang="en" lang="en">Changelog</span></a>
+          <a href="/about"><span data-lang="zh">关于</span><span data-lang="en" lang="en">About</span></a>
           <a href="https://github.com/sparkjokerben/jokbet">GitHub</a>
         </nav>
         <div class="langs" role="group" aria-label="语言 / Language">
@@ -94,15 +94,18 @@
           <button type="button" data-set-lang="en" aria-pressed="false" lang="en">English</button>
         </div>
       </header>
+      <!-- /partial:header -->
 
-      <!-- The pet's column: on a wide screen it is sticky, and the creature
-           stands on the bottom edge of the window all the way down the page,
-           the way it stands on the bottom of your screen. -->
+      <!-- partial:rail -->
+      <!-- The pet's column: on a wide screen it is sticky, and the creature stands on
+           the bottom edge of the window all the way down the page, the way it stands
+           on the bottom of your screen. -->
       <div class="rail">
         <div class="pet-host" id="pet">
           <img class="pet-poster" src="/assets/jokbet-poster.png" width="240" height="156" alt="" />
         </div>
       </div>
+      <!-- /partial:rail -->
 
       <main class="content">
         <section class="hero">
@@ -125,11 +128,16 @@
           </p>
 
           <div class="cta" id="cta">
-            <a class="btn btn-primary" href="https://github.com/sparkjokerben/jokbet/releases"
-              ><span data-lang="zh">去 GitHub 下载</span><span data-lang="en" lang="en">Downloads on GitHub</span></a
+            <a class="btn btn-primary" href="/download"
+              ><span data-lang="zh">下载</span><span data-lang="en" lang="en">Download</span></a
             >
           </div>
-          <p class="meta" id="release-line"></p>
+          <p class="meta">
+            <span id="release-line"></span>
+            <a href="/download"
+              ><span data-lang="zh">所有平台和安装步骤</span><span data-lang="en" lang="en">Every platform, and how to install</span></a
+            >
+          </p>
 
           <div class="try">
             <h2><span data-lang="zh">试试看</span><span data-lang="en" lang="en">Try it</span></h2>
@@ -166,45 +174,6 @@
               >
             </p>
           </div>
-        </section>
-
-        <section class="block" id="download">
-          <h2><span data-lang="zh">下载</span><span data-lang="en" lang="en">Download</span></h2>
-          <div class="release-head" id="release-head" hidden>
-            <span class="version" id="release-version"></span>
-            <span id="release-when"></span>
-            <span id="release-source"></span>
-            <a class="all" href="/changelog"
-              ><span data-lang="zh">所有版本</span><span data-lang="en" lang="en">All versions</span></a
-            >
-          </div>
-          <p class="empty" id="release-empty" aria-live="polite">
-            <span data-lang="zh">正在读取版本信息…</span>
-            <span data-lang="en" lang="en">Reading the current release…</span>
-          </p>
-          <ul class="files" id="files" hidden></ul>
-          <details id="notes-details" hidden>
-            <summary>
-              <span data-lang="zh">这次更新了什么</span><span data-lang="en" lang="en">What changed in this release</span>
-            </summary>
-            <div class="notes" id="notes"></div>
-          </details>
-          <p class="note">
-            <span data-lang="zh"
-              >安装包没有 Apple 或微软的签名，第一次打开时系统会拦一下，按下面的步骤放行即可。下载走本站的镜像，镜像不可用时自动改用
-              GitHub。</span
-            >
-            <span data-lang="en" lang="en"
-              >The builds are not signed by Apple or Microsoft, so your system stops the first launch once. Downloads come from this
-              site's mirror, and fall back to GitHub when it is unavailable.</span
-            >
-          </p>
-          <noscript>
-            <p class="note">
-              下载列表需要 JavaScript。安装包都在
-              <a href="https://github.com/sparkjokerben/jokbet/releases">GitHub Releases</a>。
-            </p>
-          </noscript>
         </section>
 
         <section class="block" id="features">
@@ -255,163 +224,18 @@
             </li>
           </ul>
         </section>
-
-        <section class="block" id="install">
-          <h2><span data-lang="zh">安装</span><span data-lang="en" lang="en">Install</span></h2>
-          <div class="platforms">
-            <div>
-              <h3>macOS</h3>
-              <ol>
-                <li>
-                  <span data-lang="zh">解压后把 Jokbet.app 拖进「应用程序」。Apple 芯片选 aarch64，Intel 选 x64。</span>
-                  <span data-lang="en" lang="en">Unzip it and move Jokbet.app to Applications. aarch64 for Apple silicon, x64 for Intel.</span>
-                </li>
-                <li>
-                  <span data-lang="zh">首次打开会被拦下，到「系统设置 → 隐私与安全性」点「仍要打开」。</span>
-                  <span data-lang="en" lang="en">The first launch is blocked: System Settings → Privacy &amp; Security → Open Anyway.</span>
-                </li>
-                <li>
-                  <span data-lang="zh">按提示授予「输入监控」权限。没有它，桌宠会一脸问号，也统计不到任何操作。</span>
-                  <span data-lang="en" lang="en">Allow Input Monitoring when asked. Without it the pet is confused and counts nothing.</span>
-                </li>
-              </ol>
-            </div>
-            <div>
-              <h3>Windows</h3>
-              <ol>
-                <li>
-                  <span data-lang="zh">运行下载的安装程序。</span>
-                  <span data-lang="en" lang="en">Run the installer you downloaded.</span>
-                </li>
-                <li>
-                  <span data-lang="zh">SmartScreen 提示「Windows 已保护你的电脑」时，点「更多信息 → 仍要运行」。部分杀毒软件会把监听键盘的程序当成可疑程序；本程序只做计数。</span>
-                  <span data-lang="en" lang="en"
-                    >If SmartScreen says “Windows protected your PC”, click More info → Run anyway. Some antivirus tools flag anything
-                    that listens to the keyboard; this app only counts.</span
-                  >
-                </li>
-              </ol>
-            </div>
-            <div>
-              <h3>Linux (X11)</h3>
-              <ol>
-                <li>
-                  <span data-lang="zh">用 AppImage（支持自动更新）或 deb 包。</span>
-                  <span data-lang="en" lang="en">Use the AppImage (it self-updates) or the .deb.</span>
-                </li>
-                <li>
-                  <span data-lang="zh">只支持 X11：Wayland 不允许程序监听全局输入。透明窗口需要合成器，托盘菜单需要 AppIndicator。</span>
-                  <span data-lang="en" lang="en"
-                    >X11 only — Wayland does not let apps listen to global input. A compositor for the transparent window, and an
-                    AppIndicator for the tray menu.</span
-                  >
-                </li>
-              </ol>
-            </div>
-          </div>
-          <p class="note">
-            <span data-lang="zh">macOS 上也可以绕开这一步，在终端里运行：</span>
-            <span data-lang="en" lang="en">On macOS you can skip that step instead by running, in a terminal:</span>
-          </p>
-          <pre><code>xattr -dr com.apple.quarantine /Applications/Jokbet.app</code></pre>
-          <p class="note">
-            <span data-lang="zh">更新后如果不计数了，在「输入监控」里删掉旧条目再重新添加。</span>
-            <span data-lang="en" lang="en">If counting stops after an update, remove the old entry from Input Monitoring and add the app again.</span>
-          </p>
-        </section>
-
-        <section class="block" id="privacy">
-          <h2><span data-lang="zh">隐私</span><span data-lang="en" lang="en">Privacy</span></h2>
-          <p>
-            <span data-lang="zh"
-              >只保存计数：每个键按了几次、点击、滚动手势和鼠标移动距离。不记录输入内容，也不记录按键顺序。所有数据只存在本机，不上传。</span
-            >
-            <span data-lang="en" lang="en"
-              >Only counts are stored: how many times each key was pressed, clicks, scroll gestures, and how far the mouse moved. It
-              never records what you type or the order of your keys. Everything stays on your machine.</span
-            >
-          </p>
-          <p class="note">
-            <span data-lang="zh">数据在 <code>~/Library/Application Support/io.github.sparkjokerben.jokbet/</code>（Windows 在 <code>%APPDATA%</code> 下，Linux 在 <code>~/.local/share/</code> 下）。</span>
-            <span data-lang="en" lang="en"
-              >It lives in <code>~/Library/Application Support/io.github.sparkjokerben.jokbet/</code> (the same folder under
-              <code>%APPDATA%</code> on Windows and <code>~/.local/share/</code> on Linux).</span
-            >
-          </p>
-          <p class="note">
-            <span data-lang="zh">这一页上的桌宠也一样：它只对你在这个页面里的操作做反应，纯粹用来演示，什么都不发送。</span>
-            <span data-lang="en" lang="en"
-              >The pet on this page works the same way: it only reacts to what you do here, as a demonstration, and sends
-              nothing.</span
-            >
-          </p>
-        </section>
-
-        <section class="block" id="limits">
-          <h2><span data-lang="zh">已知限制</span><span data-lang="en" lang="en">Known limits</span></h2>
-          <ul class="list-flat">
-            <li>
-              <span data-lang="zh"
-                >macOS：开了「安全键盘输入」时（终端设置或密码框里），按键对所有程序都不可见，它会戴上眼罩。</span
-              >
-              <span data-lang="en" lang="en"
-                >macOS: while Secure Keyboard Entry is on (a Terminal setting, or any password field), no app can see the keys — it
-                puts on a blindfold.</span
-              >
-              <button class="linkish" type="button" data-block="secure">
-                <span data-lang="zh">看看它戴眼罩的样子</span><span data-lang="en" lang="en">Show the blindfold</span>
-              </button>
-            </li>
-            <li>
-              <span data-lang="zh">macOS：没给「输入监控」权限时，它一脸问号，什么也数不到。</span>
-              <span data-lang="en" lang="en">macOS: without Input Monitoring permission it is baffled and cannot count a thing.</span>
-              <button class="linkish" type="button" data-block="noperm">
-                <span data-lang="zh">看看它一脸问号的样子</span><span data-lang="en" lang="en">Show the confused face</span>
-              </button>
-            </li>
-            <li>
-              <span data-lang="zh">Windows：管理员权限窗口里的输入看不到（除非它也以管理员运行）；它会留在启动时的那个虚拟桌面。</span>
-              <span data-lang="en" lang="en"
-                >Windows: input going to administrator windows is not seen unless it runs as administrator too, and it stays on the
-                virtual desktop it started on.</span
-              >
-            </li>
-            <li>
-              <span data-lang="zh">Linux：只支持 X11，Wayland 下无法工作。</span>
-              <span data-lang="en" lang="en">Linux: X11 only; it cannot work under Wayland.</span>
-            </li>
-            <li>
-              <span data-lang="zh">它会待在别的窗口上面，包括全屏应用；遮挡内容时可右键隐藏。</span>
-              <span data-lang="en" lang="en"
-                >It stays above other windows, fullscreen apps included; hide it from the tray menu when it gets in the way.</span
-              >
-            </li>
-          </ul>
-        </section>
-
-        <section class="block" id="license">
-          <h2><span data-lang="zh">开源</span><span data-lang="en" lang="en">Open source</span></h2>
-          <p>
-            <span data-lang="zh"
-              >以 <strong>MIT 协议</strong>开源：可以自由使用、修改、分发，包括商用。源码在
-              <a href="https://github.com/sparkjokerben/jokbet">GitHub</a>，问题和新想法都欢迎提到那里。</span
-            >
-            <span data-lang="en" lang="en"
-              >Released under the <strong>MIT license</strong>: use it, change it, ship it, sell it. The source is on
-              <a href="https://github.com/sparkjokerben/jokbet">GitHub</a>, which is also the place for bugs and ideas.</span
-            >
-          </p>
-        </section>
       </main>
 
+      <!-- partial:footer -->
       <footer class="foot">
         <p class="links">
           <a href="https://github.com/sparkjokerben/jokbet">GitHub</a>
           <a href="https://github.com/sparkjokerben/jokbet/releases">
-            <span data-lang="zh">发布</span><span data-lang="en" lang="en">Releases</span>
+            <span data-lang="zh">GitHub 发布页</span><span data-lang="en" lang="en">GitHub releases</span>
           </a>
-          <a href="/changelog"><span data-lang="zh">更新日志</span><span data-lang="en" lang="en">Changelog</span></a>
-          <a href="https://github.com/sparkjokerben/jokbet/blob/main/LICENSE">MIT</a>
+          <a href="https://github.com/sparkjokerben/jokbet/blob/main/LICENSE">
+            <span data-lang="zh">MIT 协议</span><span data-lang="en" lang="en">MIT license</span>
+          </a>
         </p>
         <div class="disclaimer">
           <p lang="en">
@@ -423,11 +247,8 @@
             的商标或角色。
           </p>
         </div>
-        <p class="fine">
-          <span data-lang="zh">字体 Silkscreen（SIL Open Font License）。</span>
-          <span data-lang="en" lang="en">Set in Silkscreen (SIL Open Font License).</span>
-        </p>
       </footer>
+      <!-- /partial:footer -->
     </div>
   </body>
 </html>

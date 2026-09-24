@@ -26,9 +26,9 @@ Only counts are stored: how many times each key was pressed, clicks, scroll gest
 
 ## Install / 安装
 
-Download the installer for your platform from **[jokbet.jokerben.top](https://jokbet.jokerben.top)** or from [Releases](https://github.com/sparkjokerben/jokbet/releases). The builds are not signed by Apple or Microsoft, so your system will warn you the first time.
+Download the installer for your platform from **[jokbet.jokerben.top/download](https://jokbet.jokerben.top/download)** or from [Releases](https://github.com/sparkjokerben/jokbet/releases). The builds are not signed by Apple or Microsoft, so your system will warn you the first time.
 
-从 **[jokbet.jokerben.top](https://jokbet.jokerben.top)** 或 [Releases](https://github.com/sparkjokerben/jokbet/releases) 下载对应平台的安装包。安装包没有经过 Apple 或微软的签名，第一次打开时系统会拦截，按下面的步骤放行即可。
+从 **[jokbet.jokerben.top/download](https://jokbet.jokerben.top/download)** 或 [Releases](https://github.com/sparkjokerben/jokbet/releases) 下载对应平台的安装包。安装包没有经过 Apple 或微软的签名，第一次打开时系统会拦截，按下面的步骤放行即可。
 
 ### macOS
 
@@ -89,7 +89,7 @@ python3 tools/extract-reference-frames/build-frames.py --help  # re-derive the v
 
 With `npm run dev` running, `http://localhost:1420/preview.html?view=stats` (or `settings`, `onboarding`, `pet`) renders a window in a normal browser with fake data, which is handy for layout work.
 
-The website in [`site/`](site/README.md) is plain static files served by a Cloudflare Worker, with the installers in an R2 bucket and the Worker in front of them. The pet on the home page is not a copy: it runs the app's own controller and sprites, bundled for the browser by `scripts/build-site-pet.ts`. `npm run site:assets` regenerates that bundle and the page's pixel art; `npm run site:check` fails if they drift from `src/`; `npm test` covers the functions; `site/README.md` has the Cloudflare setup and the release flow.
+The website in [`site/`](site/README.md) is four static pages served by a Cloudflare Worker, which also answers `/api/` (the manifests) and `/dl/` (every release file, mirrored in R2 with GitHub behind it). The pet on its pages is not a copy: it runs the app's own controller and sprites, bundled for the browser by `scripts/build-site-pet.ts`. `npm run site:assets` regenerates that bundle and the pixel art, `npm run site:pages` copies the shared header, footer and pet column into every page, and `npm run site:check` fails if any of it drifts; `npm test` covers the Worker; `site/README.md` has the addresses, the Cloudflare setup and the release flow.
 
 On macOS, `tauri dev` runs the app as a child of your terminal, so grant Input Monitoring to the terminal app. To test the real permission flow, build a bundle with `npm run tauri build -- --debug --bundles app`. Every rebuild changes an ad-hoc signature, so clear the stale grant with:
 
@@ -102,7 +102,10 @@ tccutil reset ListenEvent io.github.sparkjokerben.jokbet
 1. Bump `version` in `package.json` (the app reads it from there) and commit.
 2. Tag and push: `git tag v0.1.0 && git push origin v0.1.0`.
 3. The Release workflow builds macOS (arm64 and x64), Windows and Linux into a draft release with the updater manifest (`latest.json`).
-4. Check the draft and publish it. Installed apps pick the update up within six hours and install it on restart, and publishing also runs the *Publish to R2* workflow that puts the installers, the download manifest and the changelog on the site's mirror (see `site/README.md`).
+4. Check the draft and publish it. That runs the *Publish to R2* workflow, which mirrors every file of the release and the three manifests on the site (see `site/README.md`).
+5. Run `npm run site:fallback` and commit the result, so the Worker's fallback copies name the new release too.
+
+Installed apps pick an update up within six hours and install it on restart. They ask the site's mirror (`/api/update.json`) first and GitHub second, and a download that fails on one host is retried on the other — every file lives at the same `<tag>/<name>` on both, and the signature travels with the manifest (`src-tauri/src/updater.rs`).
 
 The updater signing key lives in the `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secrets. Keep a backup: without it, installed copies can never be updated again.
 
