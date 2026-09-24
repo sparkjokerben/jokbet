@@ -6,8 +6,10 @@
 import { describe, expect, it } from "vitest";
 import {
   changelogFrom,
+  compareVersions,
   emptyChangelog,
   latestFrom,
+  platformsFor,
   updaterForMirror,
   validateChangelog,
   validateManifest,
@@ -124,6 +126,57 @@ describe("the newest release, from the releases API", () => {
   it("is the empty manifest before the first release", () => {
     expect(latestFrom([])).toMatchObject({ version: null, files: {} });
     expect(validateManifest(latestFrom([release({ draft: true })]))).toEqual([]);
+  });
+});
+
+describe("the installers of a version", () => {
+  it("compares versions by their numbers", () => {
+    expect(compareVersions("0.1.2", "0.1.2")).toBe(0);
+    expect(compareVersions("0.1.10", "0.1.2")).toBe(1);
+    expect(compareVersions("v0.2.0", "0.1.2")).toBe(1);
+    expect(compareVersions("0.1.1", "0.1.2")).toBe(-1);
+    expect(compareVersions("0.1.2-beta.1", "0.1.2")).toBe(0);
+  });
+
+  it("offers the macOS zips from 0.1.2 on, each ahead of its disk image", () => {
+    expect(platformsFor("0.1.1").map((p) => p.id)).not.toContain("macos-aarch64-zip");
+    expect(platformsFor("0.1.2").map((p) => p.id).slice(0, 4)).toEqual([
+      "macos-aarch64-zip",
+      "macos-aarch64",
+      "macos-x64-zip",
+      "macos-x64",
+    ]);
+    expect(platformsFor("0.2.0")[0].file("0.2.0")).toBe("Jokbet_0.2.0_aarch64.app.zip");
+  });
+
+  const everything = (v: string) =>
+    ["aarch64.app.zip", "aarch64.dmg", "x64.app.zip", "x64.dmg", "x64-setup.exe", "x64_en-US.msi", "amd64.AppImage", "amd64.deb"].map(
+      (end) => asset(`Jokbet_${v}_${end}`, 4096, `sha256:${"c".repeat(64)}`),
+    );
+
+  it("does not expect a zip of a release made before there were any", () => {
+    const assets = everything("0.1.1").filter((a) => !a.name.endsWith(".zip"));
+    const manifest = latestFrom([release({ tag_name: "v0.1.1", assets })]);
+    expect(Object.keys(manifest.files)).not.toContain("macos-aarch64-zip");
+    expect(validateManifest(manifest)).toEqual([]);
+  });
+
+  it("expects the zips of a release made since, and lists them in the changelog", () => {
+    const manifest = latestFrom([release({ tag_name: "v0.1.2", assets: everything("0.1.2") })]);
+    expect(manifest.files["macos-aarch64-zip"]).toMatchObject({ name: "Jokbet_0.1.2_aarch64.app.zip", size: 4096 });
+    expect(validateManifest(manifest)).toEqual([]);
+    delete manifest.files["macos-x64-zip"];
+    expect(validateManifest(manifest)).toContain("files.macos-x64-zip is missing");
+
+    const log = changelogFrom([release({ tag_name: "v0.1.2", assets: everything("0.1.2") })]);
+    expect(log.releases[0].files.map((f) => f.platform).slice(0, 2)).toEqual(["macos-aarch64-zip", "macos-aarch64"]);
+    expect(validateChangelog(log)).toEqual([]);
+  });
+
+  it("refuses a zip in the manifest of a release made before there were any", () => {
+    const manifest = latestFrom([release({ tag_name: "v0.1.1", assets: everything("0.1.1") })]);
+    manifest.files["macos-aarch64-zip"] = { name: "Jokbet_0.1.1_aarch64.app.zip", size: 1, sha256: null };
+    expect(validateManifest(manifest)).toContain("files.macos-aarch64-zip is not an installer of 0.1.1");
   });
 });
 

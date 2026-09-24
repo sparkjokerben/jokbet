@@ -47,6 +47,9 @@ const T = {
     unreleased: "还没有正式发布的版本",
     primary: { "macos-aarch64": "下载 macOS 版", "windows-x64": "下载 Windows 版", "linux-appimage": "下载 Linux 版" },
     altMac: "Intel 版",
+    copied: "已复制",
+    blocked1: "只拦 1 次",
+    blocked2: "拦 2 次",
     releases: "去 GitHub 下载",
     everyPlatform: "选择平台下载",
     released: "发布于",
@@ -59,7 +62,12 @@ const T = {
     github: "GitHub 下载",
     checksum: "SHA-256 校验值",
     prerelease: "预发布",
-    macos: { "macos-aarch64": "macOS · Apple 芯片（aarch64）", "macos-x64": "macOS · Intel（x64）" },
+    macos: {
+      "macos-aarch64-zip": "macOS · Apple 芯片（aarch64）",
+      "macos-aarch64": "macOS · Apple 芯片（aarch64）",
+      "macos-x64-zip": "macOS · Intel（x64）",
+      "macos-x64": "macOS · Intel（x64）",
+    },
     windows: { "windows-x64": "Windows · 安装程序", "windows-x64-msi": "Windows · MSI" },
     linux: { "linux-appimage": "Linux · AppImage", "linux-deb": "Linux · deb" },
   },
@@ -75,6 +83,9 @@ const T = {
     unreleased: "no release yet",
     primary: { "macos-aarch64": "Download for macOS", "windows-x64": "Download for Windows", "linux-appimage": "Download for Linux" },
     altMac: "Intel build",
+    copied: "Copied",
+    blocked1: "1 block",
+    blocked2: "2 blocks",
     releases: "Downloads on GitHub",
     everyPlatform: "Pick your platform",
     released: "Released",
@@ -87,7 +98,12 @@ const T = {
     github: "On GitHub",
     checksum: "SHA-256",
     prerelease: "prerelease",
-    macos: { "macos-aarch64": "macOS · Apple silicon (aarch64)", "macos-x64": "macOS · Intel (x64)" },
+    macos: {
+      "macos-aarch64-zip": "macOS · Apple silicon (aarch64)",
+      "macos-aarch64": "macOS · Apple silicon (aarch64)",
+      "macos-x64-zip": "macOS · Intel (x64)",
+      "macos-x64": "macOS · Intel (x64)",
+    },
     windows: { "windows-x64": "Windows · installer", "windows-x64-msi": "Windows · MSI" },
     linux: { "linux-appimage": "Linux · AppImage", "linux-deb": "Linux · .deb" },
   },
@@ -103,9 +119,11 @@ const platformLabel = (l, id) => {
   return id;
 };
 
-/** The platforms, in the order they are listed. */
+/** The platforms, in the order they are listed. Each Mac build comes as a zip
+ * (from 0.1.2 on) and as a disk image; the zip is first, being stopped by
+ * Gatekeeper once where the disk image is stopped twice. */
 const GROUPS = /** @type {{ key: "macos" | "windows" | "linux", ids: string[] }[]} */ ([
-  { key: "macos", ids: ["macos-aarch64", "macos-x64"] },
+  { key: "macos", ids: ["macos-aarch64-zip", "macos-aarch64", "macos-x64-zip", "macos-x64"] },
   { key: "windows", ids: ["windows-x64", "windows-x64-msi"] },
   { key: "linux", ids: ["linux-appimage", "linux-deb"] },
 ]);
@@ -201,6 +219,11 @@ function guess() {
   return null;
 }
 
+/** Which file a button offers for a platform: a Mac gets the zip when the
+ * release has one, and the disk image before that.
+ * @param {string} id */
+const offered = (id) => (manifest?.files?.[`${id}-zip`] ? `${id}-zip` : id);
+
 /** A release file on this site's mirror, and the same file on GitHub.
  * @param {string} tag @param {string} name */
 const mirrorHref = (tag, name) => `/dl/${tag}/${name}`;
@@ -216,6 +239,12 @@ function latestHref(file) {
   return manifest?.source === "r2" ? mirrorHref(tag, file.name) : githubHref(tag, file.name);
 }
 
+/** What macOS does to a download: a disk image is stopped when it is opened
+ * and the app inside it once more, a zip only for the app. Worth saying in the
+ * list, since that is where the choice between the two is made.
+ * @param {Lang} l @param {string} id */
+const macBlocks = (l, id) => (!id.startsWith("macos-") ? "" : id.endsWith("-zip") ? T[l].blocked1 : T[l].blocked2);
+
 /** One row of an installer list.
  * @param {string} platform @param {{ name: string, size: number | null, sha256?: string | null }} file
  * @param {string} href @param {string} github
@@ -230,7 +259,10 @@ function fileRow(platform, file, href, github) {
   link.dataset.platform = platform;
   const label = el("span", platformLabel(lang(), platform));
   label.className = "file-label";
-  const meta = el("span", [file.name.slice(file.name.lastIndexOf(".") + 1), bytes(file.size)].filter(Boolean).join(" · "));
+  const meta = el(
+    "span",
+    [file.name.slice(file.name.lastIndexOf(".") + 1), bytes(file.size), macBlocks(lang(), platform)].filter(Boolean).join(" · "),
+  );
   meta.className = "file-meta";
   link.append(label, meta);
   const from = el("a", T[lang()].github);
@@ -322,7 +354,9 @@ function renderCta() {
   cta.replaceChildren();
   const hasFiles = !!manifest.version && Object.keys(manifest.files ?? {}).length > 0;
   const pick = guess();
-  const file = pick ? manifest.files?.[pick] : undefined;
+  const mac = $("cta-mac");
+  if (mac) mac.hidden = pick !== "macos-aarch64";
+  const file = pick ? manifest.files?.[offered(pick)] : undefined;
   if (!pick || !file) {
     // Nothing to guess from: the download page lists every platform, or, with
     // no release at all, GitHub is where one will appear.
@@ -334,13 +368,13 @@ function renderCta() {
   }
   const ids = pick === "macos-aarch64" && manifest.files?.["macos-x64"] ? ["macos-aarch64", "macos-x64"] : [pick];
   ids.forEach((id, index) => {
-    const f = manifest?.files?.[id];
+    const f = manifest?.files?.[offered(id)];
     if (!f) return;
     const link = el("a", index === 0 ? /** @type {Record<string, string>} */ (t.primary)[id] ?? id : t.altMac);
     link.className = index === 0 ? "btn btn-primary" : "btn";
     link.href = latestHref(f);
     link.setAttribute("download", "");
-    link.dataset.platform = id;
+    link.dataset.platform = offered(id);
     const size = el("span", bytes(f.size));
     size.className = "sub";
     if (f.size) link.append(size);
@@ -538,6 +572,32 @@ function setLang(next, chosen = false) {
   renderChangelog();
 }
 
+// --- copy buttons -----------------------------------------------------------
+
+/** A button with data-copy="<id>" copies that element's text, and says so. */
+function wireCopy() {
+  for (const button of document.querySelectorAll("[data-copy]")) {
+    const source = $(button.getAttribute("data-copy") ?? "");
+    if (!source || !navigator.clipboard) {
+      // Nothing to copy with: the text can still be selected by hand.
+      /** @type {HTMLElement} */ (button).hidden = true;
+      continue;
+    }
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
+    let timer;
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(source.textContent ?? "");
+      } catch {
+        return;
+      }
+      clearTimeout(timer);
+      button.setAttribute("data-copied", T[lang()].copied);
+      timer = setTimeout(() => button.removeAttribute("data-copied"), 1600);
+    });
+  }
+}
+
 // --- start ------------------------------------------------------------------
 
 async function main() {
@@ -545,6 +605,7 @@ async function main() {
     button.addEventListener("click", () => setLang(/** @type {Lang} */ (button.getAttribute("data-set-lang")), true));
   }
   setLang(lang());
+  wireCopy();
   // The pet and the data are fetched together; neither waits for the other.
   const petting = wirePet();
   if (page === "changelog") {

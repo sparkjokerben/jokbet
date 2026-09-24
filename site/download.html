@@ -120,12 +120,13 @@
           </details>
           <p class="note">
             <span data-lang="zh"
-              >安装包没有 Apple 或微软的签名，第一次打开时系统会拦一下，按下面的安装步骤放行即可。下载走本站的镜像，镜像不可用时自动改用
+              >安装包没有 Apple 或微软的签名，第一次打开时系统会拦一下，按下面的安装步骤放行即可；Mac 用终端一键安装就不会被拦。下载走本站的镜像，镜像不可用时自动改用
               GitHub。</span
             >
             <span data-lang="en" lang="en"
-              >The builds are not signed by Apple or Microsoft, so your system stops the first launch once. Downloads come from this
-              site's mirror, and fall back to GitHub when it is unavailable.</span
+              >The builds are not signed by Apple or Microsoft, so your system stops the first launch once — unless, on a Mac, you
+              install from the terminal. Downloads come from this site's mirror, and fall back to GitHub when it is
+              unavailable.</span
             >
           </p>
           <noscript>
@@ -138,17 +139,49 @@
 
         <section class="block" id="install">
           <h2><span data-lang="zh">安装</span><span data-lang="en" lang="en">Install</span></h2>
+          <div class="oneliner">
+            <h3><span data-lang="zh">Mac 一键安装</span><span data-lang="en" lang="en">One line on a Mac</span></h3>
+            <p>
+              <span data-lang="zh">在「终端」里运行这一行：它装好最新版并打开，系统不会拦。以后再运行一次，就是更新到最新版。</span>
+              <span data-lang="en" lang="en"
+                >Run this in Terminal: it installs the newest release and opens it, and macOS does not stop it. Run it again any time
+                to update.</span
+              >
+            </p>
+            <div class="command">
+              <pre><code id="install-command">curl -fsSL https://jokbet.jokerben.top/install.sh | sh</code></pre>
+              <button class="btn" type="button" data-copy="install-command">
+                <span data-lang="zh">复制</span><span data-lang="en" lang="en">Copy</span>
+              </button>
+            </div>
+            <p class="note">
+              <span data-lang="zh"
+                >它下载的就是上面列出的 dmg，核对 SHA-256 后装进「应用程序」。运行前可以先<a href="/install.sh">看看脚本</a>。</span
+              >
+              <span data-lang="en" lang="en"
+                >It downloads the disk image listed above, checks its SHA-256 and puts the app in Applications. You can
+                <a href="/install.sh">read the script</a> first.</span
+              >
+            </p>
+          </div>
           <div class="platforms">
             <div>
               <h3>macOS</h3>
               <ol>
                 <li>
-                  <span data-lang="zh">解压后把 Jokbet.app 拖进「应用程序」。Apple 芯片选 aarch64，Intel 选 x64。</span>
-                  <span data-lang="en" lang="en">Unzip it and move Jokbet.app to Applications. aarch64 for Apple silicon, x64 for Intel.</span>
+                  <span data-lang="zh">zip 双击解压，把 Jokbet.app 拖进「应用程序」。Apple 芯片选 aarch64，Intel 选 x64。</span>
+                  <span data-lang="en" lang="en"
+                    >Open the zip and move Jokbet.app to Applications. aarch64 for Apple silicon, x64 for Intel.</span
+                  >
                 </li>
                 <li>
-                  <span data-lang="zh">首次打开会被拦下，到「系统设置 → 隐私与安全性」点「仍要打开」。</span>
-                  <span data-lang="en" lang="en">The first launch is blocked: System Settings → Privacy &amp; Security → Open Anyway.</span>
+                  <span data-lang="zh"
+                    >第一次打开会被拦一次，到「系统设置 → 隐私与安全性」点「仍要打开」。dmg 在打开磁盘映像时还会先拦一次。</span
+                  >
+                  <span data-lang="en" lang="en"
+                    >The first launch is stopped once: System Settings → Privacy &amp; Security → Open Anyway. A dmg is stopped once
+                    more, when the disk image is opened.</span
+                  >
                 </li>
                 <li>
                   <span data-lang="zh">按提示授予「输入监控」权限。没有它，桌宠会一脸问号，也统计不到任何操作。</span>
@@ -189,11 +222,6 @@
               </ol>
             </div>
           </div>
-          <p class="note">
-            <span data-lang="zh">macOS 上也可以绕开这一步，在终端里运行：</span>
-            <span data-lang="en" lang="en">On macOS you can skip that step instead by running, in a terminal:</span>
-          </p>
-          <pre><code>xattr -dr com.apple.quarantine /Applications/Jokbet.app</code></pre>
           <p class="note">
             <span data-lang="zh">更新后如果不计数了，在「输入监控」里删掉旧条目再重新添加。</span>
             <span data-lang="en" lang="en">If counting stops after an update, remove the old entry from Input Monitoring and add the app again.</span>

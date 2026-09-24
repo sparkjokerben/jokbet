@@ -32,16 +32,25 @@ Download the installer for your platform from **[jokbet.jokerben.top/download](h
 
 ### macOS
 
-1. Unzip and move `Jokbet.app` to Applications. The `aarch64` build is for Apple Silicon, `x64` for Intel Macs.
-2. Open it once. When macOS says it can't verify the developer, go to **System Settings → Privacy & Security** and click **Open Anyway**. (On macOS 15 and later, right-click → Open no longer works.) Alternatively run:
-   ```sh
-   xattr -dr com.apple.quarantine /Applications/Jokbet.app
-   ```
+The builds are not notarized, so Gatekeeper stops a build that a browser downloaded: a `.dmg` when it is opened, and then the app inside it once more. A build fetched with `curl` carries no quarantine flag and opens straight away, so the shortest way past all of it is one line in Terminal — it installs the newest release, and running it again updates to the newest:
+
+```sh
+curl -fsSL https://jokbet.jokerben.top/install.sh | sh
+```
+
+By hand instead (one stop for a zip, two for a disk image):
+
+1. Open the zip and move `Jokbet.app` to Applications. The `aarch64` build is for Apple Silicon, `x64` for Intel Macs.
+2. Open it once. When macOS says it can't verify the developer, go to **System Settings → Privacy & Security** and click **Open Anyway**. (On macOS 15 and later, right-click → Open no longer works.)
 3. Allow **Input Monitoring** when asked (System Settings → Privacy & Security → Input Monitoring). Without it the pet shows a confused face and counts nothing.
 
-- 解压后把 app 拖进「应用程序」。Apple 芯片选 `aarch64`，Intel 选 `x64`。
-- 首次打开被拦截时，到「系统设置 → 隐私与安全性」点「仍要打开」（macOS 15 起右键「打开」已经不管用），或者在终端运行上面的 `xattr` 命令。
-- 按提示授予「输入监控」权限。没有这个权限，桌宠会一脸问号，也统计不到任何操作。
+安装包没有 Apple 的公证，所以浏览器下载的版本会被拦：`.dmg` 在打开磁盘映像时拦一次，里面的 app 再拦一次。用 `curl` 抓下来的文件没有隔离标记，不会被拦——所以最省事的是在终端里一行命令装好，再运行一次就是更新：
+
+```sh
+curl -fsSL https://jokbet.jokerben.top/install.sh | sh
+```
+
+手动安装（zip 拦一次，dmg 拦两次）：解压后把 app 拖进「应用程序」（Apple 芯片选 `aarch64`，Intel 选 `x64`）；首次打开被拦时到「系统设置 → 隐私与安全性」点「仍要打开」（macOS 15 起右键「打开」已经不管用）；按提示授予「输入监控」权限，没有它桌宠会一脸问号，什么也统计不到。
 - If an update ever stops counting, remove the old entry from Input Monitoring and add the app again. 如果更新后不计数了，在「输入监控」里删掉旧条目再重新添加。
 
 ### Windows
@@ -58,7 +67,7 @@ Use the AppImage (auto-updates) or the `.deb`. Only X11 sessions are supported: 
 
 ## Known limitations / 已知限制
 
-- macOS: keys typed while **Secure Keyboard Entry** is on (e.g. enabled in Terminal or iTerm, or in password fields) are hidden from every app, including this one. The pet puts on a blindfold while that happens.
+- macOS: keys typed while **Secure Keyboard Entry** is on (in password fields, or when enabled in Terminal or iTerm) are hidden from every other app, so they are not counted. Clicks, the mouse and the modifier keys still are.
 - Windows: input sent to windows running as administrator is not seen unless the pet also runs as administrator. The pet stays on the virtual desktop it was started on.
 - Linux: X11 only.
 - The pet stays on top of fullscreen apps too; hide it from the tray menu when it gets in the way.

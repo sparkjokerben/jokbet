@@ -104,9 +104,29 @@ jobs:
           releaseName: Jokbet ${{ github.ref_name }}
           releaseBody: |
             Unofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.
-            非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见 README。
+            非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。
 
-            See the [README](https://github.com/sparkjokerben/jokbet#install) for install steps.
+            See the [download page](https://jokbet.jokerben.top/download#install) for install steps.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Zip the macOS app
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # The same signed Jokbet.app the disk image holds, zipped. Gatekeeper
+          # stops a downloaded disk image when it is opened and then the app in
+          # it; out of a zip, only the app.
+          version="$(node -p 'require("./package.json").version')"
+          case "${{ matrix.target }}" in
+            aarch64-*) arch=aarch64 ;;
+            *) arch=x64 ;;
+          esac
+          app="src-tauri/target/${{ matrix.target }}/release/bundle/macos/Jokbet.app"
+          zip="$RUNNER_TEMP/Jokbet_${version}_${arch}.app.zip"
+          codesign --verify --strict "$app"
+          ditto -c -k --sequesterRsrc --keepParent "$app" "$zip"
+          gh release upload "$GITHUB_REF_NAME" "$zip" --repo "$GITHUB_REPOSITORY" --clobber

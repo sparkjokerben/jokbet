@@ -39,9 +39,23 @@ export interface Manifest {
   files: Record<string, ManifestFile>;
 }
 
-/** The installers, in the order the page lists them. */
-export const PLATFORMS: { id: string; file: (version: string) => string; bundle: string }[] = [
+/** One installer every release ships (from `since` on, when it came later). */
+export interface Platform {
+  id: string;
+  file: (version: string) => string;
+  /** Where it comes from: a Tauri bundle, or "app" for the zip of the .app the release job makes. */
+  bundle: string;
+  /** The first version that ships it; the releases before it are not expected to. */
+  since?: string;
+}
+
+/** The installers, in the order the page lists them. On macOS the zip comes
+ * first: Gatekeeper stops the app inside once, where a disk image is stopped
+ * itself and then the app again. */
+export const PLATFORMS: Platform[] = [
+  { id: "macos-aarch64-zip", file: (v) => `Jokbet_${v}_aarch64.app.zip`, bundle: "app", since: "0.1.2" },
   { id: "macos-aarch64", file: (v) => `Jokbet_${v}_aarch64.dmg`, bundle: "dmg" },
+  { id: "macos-x64-zip", file: (v) => `Jokbet_${v}_x64.app.zip`, bundle: "app", since: "0.1.2" },
   { id: "macos-x64", file: (v) => `Jokbet_${v}_x64.dmg`, bundle: "dmg" },
   { id: "windows-x64", file: (v) => `Jokbet_${v}_x64-setup.exe`, bundle: "nsis" },
   { id: "windows-x64-msi", file: (v) => `Jokbet_${v}_x64_en-US.msi`, bundle: "msi" },
@@ -51,6 +65,21 @@ export const PLATFORMS: { id: string; file: (version: string) => string; bundle:
 
 export const PLATFORM_IDS = PLATFORMS.map((p) => p.id);
 
+/** -1, 0 or 1, comparing the numbers of two versions (a prerelease counts as its release). */
+export function compareVersions(a: string, b: string): number {
+  const parts = (v: string) => v.replace(/^v/, "").split(/[-+]/)[0].split(".").map(Number);
+  const [x, y] = [parts(a), parts(b)];
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    const d = (x[i] ?? 0) - (y[i] ?? 0);
+    if (d) return Math.sign(d);
+  }
+  return 0;
+}
+
+/** The installers a version ships. */
+export const platformsFor = (version: string) =>
+  PLATFORMS.filter((p) => !p.since || compareVersions(version, p.since) >= 0);
+
 export const downloadBase = (tag: string | null) => (tag ? `https://github.com/${REPO}/releases/download/${tag}` : null);
 export const releaseUrl = (tag: string | null) => (tag ? `https://github.com/${REPO}/releases/tag/${tag}` : null);
 
@@ -59,7 +88,7 @@ export function emptyManifest(version: string | null = null): Manifest {
   const tag = version ? `v${version}` : null;
   const files: Record<string, ManifestFile> = {};
   if (version) {
-    for (const p of PLATFORMS) files[p.id] = { name: p.file(version), size: null, sha256: null };
+    for (const p of platformsFor(version)) files[p.id] = { name: p.file(version), size: null, sha256: null };
   }
   return {
     schema: 1,
@@ -170,7 +199,7 @@ export function latestFrom(releases: GithubRelease[]): Manifest {
   const tag = newest.tag_name;
   const version = tag.replace(/^v/, "");
   const files: Record<string, ManifestFile> = {};
-  for (const platform of PLATFORMS) {
+  for (const platform of platformsFor(version)) {
     const name = platform.file(version);
     const asset = newest.assets?.find((a) => a.name === name);
     files[platform.id] = {
@@ -272,7 +301,7 @@ export function validateManifest(m: unknown): string[] {
     return bad;
   }
   if (typeof man.version !== "string") return [...bad, "version must be a string or null"];
-  for (const p of PLATFORMS) {
+  for (const p of platformsFor(man.version)) {
     const f = man.files?.[p.id];
     if (!f) {
       bad.push(`files.${p.id} is missing`);
@@ -287,7 +316,7 @@ export function validateManifest(m: unknown): string[] {
     }
   }
   for (const id of Object.keys(man.files ?? {})) {
-    if (!PLATFORMS.some((p) => p.id === id)) bad.push(`files.${id} is not a known platform`);
+    if (!platformsFor(man.version).some((p) => p.id === id)) bad.push(`files.${id} is not an installer of ${man.version}`);
   }
   if (man.tag !== `v${man.version}`) bad.push(`tag ${man.tag} does not match version ${man.version}`);
   if (man.downloadBase && !man.downloadBase.endsWith(`/download/${man.tag}`)) {

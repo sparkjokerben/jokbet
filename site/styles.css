@@ -536,6 +536,47 @@ code {
   color: var(--ink-soft);
 }
 
+/* The Mac's one line: the command and a button that copies it. */
+.oneliner {
+  margin-bottom: 32px;
+}
+
+.oneliner h3 {
+  margin-top: 0;
+}
+
+.oneliner p {
+  font-size: 14px;
+  color: var(--ink-soft);
+  max-width: var(--measure);
+}
+
+.command {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.command pre {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.command .btn {
+  flex: none;
+  align-items: center;
+}
+
+/* Copied: the button says so for a moment, in the page's language. */
+.command [data-copied] > span {
+  display: none;
+}
+
+.command [data-copied]::after {
+  content: attr(data-copied);
+}
+
 .platforms {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

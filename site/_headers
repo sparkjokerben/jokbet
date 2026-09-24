@@ -37,3 +37,9 @@
 
 /assets/wordmark.svg
   Cache-Control: public, max-age=3600
+
+# The installer is meant to be read before it is run, so a browser shows it as
+# text rather than saving it. It changes with the site: a short cache only.
+/install.sh
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=300

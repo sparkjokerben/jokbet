@@ -22,6 +22,7 @@ const IMMUTABLE = "public, max-age=31536000, immutable";
 /** R2 keeps what was uploaded (aws s3 cp guesses by extension); this is the belt. */
 const TYPES: [string, string][] = [
   [".dmg", "application/x-apple-diskimage"],
+  [".zip", "application/zip"],
   [".msi", "application/x-msi"],
   [".exe", "application/vnd.microsoft.portable-executable"],
   [".deb", "application/vnd.debian.binary-package"],

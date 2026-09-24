@@ -25,10 +25,10 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  PLATFORMS,
   changelogFrom,
   downloadBase,
   latestFrom,
+  platformsFor,
   releaseUrl,
   updaterForMirror,
   validateChangelog,
@@ -63,7 +63,7 @@ function full(): Manifest {
 
   const files: Manifest["files"] = {};
   const missing: string[] = [];
-  for (const p of PLATFORMS) {
+  for (const p of platformsFor(version)) {
     const name = p.file(version);
     const path = join(dir, name);
     let size: number;

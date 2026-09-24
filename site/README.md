@@ -17,12 +17,32 @@ There is no build step: what is in `site/` is what is deployed.
 | `/api/releases.json` | every published release, for `/changelog` | R2 `manifests/releases.json`, else `worker/fallback/releases.json` |
 | `/api/update.json` | the app's updater manifest, its downloads pointed at `/dl/` | R2 `manifests/update.json`, else a redirect to GitHub's |
 | `/dl/<tag>/<name>` | one file of one release | R2 `releases/<tag>/<name>`, else a redirect to GitHub |
+| `/install.sh` | the one-line macOS installer the download page offers | `site/install.sh` |
 
 Every release file has one address per host, the same shape on both:
 `/dl/<tag>/<name>` here, `releases/download/<tag>/<name>` on GitHub. The site's
 links, the Worker's fallback and the app's updater all move between the two
 without looking anything up, and a version in the path means an address never
 changes what it serves.
+
+`install.sh` is the way past Gatekeeper. A build a browser downloaded is
+quarantined, and macOS then stops an un-notarized one — a disk image when it is
+opened, the app inside it once more. `curl` marks nothing, so
+`curl -fsSL https://jokbet.jokerben.top/install.sh | sh` installs the newest
+release's `aarch64`/`x64` disk image for the Mac it runs on, checks it against
+the manifest's SHA-256, puts it in `/Applications` (or `~/Applications` when
+that is not writable) and opens it. Running it again updates in place: it asks
+the running app to quit the way its own Quit item does, so the counts in hand
+are saved first. The script is served as `text/plain`, so a browser shows it
+rather than saving it, and the download page links to it for reading first.
+
+Each macOS build also ships as a zip from 0.1.2 on, and that is what the pages
+offer first: a zip is stopped once, a disk image twice. The zip comes from the
+release job (`release.yml`), which zips the signed `Jokbet.app` tauri-action
+just built and uploads it to the draft release, so it is the same binary the
+disk image holds — signed with the same identity, which is what keeps the Input
+Monitoring grant across updates. `scripts/site-manifest.ts` lists it with
+`since: "0.1.2"`, so the releases before it are not expected to have one.
 
 Older addresses still land: `/latest` and `/changelog.json` (the 0.1.0 page's
 JSON) redirect to `/api/`, `/dl/<name>?v=<version>` (its download links) to
@@ -46,6 +66,7 @@ site/
   styles.css             the app's palette, the layout, the pet's own looks
   app.js                 the language switch, the pet, and what each page builds from /api/
   boot.js                picks zh/en before the first paint; forwards the old anchors
+  install.sh             the one-line macOS installer: manifest, checksum, ditto, open
   _headers               security headers (CSP) and cache rules
   _redirects             the .html aliases and the pre-/api/ addresses
   .assetsignore          what lives here but is not published (partials/, this README)

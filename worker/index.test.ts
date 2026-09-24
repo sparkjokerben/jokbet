@@ -109,6 +109,16 @@ describe("/dl/<tag>/<name>", () => {
     expect(await (await call(`/dl/v0.2.0/${name}`, env)).text()).toBe("new");
   });
 
+  it("serves the zipped macOS app as a zip", async () => {
+    const name = "Jokbet_0.1.2_aarch64.app.zip";
+    const env = { DOWNLOADS: bucket({ [`releases/v0.1.2/${name}`]: new Uint8Array(8) }), ASSETS: assets() };
+    const response = await call(`/dl/v0.1.2/${name}`, env);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("application/zip");
+    expect(response.headers.get("content-disposition")).toBe(`attachment; filename="${name}"`);
+  });
+
   it("sends the whole file when nothing asked for a range", async () => {
     // The bucket calls this a range covering everything; answering 206 to a
     // request that carried no Range header makes browsers refuse the download.
