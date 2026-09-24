@@ -1,10 +1,15 @@
 // The site's server side.
 //
-// The files in site/ are served by the assets layer, which answers a request
-// only when it matches a file and hands everything else here. This Worker
-// answers the three paths that need the bucket — /latest, /changelog.json and
-// /dl/<name> — and defers the rest back to the assets layer, so an unknown
-// path still gets the platform's own 404.
+// The files in site/ are served by the assets layer; this Worker answers the
+// paths that need the bucket — /latest, /changelog.json and /dl/<name> — and
+// defers the rest back to the assets layer, so an unknown path still gets the
+// platform's own 404.
+//
+// Those paths are named in wrangler.toml's `run_worker_first`, and they have to
+// be: the assets layer otherwise answers a request that matches no file on its
+// own, and for a *navigation* it answers with the 404 page without ever calling
+// this Worker. A browser makes a download a navigation, so every real download
+// used to 404 while curl, which is not a navigation, went straight through.
 
 /// <reference types="@cloudflare/workers-types" />
 

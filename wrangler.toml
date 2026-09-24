@@ -21,6 +21,13 @@ binding = "ASSETS"
 # Unknown paths are the Worker's business (it answers /latest, /changelog.json
 # and /dl/); anything left over becomes site/404.html with a 404 status.
 not_found_handling = "404-page"
+# The Worker has to go first for the paths it owns, and /dl/ is why: browsers
+# make a download a *navigation*, and a navigation that matches no file is
+# answered by the assets layer's 404 page without the Worker ever running. That
+# only shows up in a browser — curl and fetch are not navigations, so they went
+# straight through and hid it. Everything else is still served from the assets
+# layer without waking the Worker.
+run_worker_first = ["/latest", "/changelog.json", "/changelog", "/dl/*"]
 
 # The installers live here; the /dl route is the only way to reach them.
 [[r2_buckets]]

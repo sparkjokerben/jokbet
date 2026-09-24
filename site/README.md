@@ -6,7 +6,7 @@ answering the three paths that need them. There is no build step: what is in
 `site/` is what is deployed.
 
 ```
-wrangler.toml           the Worker: name, entry point, the assets directory, the R2 binding
+wrangler.toml           the Worker: name, entry point, the assets directory, run_worker_first, the R2 binding
 worker/index.ts         the routes: /latest, /changelog.json, /dl/<name>, /changelog, then the assets
 worker/mirror.ts        the bucket-then-baked JSON door, shared by the two JSON routes
 worker/download.ts      the installer proxy: R2 first, then GitHub
@@ -73,6 +73,15 @@ and says which source answered.
 
 The bucket stays private; the Worker is the only door to it, and the names it
 will serve are checked against what Tauri produces.
+
+`run_worker_first` in `wrangler.toml` lists those paths, and it is not optional.
+The assets layer answers a request that matches no file by itself, and for a
+**navigation** it answers with `404.html` without calling the Worker at all. A
+browser turns a download into a navigation, so without that list every download
+from the page 404s while `curl` and `fetch` — which are not navigations — are
+served correctly. That is what the list is there to prevent: a download link was
+broken for days because `curl -I` said 200. Test this route the way a browser
+uses it, with `Sec-Fetch-Dest: document`, or in a browser.
 
 ## Working on it
 
