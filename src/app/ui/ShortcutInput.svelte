@@ -11,6 +11,7 @@
   }: { value: string | null; label: string; onchange: (v: string | null) => void } = $props();
 
   let recording = $state(false);
+  let root: HTMLSpanElement;
 
   // While recording, the app lets go of its shortcuts: pressing one should
   // record it, not run it.
@@ -26,7 +27,6 @@
   }
 
   function onkeydown(e: KeyboardEvent) {
-    if (!recording) return;
     e.preventDefault();
     e.stopPropagation();
     if (e.code === "Escape") return stop();
@@ -37,17 +37,35 @@
     }
   }
 
+  function onpointerdown(e: PointerEvent) {
+    if (!root.contains(e.target as Node)) stop();
+  }
+
+  // Keys are taken from the whole window while recording: WebKit on macOS
+  // does not focus a button that is clicked, so the button itself would hear
+  // nothing. Clicking elsewhere, or leaving the window, cancels.
+  $effect(() => {
+    if (!recording) return;
+    window.addEventListener("keydown", onkeydown, true);
+    window.addEventListener("pointerdown", onpointerdown, true);
+    window.addEventListener("blur", stop);
+    return () => {
+      window.removeEventListener("keydown", onkeydown, true);
+      window.removeEventListener("pointerdown", onpointerdown, true);
+      window.removeEventListener("blur", stop);
+    };
+  });
+
   onDestroy(stop);
 </script>
 
-<span class="shortcut">
+<span class="shortcut" bind:this={root}>
   <button
     class="btn key"
     class:recording
     aria-label={label}
+    aria-pressed={recording}
     onclick={() => (recording ? stop() : start())}
-    {onkeydown}
-    onblur={stop}
   >
     {recording ? t("shortcutRecording") : value ? describeShortcut(value) : t("shortcutNone")}
   </button>
