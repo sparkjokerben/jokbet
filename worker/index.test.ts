@@ -225,7 +225,10 @@ describe("the rest of the site", () => {
     expect(response.status).toBe(404);
   });
 
-  it("serves /changelog from changelog.html, its clean URL", async () => {
+  it("hands /changelog to the assets layer as it stands", async () => {
+    // The assets layer serves the clean URL from changelog.html itself. The
+    // Worker must not ask for changelog.html by name: the _redirects rule sends
+    // that back to /changelog, so the two together are a redirect loop.
     let asked = "";
     const env = {
       DOWNLOADS: bucket({}, true),
@@ -239,7 +242,7 @@ describe("the rest of the site", () => {
     const response = await call(page("/changelog"), env);
 
     expect(response.status).toBe(200);
-    expect(asked).toContain("/changelog.html");
+    expect(asked).toBe("https://jokbet.jokerben.top/changelog");
   });
 
   it("refuses anything but GET and HEAD on the JSON endpoints", async () => {
