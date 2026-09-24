@@ -2,17 +2,33 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), camera=(), microphone=(), interest-cohort=()
-  Content-Security-Policy: default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; style-src-attr 'none'; script-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   X-Frame-Options: DENY
 
-/assets/*
+# Rules are merged when more than one matches, so they must not overlap: the
+# pictures and the fonts are the only things cached hard. Everything else —
+# the pages, the script, the pet, the manifest — revalidates on the ETag, so a
+# deploy is never an hour behind for someone who has been here before.
+/assets/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/apple-touch-icon.png
   Cache-Control: public, max-age=3600
 
-/styles.css
+/assets/favicon.ico
   Cache-Control: public, max-age=3600
 
-/app.js
+/assets/favicon-32.png
   Cache-Control: public, max-age=3600
 
-/lang-boot.js
+/assets/favicon-192.png
+  Cache-Control: public, max-age=3600
+
+/assets/icon-512.png
+  Cache-Control: public, max-age=3600
+
+/assets/og.png
+  Cache-Control: public, max-age=3600
+
+/assets/wordmark.svg
   Cache-Control: public, max-age=3600
