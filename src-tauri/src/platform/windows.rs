@@ -97,3 +97,71 @@ pub fn primary_button_pressed() -> bool {
         GetAsyncKeyState(i32::from(vk.0)) as u16 & 0x8000 != 0
     }
 }
+
+/// Whether the foreground window belongs to a full-screen app (or a
+/// presentation, or an exclusive-mode game) on the monitor holding the point,
+/// in physical pixels.
+pub fn fullscreen_covers(x: f64, y: f64) -> bool {
+    use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_EXTENDED_FRAME_BOUNDS};
+    use windows::Win32::Graphics::Gdi::{MonitorFromWindow, MONITOR_DEFAULTTONULL};
+    use windows::Win32::UI::Shell::{
+        SHQueryUserNotificationState, QUNS_PRESENTATION_MODE, QUNS_RUNNING_D3D_FULL_SCREEN,
+    };
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GetClassNameW, GetDesktopWindow, GetForegroundWindow, GetShellWindow, GetWindowRect,
+    };
+    unsafe {
+        // Exclusive-mode games and presentation mode say so outright.
+        if let Ok(state) = SHQueryUserNotificationState() {
+            if state == QUNS_RUNNING_D3D_FULL_SCREEN || state == QUNS_PRESENTATION_MODE {
+                return true;
+            }
+        }
+        let window = GetForegroundWindow();
+        if window.is_invalid() || window == GetShellWindow() || window == GetDesktopWindow() {
+            return false;
+        }
+        // The desktop itself is a window as large as the screen.
+        let mut class = [0u16; 16];
+        let len = GetClassNameW(window, &mut class).max(0) as usize;
+        let class = String::from_utf16_lossy(&class[..len]);
+        if class == "Progman" || class == "WorkerW" {
+            return false;
+        }
+        let monitor = MonitorFromWindow(window, MONITOR_DEFAULTTONULL);
+        if monitor.is_invalid() {
+            return false;
+        }
+        let mut info = MONITORINFO {
+            cbSize: std::mem::size_of::<MONITORINFO>() as u32,
+            ..Default::default()
+        };
+        if !GetMonitorInfoW(monitor, &mut info).as_bool() {
+            return false;
+        }
+        let bounds = |r: RECT| {
+            (
+                f64::from(r.left),
+                f64::from(r.top),
+                f64::from(r.right - r.left),
+                f64::from(r.bottom - r.top),
+            )
+        };
+        let display = bounds(info.rcMonitor);
+        if !super::contains(display, x, y) {
+            return false;
+        }
+        // The visible frame, without the invisible resize borders.
+        let mut rect = RECT::default();
+        let framed = DwmGetWindowAttribute(
+            window,
+            DWMWA_EXTENDED_FRAME_BOUNDS,
+            &mut rect as *mut RECT as *mut _,
+            std::mem::size_of::<RECT>() as u32,
+        );
+        if framed.is_err() && GetWindowRect(window, &mut rect).is_err() {
+            return false;
+        }
+        super::covers(bounds(rect), display)
+    }
+}

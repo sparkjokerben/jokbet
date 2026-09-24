@@ -125,12 +125,74 @@ pub fn set_glass<R: tauri::Runtime>(
 ) {
 }
 
-/// Keeps the pet on every Space (fullscreen ones too), out of Mission Control
-/// and the Cmd-` cycle.
+/// Keeps the pet on every Space, out of Mission Control and the Cmd-` cycle.
+/// With `full_screen`, full-screen Spaces too; without it, macOS leaves the pet
+/// out of them.
 /// Must run on the main thread.
 #[cfg(target_os = "macos")]
-pub fn pin_to_all_spaces<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) {
+pub fn pin_to_all_spaces<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>, full_screen: bool) {
     if let Ok(ns_window) = window.ns_window() {
-        macos::pin_to_all_spaces(ns_window);
+        macos::pin_to_all_spaces(ns_window, full_screen);
+    }
+}
+
+/// A rectangle as `(x, y, w, h)`.
+pub type Bounds = (f64, f64, f64, f64);
+
+/// Whether the rectangle holds the point.
+pub fn contains(outer: Bounds, x: f64, y: f64) -> bool {
+    x >= outer.0 && x < outer.0 + outer.2 && y >= outer.1 && y < outer.1 + outer.3
+}
+
+/// Whether a window covers all of a display: the mark of a full-screen one.
+/// A pixel of slack allows for frames rounded differently on each side.
+#[cfg_attr(target_os = "linux", allow(dead_code))]
+pub fn covers(window: Bounds, display: Bounds) -> bool {
+    const SLACK: f64 = 1.0;
+    window.0 <= display.0 + SLACK
+        && window.1 <= display.1 + SLACK
+        && window.0 + window.2 >= display.0 + display.2 - SLACK
+        && window.1 + window.3 >= display.1 + display.3 - SLACK
+}
+
+/// Whether another app shows a full-screen window (or a presentation) on the
+/// display holding the point. The point is in the window API's physical
+/// pixels; `scale` turns them into points where the platform measures so.
+#[allow(unused_variables)]
+pub fn fullscreen_covers(x: f64, y: f64, scale: f64) -> bool {
+    #[cfg(target_os = "macos")]
+    return macos::fullscreen_covers(x / scale, y / scale);
+    #[cfg(windows)]
+    return windows::fullscreen_covers(x, y);
+    #[cfg(target_os = "linux")]
+    return linux::fullscreen_covers(x, y);
+    #[allow(unreachable_code)]
+    false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SCREEN: Bounds = (0.0, 0.0, 1440.0, 900.0);
+
+    #[test]
+    fn a_window_as_large_as_the_display_covers_it() {
+        assert!(covers(SCREEN, SCREEN));
+        assert!(covers((-0.5, 0.0, 1441.0, 900.0), SCREEN));
+    }
+
+    #[test]
+    fn a_maximised_window_leaves_the_menu_bar() {
+        assert!(!covers((0.0, 25.0, 1440.0, 875.0), SCREEN));
+        assert!(!covers((0.0, 0.0, 1440.0, 850.0), SCREEN));
+    }
+
+    #[test]
+    fn a_full_screen_window_on_another_display_is_not_this_one() {
+        let side = (1440.0, 0.0, 1920.0, 1080.0);
+        assert!(!covers(side, SCREEN));
+        assert!(contains(side, 1500.0, 10.0));
+        assert!(!contains(side, 100.0, 10.0));
     }
 }

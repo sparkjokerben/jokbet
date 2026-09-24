@@ -158,6 +158,8 @@ pub struct Settings {
     /// The first-run onboarding has been completed.
     pub onboarded: bool,
     pub language: Language,
+    /// Take the pet off screen while another app is full screen or presenting.
+    pub hide_in_fullscreen: bool,
 }
 
 impl Default for Settings {
@@ -179,6 +181,7 @@ impl Default for Settings {
             paused: false,
             onboarded: false,
             language: Language::System,
+            hide_in_fullscreen: true,
         }
     }
 }
@@ -475,6 +478,7 @@ mod tests {
         assert_eq!(s.sleep_after_min, 1);
         assert!(!s.liquid_glass, "the material starts switched off");
         assert_eq!(s.language, Language::System);
+        assert!(s.hide_in_fullscreen);
     }
 
     #[test]

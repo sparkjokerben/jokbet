@@ -11,6 +11,7 @@ mod pet_window;
 mod platform;
 mod settings;
 mod updater;
+mod visibility;
 
 use engine::runtime::RuntimeHandle;
 use hover::HoverState;
@@ -66,6 +67,7 @@ pub fn run() {
             let initial = settings.get();
             app.manage(settings);
             app.manage(HoverState::default());
+            app.manage(visibility::PetVisibility::default());
 
             let db_path = data_dir.join("stats.sqlite");
             let db = db::Db::open(&db_path)
@@ -79,13 +81,14 @@ pub fn run() {
 
             let pet = pet_window::create(app.handle())?;
             #[cfg(target_os = "macos")]
-            platform::pin_to_all_spaces(&pet);
+            platform::pin_to_all_spaces(&pet, !initial.hide_in_fullscreen);
             #[cfg(not(target_os = "macos"))]
             let _ = pet;
             if !initial.onboarded {
                 menu::open_panel(app.handle(), panels::Panel::Onboarding);
             }
             hover::spawn(app.handle().clone());
+            visibility::spawn(app.handle().clone());
             updater::spawn(app.handle().clone());
             Ok(())
         })

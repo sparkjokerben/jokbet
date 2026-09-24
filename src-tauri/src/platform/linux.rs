@@ -1,7 +1,7 @@
 use crate::engine::distance::Display;
 use x11rb::connection::Connection;
 use x11rb::protocol::randr::ConnectionExt as _;
-use x11rb::protocol::xproto::{ConnectionExt as _, KeyButMask};
+use x11rb::protocol::xproto::{AtomEnum, ConnectionExt as _, KeyButMask, Window};
 use x11rb::rust_connection::RustConnection;
 
 /// X11 outputs in root-window pixels, with RandR's physical size.
@@ -73,4 +73,57 @@ impl PointerX11 {
             }
         }
     }
+}
+
+/// Whether the active window is full screen (`_NET_WM_STATE_FULLSCREEN`) on
+/// the monitor holding the point, in root-window pixels.
+pub fn fullscreen_covers(x: f64, y: f64) -> bool {
+    active_fullscreen(x, y).unwrap_or(false)
+}
+
+fn active_fullscreen(x: f64, y: f64) -> Option<bool> {
+    let (conn, screen) = x11rb::connect(None).ok()?;
+    let root = conn.setup().roots.get(screen)?.root;
+    let atom = |name: &[u8]| -> Option<u32> {
+        Some(conn.intern_atom(false, name).ok()?.reply().ok()?.atom)
+    };
+    let (active, state, fullscreen) = (
+        atom(b"_NET_ACTIVE_WINDOW")?,
+        atom(b"_NET_WM_STATE")?,
+        atom(b"_NET_WM_STATE_FULLSCREEN")?,
+    );
+    let window: Window = conn
+        .get_property(false, root, active, AtomEnum::WINDOW, 0, 1)
+        .ok()?
+        .reply()
+        .ok()?
+        .value32()?
+        .next()?;
+    if window == 0 {
+        return Some(false);
+    }
+    let is_fullscreen = conn
+        .get_property(false, window, state, AtomEnum::ATOM, 0, 64)
+        .ok()?
+        .reply()
+        .ok()?
+        .value32()?
+        .any(|a| a == fullscreen);
+    if !is_fullscreen {
+        return Some(false);
+    }
+    // Only if it is on the pet's monitor: the window's box in root pixels.
+    let geometry = conn.get_geometry(window).ok()?.reply().ok()?;
+    let origin = conn
+        .translate_coordinates(window, root, 0, 0)
+        .ok()?
+        .reply()
+        .ok()?;
+    let bounds = (
+        f64::from(origin.dst_x),
+        f64::from(origin.dst_y),
+        f64::from(geometry.width),
+        f64::from(geometry.height),
+    );
+    Some(super::contains(bounds, x, y))
 }

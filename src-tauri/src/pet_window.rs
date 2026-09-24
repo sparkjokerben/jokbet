@@ -142,6 +142,16 @@ pub fn place<R: Runtime>(window: &WebviewWindow<R>) -> tauri::Result<()> {
     window.set_position(PhysicalPosition::new(pos.0, pos.1))
 }
 
+/// Forgets where the pet was dragged to and puts it back in the default corner.
+pub fn reset_position<R: Runtime>(window: &WebviewWindow<R>) -> tauri::Result<()> {
+    window
+        .app_handle()
+        .state::<SettingsStore>()
+        .update(|s| s.pet_position = None)
+        .map_err(tauri::Error::Io)?;
+    place(window)
+}
+
 /// Resizes the window for a new pet size, keeping the pet's feet in place.
 pub fn apply_size<R: Runtime>(window: &WebviewWindow<R>, from: f64, to: f64) -> tauri::Result<()> {
     let sf = window.scale_factor()?;

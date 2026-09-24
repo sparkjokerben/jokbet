@@ -35,6 +35,7 @@ impl Lang {
 pub enum Text {
     ShowPet,
     HidePet,
+    ResetPosition,
     Stats,
     Settings,
     PauseCounting,
@@ -46,6 +47,7 @@ pub fn t(lang: Lang, text: Text) -> &'static str {
     match (lang, text) {
         (Lang::Zh, Text::ShowPet) => "显示桌宠",
         (Lang::Zh, Text::HidePet) => "隐藏桌宠",
+        (Lang::Zh, Text::ResetPosition) => "把桌宠移回角落",
         (Lang::Zh, Text::Stats) => "统计…",
         (Lang::Zh, Text::Settings) => "设置…",
         (Lang::Zh, Text::PauseCounting) => "暂停计数",
@@ -53,6 +55,7 @@ pub fn t(lang: Lang, text: Text) -> &'static str {
         (Lang::Zh, Text::Quit) => "退出",
         (Lang::En, Text::ShowPet) => "Show Pet",
         (Lang::En, Text::HidePet) => "Hide Pet",
+        (Lang::En, Text::ResetPosition) => "Move Pet Back to Corner",
         (Lang::En, Text::Stats) => "Stats…",
         (Lang::En, Text::Settings) => "Settings…",
         (Lang::En, Text::PauseCounting) => "Pause Counting",

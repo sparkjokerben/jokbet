@@ -32,6 +32,16 @@ pub fn apply_patch<R: Runtime>(
         // setting flips while it is up.
         clear_glass(app);
     }
+    #[cfg(target_os = "macos")]
+    if next.hide_in_fullscreen != before.hide_in_fullscreen {
+        let handle = app.clone();
+        let full_screen = !next.hide_in_fullscreen;
+        let _ = app.run_on_main_thread(move || {
+            if let Some(window) = handle.get_webview_window(pet_window::PET_LABEL) {
+                crate::platform::pin_to_all_spaces(&window, full_screen);
+            }
+        });
+    }
     if next.pet_scale != before.pet_scale {
         if let Some(window) = app.get_webview_window(pet_window::PET_LABEL) {
             pet_window::apply_size(&window, before.pet_scale, next.pet_scale)

@@ -50,6 +50,8 @@ export interface Settings {
   paused: boolean;
   onboarded: boolean;
   language: Language;
+  /** Take the pet off screen while another app is full screen or presenting. */
+  hideInFullscreen: boolean;
 }
 
 export interface Totals {

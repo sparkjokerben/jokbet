@@ -15,6 +15,7 @@ const ID_TOGGLE: &str = "toggle-pet";
 const ID_STATS: &str = "stats";
 const ID_SETTINGS: &str = "settings";
 const ID_PAUSE: &str = "pause";
+const ID_RESET_POSITION: &str = "reset-position";
 const ID_RESTART_UPDATE: &str = "restart-update";
 const ID_QUIT: &str = "quit";
 
@@ -23,6 +24,7 @@ pub struct AppMenu<R: Runtime> {
     stats: MenuItem<R>,
     settings: MenuItem<R>,
     toggle: MenuItem<R>,
+    reset_position: MenuItem<R>,
     pause: CheckMenuItem<R>,
     quit: MenuItem<R>,
     /// "Restart to Update" and its version, once an update is downloaded.
@@ -39,6 +41,7 @@ impl<R: Runtime> AppMenu<R> {
         let item =
             |id: &str, text: Text| MenuItem::with_id(app, id, t(lang, text), true, None::<&str>);
         let toggle = item(ID_TOGGLE, Text::HidePet)?;
+        let reset_position = item(ID_RESET_POSITION, Text::ResetPosition)?;
         let stats = item(ID_STATS, Text::Stats)?;
         let settings = item(ID_SETTINGS, Text::Settings)?;
         let pause = CheckMenuItem::with_id(
@@ -57,6 +60,7 @@ impl<R: Runtime> AppMenu<R> {
                 &settings,
                 &PredefinedMenuItem::separator(app)?,
                 &toggle,
+                &reset_position,
                 &pause,
                 &PredefinedMenuItem::separator(app)?,
                 &quit,
@@ -67,6 +71,7 @@ impl<R: Runtime> AppMenu<R> {
             stats,
             settings,
             toggle,
+            reset_position,
             pause,
             quit,
             update: Mutex::new(None),
@@ -84,6 +89,7 @@ impl<R: Runtime> AppMenu<R> {
         *self.lang.lock().unwrap() = lang;
         let _ = self.stats.set_text(t(lang, Text::Stats));
         let _ = self.settings.set_text(t(lang, Text::Settings));
+        let _ = self.reset_position.set_text(t(lang, Text::ResetPosition));
         let _ = self.pause.set_text(t(lang, Text::PauseCounting));
         let _ = self.quit.set_text(t(lang, Text::Quit));
         self.sync_toggle(self.pet_shown.load(Ordering::Relaxed));
@@ -112,7 +118,7 @@ impl<R: Runtime> AppMenu<R> {
         }
     }
 
-    fn sync_toggle(&self, visible: bool) {
+    pub fn sync_toggle(&self, visible: bool) {
         self.pet_shown.store(visible, Ordering::Relaxed);
         let text = if visible {
             Text::HidePet
@@ -146,16 +152,14 @@ pub fn create_tray<R: Runtime>(app: &AppHandle<R>, menu: &AppMenu<R>) -> tauri::
 
 pub fn handle_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
     match event.id().as_ref() {
-        ID_TOGGLE => {
+        ID_TOGGLE => crate::visibility::toggle(app),
+        ID_RESET_POSITION => {
             if let Some(window) = app.get_webview_window(PET_LABEL) {
-                let visible = window.is_visible().unwrap_or(true);
-                let _ = if visible {
-                    window.hide()
-                } else {
-                    window.show()
-                };
-                app.state::<AppMenu<R>>().sync_toggle(!visible);
+                if let Err(e) = crate::pet_window::reset_position(&window) {
+                    log::error!("moving the pet back failed: {e}");
+                }
             }
+            crate::visibility::show(app);
         }
         ID_STATS => open_panel(app, Panel::Stats),
         ID_SETTINGS => open_panel(app, Panel::Settings),

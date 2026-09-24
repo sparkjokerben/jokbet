@@ -181,6 +181,11 @@
 
     <section class="card">
       <h2>{t("sectionDisplay")}</h2>
+      <Toggle
+        label={t("hideInFullscreen")}
+        checked={s.hideInFullscreen}
+        onchange={(v) => update({ hideInFullscreen: v })}
+      />
       <Toggle label={t("bubbleEnabled")} checked={s.bubble} onchange={(v) => update({ bubble: v })} />
       {#if glass !== "none"}
         <!-- Only where the system has a material to put behind the bubble. -->

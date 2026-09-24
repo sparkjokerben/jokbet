@@ -59,21 +59,111 @@ const STATIONARY: usize = 1 << 4;
 const IGNORES_CYCLE: usize = 1 << 6;
 const FULL_SCREEN_AUXILIARY: usize = 1 << 8;
 
-pub fn pin_to_all_spaces(ns_window: *mut std::ffi::c_void) {
+pub fn pin_to_all_spaces(ns_window: *mut std::ffi::c_void, full_screen: bool) {
     use objc2::msg_send;
     use objc2::runtime::AnyObject;
     // SAFETY: `ns_window` is the live NSWindow of a Tauri window, used on the main thread.
     unsafe {
         let window = &*(ns_window as *const AnyObject);
         let behavior: usize = msg_send![window, collectionBehavior];
-        let _: () = msg_send![
-            window,
-            setCollectionBehavior: behavior
-                | CAN_JOIN_ALL_SPACES
-                | STATIONARY
-                | IGNORES_CYCLE
-                | FULL_SCREEN_AUXILIARY
-        ];
+        let mut behavior = behavior | CAN_JOIN_ALL_SPACES | STATIONARY | IGNORES_CYCLE;
+        if full_screen {
+            behavior |= FULL_SCREEN_AUXILIARY;
+        } else {
+            behavior &= !FULL_SCREEN_AUXILIARY;
+        }
+        let _: () = msg_send![window, setCollectionBehavior: behavior];
+    }
+}
+
+#[link(name = "CoreGraphics", kind = "framework")]
+extern "C" {
+    fn CGWindowListCopyWindowInfo(option: u32, relative_to: u32) -> *mut std::ffi::c_void;
+}
+
+#[link(name = "CoreFoundation", kind = "framework")]
+extern "C" {
+    fn CFRelease(cf: *const std::ffi::c_void);
+}
+
+const LIST_ON_SCREEN_ONLY: u32 = 1 << 0;
+const LIST_EXCLUDE_DESKTOP: u32 = 1 << 4;
+/// Ordinary app windows; menus, panels and the pet itself sit above it.
+const NORMAL_LAYER: i64 = 0;
+
+/// Whether the frontmost ordinary window on the display holding the point
+/// (global points) belongs to another app and covers the whole display.
+///
+/// Only a window's layer, bounds, owner and alpha are read, which needs no
+/// Screen Recording permission (window titles would).
+pub fn fullscreen_covers(x: f64, y: f64) -> bool {
+    use objc2::msg_send;
+    use objc2::runtime::AnyObject;
+    use objc2_foundation::NSString;
+
+    let Some(display) = displays()
+        .into_iter()
+        .map(|d| (d.x, d.y, d.w, d.h))
+        .find(|&d| super::contains(d, x, y))
+    else {
+        return false;
+    };
+    // SAFETY: the list is a CFArray of CFDictionary, toll-free bridged to
+    // NSArray and NSDictionary; it is released once read.
+    unsafe {
+        let list = CGWindowListCopyWindowInfo(LIST_ON_SCREEN_ONLY | LIST_EXCLUDE_DESKTOP, 0);
+        if list.is_null() {
+            return false;
+        }
+        let key = |name: &str| NSString::from_str(name);
+        let (layer_key, bounds_key, owner_key, alpha_key) = (
+            key("kCGWindowLayer"),
+            key("kCGWindowBounds"),
+            key("kCGWindowOwnerPID"),
+            key("kCGWindowAlpha"),
+        );
+        let number = |dict: *mut AnyObject, k: &NSString| -> Option<f64> {
+            let n: *mut AnyObject = msg_send![dict, objectForKey: k];
+            (!n.is_null()).then(|| msg_send![n, doubleValue])
+        };
+        let (x_key, y_key, w_key, h_key) = (key("X"), key("Y"), key("Width"), key("Height"));
+        let windows = list as *mut AnyObject;
+        let count: usize = msg_send![windows, count];
+        let me = f64::from(std::process::id());
+        let mut covered = false;
+        // Front to back: the first ordinary window on this display decides.
+        for i in 0..count {
+            let info: *mut AnyObject = msg_send![windows, objectAtIndex: i];
+            if number(info, &layer_key) != Some(NORMAL_LAYER as f64)
+                || number(info, &alpha_key).is_some_and(|a| a <= 0.0)
+            {
+                continue;
+            }
+            let bounds: *mut AnyObject = msg_send![info, objectForKey: &*bounds_key];
+            if bounds.is_null() {
+                continue;
+            }
+            let (Some(wx), Some(wy), Some(ww), Some(wh)) = (
+                number(bounds, &x_key),
+                number(bounds, &y_key),
+                number(bounds, &w_key),
+                number(bounds, &h_key),
+            ) else {
+                continue;
+            };
+            let window = (wx, wy, ww, wh);
+            let overlaps = wx < display.0 + display.2
+                && display.0 < wx + ww
+                && wy < display.1 + display.3
+                && display.1 < wy + wh;
+            if !overlaps {
+                continue;
+            }
+            covered = number(info, &owner_key) != Some(me) && super::covers(window, display);
+            break;
+        }
+        CFRelease(list);
+        covered
     }
 }
 

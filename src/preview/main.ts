@@ -55,6 +55,7 @@ let settings: Settings = {
   paused: false,
   onboarded: true,
   language: "system",
+  hideInFullscreen: true,
 };
 
 const params = new URLSearchParams(location.search);
