@@ -1,11 +1,42 @@
 {
  "schema": 1,
- "version": null,
- "tag": null,
+ "version": "0.1.0",
+ "tag": "v0.1.0",
  "pubDate": null,
  "draft": null,
  "notes": null,
- "releaseUrl": null,
- "downloadBase": null,
- "files": {}
+ "releaseUrl": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.1.0",
+ "downloadBase": "https://github.com/sparkjokerben/jokbet/releases/download/v0.1.0",
+ "files": {
+  "macos-aarch64": {
+   "name": "Jokbet_0.1.0_aarch64.dmg",
+   "size": null,
+   "sha256": null
+  },
+  "macos-x64": {
+   "name": "Jokbet_0.1.0_x64.dmg",
+   "size": null,
+   "sha256": null
+  },
+  "windows-x64": {
+   "name": "Jokbet_0.1.0_x64-setup.exe",
+   "size": null,
+   "sha256": null
+  },
+  "windows-x64-msi": {
+   "name": "Jokbet_0.1.0_x64_en-US.msi",
+   "size": null,
+   "sha256": null
+  },
+  "linux-appimage": {
+   "name": "Jokbet_0.1.0_amd64.AppImage",
+   "size": null,
+   "sha256": null
+  },
+  "linux-deb": {
+   "name": "Jokbet_0.1.0_amd64.deb",
+   "size": null,
+   "sha256": null
+  }
+ }
 }

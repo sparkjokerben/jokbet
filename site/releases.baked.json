@@ -1,5 +1,53 @@
 {
  "schema": 1,
- "generatedAt": null,
- "releases": []
+ "generatedAt": "2026-09-24T05:32:01.420Z",
+ "releases": [
+  {
+   "version": "0.1.0",
+   "tag": "v0.1.0",
+   "name": "Jokbet v0.1.0",
+   "pubDate": "2026-09-24T05:29:57Z",
+   "prerelease": false,
+   "notes": "第一个公开版本。\n\n**它会做什么**\n\n- 统计键盘和鼠标：每个键按了几次、左中右键点击、滚动手势、鼠标移动距离，按天保存\n- 头顶一个数字：今天的次数或每秒速度，可以选键盘、鼠标或两者合计\n- 光标停在它身上看今天的数据，右键或托盘图标打开菜单\n- 你打字时它掏出笔记本一起敲，点到它、滚动页面都有反应，眼睛跟着你的光标转，你走开它就睡，戳一下会有反应\n- 空闲时会踢球或东张西望，单击和双击的反应也能自己挑\n- 中英双语，跟随系统语言\n\n**隐私**\n\n只保存计数：每个键按了几次、点击、滚动手势和鼠标移动距离。不记录输入内容，也不记录按键顺序。所有数据只存在本机。\n\n**安装**\n\n安装包没有 Apple 或微软的签名，第一次打开会被系统拦下，按 [README](https://github.com/sparkjokerben/jokbet#install) 里的步骤放行。macOS 上还要授予「输入监控」权限，否则它只会一脸问号。\n\n---\n\nFirst public release.\n\n- Counts key presses (per key), left/right/middle clicks, scroll gestures and mouse travel, stored per day\n- A number above its head: today's count or the live per-second speed, from the keyboard, the mouse or both\n- Hover it for today's stats; right-click, or use the tray icon, for the menu\n- It gets out a laptop and types along with you, reacts to clicks and scrolling, follows your cursor with its eyes, falls asleep when you are away, and likes being poked\n- Juggles a soccer ball or looks around while idle; pick what a single click and a double click do\n- Bilingual UI, following the system language\n- Only counts are stored — never what you type, nor the order of your key presses — and they stay on your machine\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见 README。",
+   "url": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.1.0",
+   "files": [
+    {
+     "platform": "macos-aarch64",
+     "name": "Jokbet_0.1.0_aarch64.dmg",
+     "size": 3113653,
+     "sha256": "ece0f520686751e869692554dcb7a1dc950b9b8c4fe4d7396b15bc9faccf18d8"
+    },
+    {
+     "platform": "macos-x64",
+     "name": "Jokbet_0.1.0_x64.dmg",
+     "size": 3408371,
+     "sha256": "1956a80cb26e83994e4aee6a6aae4a56af691fd6df642543b36fe4f32ece3c54"
+    },
+    {
+     "platform": "windows-x64",
+     "name": "Jokbet_0.1.0_x64-setup.exe",
+     "size": 2563752,
+     "sha256": "080ba90a5a47026ee66b2dc1d1048efcbf301254102b68dd502969578c642a09"
+    },
+    {
+     "platform": "windows-x64-msi",
+     "name": "Jokbet_0.1.0_x64_en-US.msi",
+     "size": 3395584,
+     "sha256": "e377f73baba04bac51f84b732b1f81aaf2227c7456270add44b786bad3fd9403"
+    },
+    {
+     "platform": "linux-appimage",
+     "name": "Jokbet_0.1.0_amd64.AppImage",
+     "size": 81840632,
+     "sha256": "e4b1ddfdbb1f7881375c37bb9b7150baef31d32ce85dc47efb3569368ac35fcb"
+    },
+    {
+     "platform": "linux-deb",
+     "name": "Jokbet_0.1.0_amd64.deb",
+     "size": 3402088,
+     "sha256": "67ea0ba5e9569f504c895225be67f7371d486ee58f0bc363781f8f7f70a11762"
+    }
+   ]
+  }
+ ]
 }
