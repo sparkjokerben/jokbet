@@ -98,8 +98,9 @@ const day = (iso) => (iso ? iso.slice(0, 10) : "");
 
 // --- the release notes ------------------------------------------------------
 
-/** Just enough Markdown for a release body: headings, bullets, bold, code and
- * links. Built out of DOM nodes, so nothing in the notes can become markup. */
+/** Just enough Markdown for a release body: headings, rules, bullets, bold,
+ * code and links. Built out of DOM nodes, so nothing in the notes can become
+ * markup. */
 /** @param {string} text */
 function inline(text) {
   const frag = document.createDocumentFragment();
@@ -130,6 +131,12 @@ function notesToDom(text) {
   /** @type {HTMLElement | null} */
   let list = null;
   for (const line of text.split("\n")) {
+    // A thematic break, before the bullets: a line of nothing but - * or _.
+    if (/^\s*(?:[-*_]\s*){3,}$/.test(line)) {
+      root.append(el("hr"));
+      list = null;
+      continue;
+    }
     const bullet = line.match(/^\s*[-*]\s+(.*)$/);
     if (bullet) {
       if (!list) {
