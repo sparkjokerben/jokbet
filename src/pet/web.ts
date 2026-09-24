@@ -266,10 +266,14 @@ export function createPet(host: HTMLElement, options: WebPetOptions = {}): WebPe
   // Where the pointer went down. The gesture code reports the start of a drag
   // without the event, so this listener keeps the position for it.
   let pressedAt = { x: 0, y: 0 };
+  /** How far it has been moved from where it stands: what `translate` says. */
+  let offset = { x: 0, y: 0 };
   let drag: {
     pointer: { x: number; y: number };
-    home: DOMRect;
-    box: { left: number; top: number };
+    /** The offset the drag started from, so a second drag does not jump. */
+    from: { x: number; y: number };
+    /** Where it sits with no offset at all, which is what gets clamped. */
+    base: { left: number; top: number };
     w: number;
     h: number;
   } | null = null;
@@ -278,10 +282,16 @@ export function createPet(host: HTMLElement, options: WebPetOptions = {}): WebPe
   });
   const onMove = (e: PointerEvent) => {
     if (!drag) return;
-    const range = clampBox(bounds() ?? drag.home, drag.w, drag.h);
-    const x = Math.min(Math.max(drag.box.left + (e.clientX - drag.pointer.x), range.minX), range.maxX);
-    const y = Math.min(Math.max(drag.box.top + (e.clientY - drag.pointer.y), range.minY), range.maxY);
-    stage.style.translate = `${x - drag.home.left}px ${y - drag.home.top}px`;
+    const range = clampBox(bounds() ?? stage.getBoundingClientRect(), drag.w, drag.h);
+    const wantX = drag.from.x + (e.clientX - drag.pointer.x);
+    const wantY = drag.from.y + (e.clientY - drag.pointer.y);
+    // Clamp the position it would have with no offset, then keep the offset
+    // that comes out of it — otherwise a drag that hits an edge would drift.
+    offset = {
+      x: Math.min(Math.max(drag.base.left + wantX, range.minX), range.maxX) - drag.base.left,
+      y: Math.min(Math.max(drag.base.top + wantY, range.minY), range.maxY) - drag.base.top,
+    };
+    stage.style.translate = `${offset.x}px ${offset.y}px`;
   };
   const onUp = () => {
     if (!drag) return;
@@ -301,13 +311,15 @@ export function createPet(host: HTMLElement, options: WebPetOptions = {}): WebPe
     doubleClick: () => run(doubleClickAnim),
     dragStart: () => {
       if (!draggable) return;
-      const home = stage.getBoundingClientRect();
+      const rect = stage.getBoundingClientRect();
       drag = {
         pointer: { ...pressedAt },
-        home,
-        box: { left: home.left, top: home.top },
-        w: home.width,
-        h: home.height,
+        from: { ...offset },
+        // The rect is where it is *with* the offset applied; take that back off
+        // to get the place the clamping speaks about.
+        base: { left: rect.left - offset.x, top: rect.top - offset.y },
+        w: rect.width,
+        h: rect.height,
       };
       controller.setDragging(true);
       window.addEventListener("pointermove", onMove);
