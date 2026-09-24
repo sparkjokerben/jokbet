@@ -35,10 +35,12 @@ The creature on the home page is not a GIF or a sprite sheet: it is the app's
 own animation code, running in the browser.
 
 - `src/pet/web.ts` is the browser adapter — it builds the same DOM the app's Svelte
-  component does (the sprite as SVG paths, the counter chip over its head, at the
-  app's own offsets), hands it a `PetController`, and feeds it what the visitor
-  does: keys and clicks on the page, the pointer for its eyes, and the chips
-  under the hero for one animation at a time.
+  component does (the sprite as SVG paths, at the app's own offsets), hands it a
+  `PetController`, and feeds it what the visitor does: keys and clicks on the
+  page, the pointer for its eyes, and the chips under the hero for one animation
+  at a time. The number the app keeps over its head is an option here, and the
+  page leaves it off: the site is not counting anything for you. The pet can be
+  dragged anywhere on the page, and stays where it is put.
 - `scripts/build-site-pet.ts` bundles that (with the sprite data) into
   `assets/pet.js` with vite — about 9 KB gzipped. `npm run site:assets` runs it,
   and `npm run site:check` fails if the bundle no longer matches the source.

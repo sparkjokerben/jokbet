@@ -29,8 +29,6 @@ const DEMO_TYPING_KPS = 5;
 const STILL_HOLD_MS = 1600;
 /** How long a blocked face (blindfold, no permission) is shown for. */
 const BLOCK_HOLD_MS = 4200;
-/** The drag eases back home instead of parking wherever it was dropped. */
-const HOME_MS = 260;
 /** Keep-proud gap around the edge of where it may be dragged. */
 const EDGE = 8;
 
@@ -44,7 +42,7 @@ export interface WebPetOptions {
   scale?: number;
   /** prefers-reduced-motion: no timers, one representative frame per action. */
   still?: boolean;
-  /** Let the pointer drag it about; it eases back home on release. */
+  /** Let the pointer drag it about; it stays where it is put. */
   draggable?: boolean;
   /** What it may be dragged within; its parent by default. */
   bounds?: () => DOMRect | null;
@@ -292,9 +290,7 @@ export function createPet(host: HTMLElement, options: WebPetOptions = {}): WebPe
     window.removeEventListener("pointerup", onUp);
     window.removeEventListener("pointercancel", onUp);
     controller.setDragging(false);
-    stage.classList.add("pet-home");
-    stage.style.translate = "0px 0px";
-    setTimeout(() => stage.classList.remove("pet-home"), HOME_MS);
+    // It stays where it was put, the way the app's pet stays where you put it.
   };
 
   // The gestures are always attached — with motion off, a click still shows the
@@ -305,9 +301,6 @@ export function createPet(host: HTMLElement, options: WebPetOptions = {}): WebPe
     doubleClick: () => run(doubleClickAnim),
     dragStart: () => {
       if (!draggable) return;
-      // Drop the easing first: a drag that starts while the last one is still
-      // easing home would otherwise measure a rect that is still moving.
-      stage.classList.remove("pet-home");
       const home = stage.getBoundingClientRect();
       drag = {
         pointer: { ...pressedAt },

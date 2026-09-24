@@ -13,7 +13,7 @@
 /** @typedef {{ schema: number, generatedAt: string | null, releases: Release[], source?: string }} Changelog */
 /** @typedef {"zh" | "en"} Lang */
 /** @typedef {{ input: (a: "typing" | "click") => void, setKeysPerSecond: (n: number) => void,
- *   point: (x: number, y: number) => void, setCounter: (n: number) => void, setLang: (l: Lang) => void,
+ *   point: (x: number, y: number) => void, setLang: (l: Lang) => void,
  *   setBlocked: (b: string | null) => void, demo: (d: string) => void }} Pet */
 
 const html = document.documentElement;
@@ -425,31 +425,26 @@ async function wirePet() {
     clickAnim: "wave",
     doubleClickAnim: "hearts",
     sleepAfterMs: 60_000,
-    bounds: () => document.querySelector(".rail")?.getBoundingClientRect() ?? null,
+    // No number over its head here: the page is not counting anything for you,
+    // it is showing what the app does.
+    counter: false,
+    // Anywhere on the page, not just the column it starts in.
+    bounds: () => new DOMRect(0, 0, window.innerWidth, window.innerHeight),
   });
 
-  let keys = 0;
-  let clicks = 0;
+  /** The keystrokes of the last second, which set the pace of its typing. */
   /** @type {number[]} */
   let recent = [];
 
-  function counted() {
-    pet?.setCounter(keys + clicks);
-  }
-
   window.addEventListener("keydown", () => {
-    keys++;
     const now = performance.now();
     recent = recent.filter((t) => now - t < 1000);
     recent.push(now);
     pet?.setKeysPerSecond(recent.length);
     pet?.input("typing");
-    counted();
   });
   document.addEventListener("pointerdown", () => {
-    clicks++;
     pet?.input("click");
-    counted();
   });
 
   // Its eyes follow the pointer, one look per frame at most.
