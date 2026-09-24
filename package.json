@@ -40,7 +40,8 @@
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-autostart": "^2.5.1",
-    "@tauri-apps/plugin-dialog": "^2.7.3"
+    "@tauri-apps/plugin-dialog": "^2.7.3",
+    "@tauri-apps/plugin-log": "^2.9.2"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260923.1",

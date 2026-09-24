@@ -403,7 +403,7 @@ impl<R: Runtime> Worker<R> {
         match db.add_day(self.date, &pending) {
             Ok(()) => self.lifetime_saved.add(&pending.totals),
             Err(e) => {
-                eprintln!("saving counts failed: {e}");
+                log::error!("saving counts failed: {e}");
                 self.agg.pending.merge(pending);
             }
         }

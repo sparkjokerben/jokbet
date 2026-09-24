@@ -144,6 +144,6 @@ pub fn open_panel<R: Runtime>(app: &AppHandle<R>, panel: Panel) {
         Panel::Onboarding | Panel::Tour => "Jokbet",
     };
     if let Err(e) = panels::open(app, panel, title.trim_end_matches('…')) {
-        eprintln!("opening {panel:?} failed: {e}");
+        log::error!("opening {panel:?} failed: {e}");
     }
 }

@@ -42,7 +42,7 @@ pub fn spawn<R: Runtime>(app: AppHandle<R>) {
             let ready = app.state::<PendingUpdate>().0.lock().unwrap().is_some();
             if !ready {
                 if let Err(e) = tauri::async_runtime::block_on(check(&app)) {
-                    eprintln!("update check failed: {e}");
+                    log::warn!("update check failed: {e}");
                 }
             }
             std::thread::sleep(CHECK_EVERY);
@@ -80,7 +80,7 @@ async fn download(update: Update) -> Result<(Update, Vec<u8>), tauri_plugin_upda
     let Some(url) = other_host(&update.download_url) else {
         return Err(first);
     };
-    eprintln!(
+    log::warn!(
         "update download from {} failed ({first}); trying {url}",
         update.download_url
     );
@@ -120,7 +120,7 @@ pub fn install_pending<R: Runtime>(app: &AppHandle<R>) -> bool {
     match update.install(bytes) {
         Ok(()) => true,
         Err(e) => {
-            eprintln!("installing update failed: {e}");
+            log::error!("installing update failed: {e}");
             false
         }
     }

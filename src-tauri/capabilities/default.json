@@ -17,6 +17,7 @@
     "dialog:allow-message",
     "autostart:allow-enable",
     "autostart:allow-disable",
-    "autostart:allow-is-enabled"
+    "autostart:allow-is-enabled",
+    "log:default"
   ]
 }

@@ -327,12 +327,12 @@ fn set_aside(path: &Path, salvaged: &Settings, dropped: &[String]) {
     let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
     let backup = path.with_file_name(format!("settings.bad-{stamp}.json"));
     match std::fs::copy(path, &backup) {
-        Ok(_) => eprintln!(
+        Ok(_) => log::warn!(
             "settings: dropped {} and kept the original as {}",
             dropped.join(", "),
             backup.display()
         ),
-        Err(e) => eprintln!(
+        Err(e) => log::warn!(
             "settings: dropped {}; keeping a copy failed: {e}",
             dropped.join(", ")
         ),
@@ -341,7 +341,7 @@ fn set_aside(path: &Path, salvaged: &Settings, dropped: &[String]) {
         .map_err(std::io::Error::other)
         .and_then(|bytes| write_atomic(path, &bytes));
     if let Err(e) = written {
-        eprintln!("settings: writing the salvaged file failed: {e}");
+        log::error!("settings: writing the salvaged file failed: {e}");
     }
 }
 
