@@ -1,7 +1,54 @@
 {
  "schema": 1,
- "generatedAt": "2026-09-24T11:14:14.173Z",
+ "generatedAt": "2026-09-24T11:51:54.894Z",
  "releases": [
+  {
+   "version": "0.1.1",
+   "tag": "v0.1.1",
+   "name": "Jokbet v0.1.1",
+   "pubDate": "2026-09-24T11:50:01Z",
+   "prerelease": false,
+   "notes": "更新多了一条路。\n\n- 检查更新时先问 [jokbet.jokerben.top](https://jokbet.jokerben.top)，没有回应再问 GitHub\n- 下载更新时，一边失败就自动换另一边重试；两边的安装包完全相同，都用同一个签名校验\n- 连不上或下载中途卡住会及时放弃，换另一条路，不会一直等下去\n\n从 0.1.0 升到这一版仍然走 GitHub；从这一版往后，每次更新都有两条路。\n\n---\n\nUpdates now have a second route.\n\n- Checking for updates asks [jokbet.jokerben.top](https://jokbet.jokerben.top) first, and GitHub if it does not answer\n- A download that fails on one is retried on the other; both serve the same files, checked against the same signature\n- A connection that cannot be made, or a download that stalls, is given up on and the other route tried, instead of waiting forever\n\nUpdating from 0.1.0 to this version still goes through GitHub; from this version on, every update has both routes.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见 [下载页](https://jokbet.jokerben.top/download)。",
+   "url": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.1.1",
+   "files": [
+    {
+     "platform": "macos-aarch64",
+     "name": "Jokbet_0.1.1_aarch64.dmg",
+     "size": 3117642,
+     "sha256": "c715c266e8a5fecc860a9c53e9a84c50a5242310c3c6497dd30293804810d74f"
+    },
+    {
+     "platform": "macos-x64",
+     "name": "Jokbet_0.1.1_x64.dmg",
+     "size": 3411450,
+     "sha256": "9b2c59b4d7cbcf9e5fa926a22f1f346f56ff7adc9446dc971017eb0e63420929"
+    },
+    {
+     "platform": "windows-x64",
+     "name": "Jokbet_0.1.1_x64-setup.exe",
+     "size": 2565362,
+     "sha256": "97f150a0bfed1e26fb3e72291135b1200ea8958f6f59ddefbc7691734f983569"
+    },
+    {
+     "platform": "windows-x64-msi",
+     "name": "Jokbet_0.1.1_x64_en-US.msi",
+     "size": 3399680,
+     "sha256": "fe4d179e091068da22b1e5b54f7015777dc43a2aa17c85a6a700d9fb2a123953"
+    },
+    {
+     "platform": "linux-appimage",
+     "name": "Jokbet_0.1.1_amd64.AppImage",
+     "size": 81844728,
+     "sha256": "e9cf5bfcc22a7d49e3549c8afd1ffce73ccb3dc5c3bf237d85d61f66d9ca2491"
+    },
+    {
+     "platform": "linux-deb",
+     "name": "Jokbet_0.1.1_amd64.deb",
+     "size": 3406140,
+     "sha256": "5ddb6433b22ac2832e7ff3f56277d8d02f3a9a70b79182cc2b2c21e1a7e76afe"
+    }
+   ]
+  },
   {
    "version": "0.1.0",
    "tag": "v0.1.0",

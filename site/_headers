@@ -1,7 +1,8 @@
 # The one outside party the pages talk to is Cloudflare Web Analytics: the edge
-# injects its beacon into every page, which loads from static.cloudflareinsights.com
-# and reports to cloudflareinsights.com. No cookies, nothing about who you are
-# (the privacy section on /about says so too).
+# injects its beacon into every page. It loads from static.cloudflareinsights.com
+# and reports to this site's own /cdn-cgi/rum ('self'); cloudflareinsights.com is
+# its default endpoint, allowed in case the setup ever reports there instead.
+# No cookies, nothing about who you are (the privacy section on /about says so).
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
