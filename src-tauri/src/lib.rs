@@ -10,6 +10,7 @@ mod panels;
 mod pet_window;
 mod platform;
 mod settings;
+mod shortcuts;
 mod updater;
 mod visibility;
 
@@ -26,6 +27,7 @@ pub fn run() {
         // First, so that what the other plugins say is kept too.
         .plugin(logger())
         .plugin(tauri_plugin_opener::init())
+        .plugin(shortcuts::plugin())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(
@@ -51,7 +53,17 @@ pub fn run() {
             commands::open_input_monitoring_settings,
             commands::restart_app,
             commands::open_external,
+            commands::suspend_shortcuts,
         ])
+        .on_window_event(|window, event| {
+            // Recording a shortcut lets go of the others; closing the window
+            // mid-recording must not leave them that way.
+            if matches!(event, tauri::WindowEvent::Destroyed)
+                && window.label() == panels::Panel::Settings.label()
+            {
+                shortcuts::suspend(window.app_handle(), false);
+            }
+        })
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
@@ -89,6 +101,9 @@ pub fn run() {
             }
             hover::spawn(app.handle().clone());
             visibility::spawn(app.handle().clone());
+            if let Err(e) = shortcuts::register(app.handle(), &initial.shortcuts) {
+                log::warn!("shortcuts: {e}");
+            }
             updater::spawn(app.handle().clone());
             Ok(())
         })

@@ -16,7 +16,18 @@ pub fn apply_patch<R: Runtime>(
 ) -> Result<Settings, String> {
     let store = app.state::<SettingsStore>();
     let before = store.get();
-    let next = store.patch(patch)?;
+    // Shortcuts can be refused by the system, so they are taken before the
+    // settings that name them are saved.
+    let wanted = store.preview(patch)?.shortcuts;
+    let shortcuts_change = wanted != before.shortcuts;
+    if shortcuts_change {
+        crate::shortcuts::replace(app, &before.shortcuts, &wanted)?;
+    }
+    let next = store.patch(patch).inspect_err(|_| {
+        if shortcuts_change {
+            let _ = crate::shortcuts::register(app, &before.shortcuts);
+        }
+    })?;
     app.state::<RuntimeHandle>()
         .send(Control::Settings(Box::new(next.clone())));
     if next.paused != before.paused {
@@ -207,4 +218,11 @@ pub fn open_external(app: AppHandle, target: String) -> Result<(), String> {
         other => return Err(format!("unknown place {other}")),
     }
     .map_err(|e| e.to_string())
+}
+
+/// Lets go of the global shortcuts while one is being recorded, and takes
+/// them back after.
+#[tauri::command]
+pub fn suspend_shortcuts(app: AppHandle, suspended: bool) {
+    crate::shortcuts::suspend(&app, suspended);
 }

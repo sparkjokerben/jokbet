@@ -68,6 +68,27 @@ pub enum Language {
     En,
 }
 
+/// Global shortcuts, as accelerators like `Control+Alt+KeyJ`; `None` is unset.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[serde(default, rename_all = "camelCase")]
+pub struct Shortcuts {
+    pub toggle_pet: Option<String>,
+    pub pause: Option<String>,
+}
+
+/// The first part of the error a shortcut in use by another app gives, which
+/// the settings window tells apart from other errors.
+pub const SHORTCUT_TAKEN: &str = "shortcut-taken";
+/// Likewise for the same combination given to both actions.
+pub const SHORTCUT_DUPLICATE: &str = "shortcut-duplicate";
+
+/// Parses an accelerator the settings hold.
+pub fn parse_shortcut(accelerator: &str) -> Result<tauri_plugin_global_shortcut::Shortcut, String> {
+    accelerator
+        .parse()
+        .map_err(|e| format!("shortcut {accelerator}: {e}"))
+}
+
 /// What the pet does while nothing else is going on.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
@@ -160,6 +181,7 @@ pub struct Settings {
     pub language: Language,
     /// Take the pet off screen while another app is full screen or presenting.
     pub hide_in_fullscreen: bool,
+    pub shortcuts: Shortcuts,
 }
 
 impl Default for Settings {
@@ -182,6 +204,7 @@ impl Default for Settings {
             onboarded: false,
             language: Language::System,
             hide_in_fullscreen: true,
+            shortcuts: Shortcuts::default(),
         }
     }
 }
@@ -199,6 +222,17 @@ impl Settings {
         {
             return Err(format!(
                 "petScale must be between {PET_SCALE_MIN} and {PET_SCALE_MAX}"
+            ));
+        }
+        let shortcuts = [&self.shortcuts.toggle_pet, &self.shortcuts.pause];
+        let parsed = shortcuts
+            .into_iter()
+            .flatten()
+            .map(|a| parse_shortcut(a).map(|s| s.id()))
+            .collect::<Result<Vec<_>, _>>()?;
+        if parsed.len() == 2 && parsed[0] == parsed[1] {
+            return Err(format!(
+                "{SHORTCUT_DUPLICATE}: both actions have the same shortcut"
             ));
         }
         for m in &self.custom_milestones {
@@ -292,18 +326,30 @@ impl SettingsStore {
         Ok(guard.clone())
     }
 
+    /// What a JSON merge patch would make of the settings, validated, without
+    /// saving it.
+    pub fn preview(&self, patch: &serde_json::Value) -> Result<Settings, String> {
+        let current = self.get();
+        patched(&current, patch)
+    }
+
     /// Applies a JSON merge patch from the UI after validating the result.
     pub fn patch(&self, patch: &serde_json::Value) -> Result<Settings, String> {
         let mut guard = self.inner.lock().unwrap();
-        let mut value = serde_json::to_value(&*guard).map_err(|e| e.to_string())?;
-        merge_patch(&mut value, patch);
-        let next: Settings = serde_json::from_value(value).map_err(|e| e.to_string())?;
-        next.validate()?;
+        let next = patched(&guard, patch)?;
         let bytes = serde_json::to_vec_pretty(&next).map_err(|e| e.to_string())?;
         write_atomic(&self.path, &bytes).map_err(|e| e.to_string())?;
         *guard = next.clone();
         Ok(next)
     }
+}
+
+fn patched(current: &Settings, patch: &serde_json::Value) -> Result<Settings, String> {
+    let mut value = serde_json::to_value(current).map_err(|e| e.to_string())?;
+    merge_patch(&mut value, patch);
+    let next: Settings = serde_json::from_value(value).map_err(|e| e.to_string())?;
+    next.validate()?;
+    Ok(next)
 }
 
 /// What the file says, and the top-level fields that had to be dropped
@@ -510,6 +556,60 @@ mod tests {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(&path, br#"{"petSize":"large","petScale":3.5}"#).unwrap();
         assert_eq!(SettingsStore::load(path).get().pet_scale, 3.5);
+    }
+
+    #[test]
+    fn shortcuts_are_accelerators_the_settings_window_writes() {
+        for a in [
+            "Control+Alt+KeyJ",
+            "Super+Shift+Digit1",
+            "Alt+F13",
+            "Control+Numpad5",
+            "Super+ArrowUp",
+            "Control+Alt+Shift+Super+Backquote",
+            "Control+NumpadAdd",
+            "Alt+PageUp",
+        ] {
+            assert!(parse_shortcut(a).is_ok(), "{a}");
+        }
+        assert!(parse_shortcut("KeyJ+Control").is_err());
+        assert!(parse_shortcut("Control+Moonwalk").is_err());
+    }
+
+    #[test]
+    fn shortcuts_are_validated_and_must_differ() {
+        let store = SettingsStore::load(temp_path("shortcuts"));
+        let next = store
+            .patch(&serde_json::json!({"shortcuts": {"togglePet": "Control+Alt+KeyJ"}}))
+            .unwrap();
+        assert_eq!(
+            next.shortcuts.toggle_pet.as_deref(),
+            Some("Control+Alt+KeyJ")
+        );
+        assert_eq!(next.shortcuts.pause, None);
+        let same = store
+            .patch(&serde_json::json!({"shortcuts": {"pause": "Alt+Control+KeyJ"}}))
+            .unwrap_err();
+        assert!(same.starts_with(SHORTCUT_DUPLICATE), "{same}");
+        assert!(store
+            .patch(&serde_json::json!({"shortcuts": {"pause": "Control+Nope"}}))
+            .is_err());
+        let cleared = store
+            .patch(&serde_json::json!({"shortcuts": {"togglePet": null}}))
+            .unwrap();
+        assert_eq!(cleared.shortcuts, Shortcuts::default());
+    }
+
+    #[test]
+    fn a_preview_saves_nothing() {
+        let path = temp_path("preview");
+        let store = SettingsStore::load(path.clone());
+        let next = store
+            .preview(&serde_json::json!({"bubble": false}))
+            .unwrap();
+        assert!(!next.bubble);
+        assert!(store.get().bubble);
+        assert!(!path.exists());
     }
 
     fn backups(path: &Path) -> usize {

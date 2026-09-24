@@ -23,6 +23,12 @@ export interface HeadCounter {
   mouse: boolean;
 }
 
+/** Global shortcuts as accelerators ("Control+Alt+KeyJ"); null is unset. */
+export interface Shortcuts {
+  togglePet: string | null;
+  pause: string | null;
+}
+
 export interface CustomMilestone {
   id: string;
   period: Period;
@@ -52,6 +58,7 @@ export interface Settings {
   language: Language;
   /** Take the pet off screen while another app is full screen or presenting. */
   hideInFullscreen: boolean;
+  shortcuts: Shortcuts;
 }
 
 export interface Totals {

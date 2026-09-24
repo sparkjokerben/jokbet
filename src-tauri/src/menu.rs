@@ -163,10 +163,7 @@ pub fn handle_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
         }
         ID_STATS => open_panel(app, Panel::Stats),
         ID_SETTINGS => open_panel(app, Panel::Settings),
-        ID_PAUSE => {
-            let paused = !app.state::<SettingsStore>().get().paused;
-            let _ = crate::commands::apply_patch(app, &serde_json::json!({ "paused": paused }));
-        }
+        ID_PAUSE => toggle_pause(app),
         ID_RESTART_UPDATE => {
             if crate::updater::install_pending(app) {
                 app.restart();
@@ -177,6 +174,14 @@ pub fn handle_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
             app.exit(0);
         }
         _ => {}
+    }
+}
+
+/// Pauses counting, or resumes it.
+pub fn toggle_pause<R: Runtime>(app: &AppHandle<R>) {
+    let paused = !app.state::<SettingsStore>().get().paused;
+    if let Err(e) = crate::commands::apply_patch(app, &serde_json::json!({ "paused": paused })) {
+        log::error!("pausing failed: {e}");
     }
 }
 

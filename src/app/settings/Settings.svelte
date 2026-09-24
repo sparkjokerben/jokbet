@@ -12,8 +12,11 @@
     type IdleAnim,
     type Language,
     type Settings,
+    type Shortcuts,
   } from "../../lib/types";
+  import { platform } from "../../lib/shortcut";
   import Segmented from "../ui/Segmented.svelte";
+  import ShortcutInput from "../ui/ShortcutInput.svelte";
   import Toggle from "../ui/Toggle.svelte";
   import MilestoneEditor from "./MilestoneEditor.svelte";
 
@@ -48,6 +51,23 @@
       autostart = await isEnabled();
     } catch (e) {
       error = t("saveFailed", { error: String(e) });
+    }
+  }
+
+  /** The modifiers a shortcut needs, as this platform names them. */
+  const SHORTCUT_MODS = platform === "mac" ? "⌘ ⌃ ⌥" : platform === "windows" ? "Ctrl Alt Win" : "Ctrl Alt Super";
+
+  async function setShortcut(action: keyof Shortcuts, accelerator: string | null) {
+    try {
+      s = await invoke<Settings>("update_settings", { patch: { shortcuts: { [action]: accelerator } } });
+      error = "";
+    } catch (e) {
+      const why = String(e);
+      error = why.startsWith("shortcut-taken")
+        ? t("shortcutTaken")
+        : why.startsWith("shortcut-duplicate")
+          ? t("shortcutDuplicate")
+          : t("saveFailed", { error: why });
     }
   }
 
@@ -223,6 +243,27 @@
       <p class="muted small">{t("milestonesBuiltin")}</p>
       <h3>{t("customMilestones")}</h3>
       <MilestoneEditor items={s.customMilestones} onchange={(next) => update({ customMilestones: next })} />
+    </section>
+
+    <section class="card">
+      <h2>{t("sectionShortcuts")}</h2>
+      <div class="field">
+        <span>{t("shortcutTogglePet")}</span>
+        <ShortcutInput
+          label={t("shortcutTogglePet")}
+          value={s.shortcuts.togglePet}
+          onchange={(v) => setShortcut("togglePet", v)}
+        />
+      </div>
+      <div class="field">
+        <span>{t("shortcutPause")}</span>
+        <ShortcutInput
+          label={t("shortcutPause")}
+          value={s.shortcuts.pause}
+          onchange={(v) => setShortcut("pause", v)}
+        />
+      </div>
+      <p class="muted small">{t("shortcutHint", { mods: SHORTCUT_MODS })}</p>
     </section>
 
     <section class="card">

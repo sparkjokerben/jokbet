@@ -56,6 +56,7 @@ let settings: Settings = {
   onboarded: true,
   language: "system",
   hideInFullscreen: true,
+  shortcuts: { togglePet: "Control+Alt+KeyJ", pause: null },
 };
 
 const params = new URLSearchParams(location.search);
