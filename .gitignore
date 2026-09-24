@@ -1,12 +1,23 @@
+# Dependencies and build output
 node_modules
 dist
-.DS_Store
+
+# Local environment
 .env
 .env.*
 !.env.example
-vite.config.ts.timestamp-*
+
+# Editor and OS leftovers
+.DS_Store
 *.log
+vite.config.ts.timestamp-*
+
+# Rendered for looking at, not for keeping; the sprites are the source
 sprites.png
 
+# The reference recordings the animations were decoded from. They are not ours
+# to redistribute, and nothing in the build needs them — see NOTICE.
 references/
+
+# Local Cloudflare state (wrangler dev writes its own R2 bucket and KV here)
 .wrangler

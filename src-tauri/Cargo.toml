@@ -1,10 +1,17 @@
 [package]
 name = "jokbet"
-version = "0.0.1"
-description = "A lightweight desktop pet that counts your keyboard and mouse activity"
+# The released version comes from package.json (tauri.conf.json reads it from
+# there); this one is crate metadata and is bumped alongside it. See Releasing
+# in the README.
+version = "0.1.2"
+description = "A desktop pet that counts your keyboard and mouse activity, keeping the totals on your own machine"
 authors = ["sparkjokerben"]
 license = "MIT"
 repository = "https://github.com/sparkjokerben/jokbet"
+homepage = "https://jokbet.jokerben.top"
+readme = "../README.md"
+keywords = ["desktop-pet", "tauri", "input", "statistics"]
+categories = ["gui"]
 edition = "2021"
 
 [lib]

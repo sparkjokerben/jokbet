@@ -1,10 +1,26 @@
 {
   "name": "jokbet",
   "version": "0.1.2",
-  "description": "A lightweight desktop pet that counts your keyboard and mouse activity",
+  "description": "A desktop pet that counts your keyboard and mouse activity, keeping the totals on your own machine",
+  "keywords": [
+    "desktop-pet",
+    "tauri",
+    "svelte",
+    "keystroke-counter",
+    "statistics"
+  ],
+  "homepage": "https://jokbet.jokerben.top",
+  "bugs": {
+    "url": "https://github.com/sparkjokerben/jokbet/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sparkjokerben/jokbet.git"
+  },
+  "author": "sparkjokerben",
+  "license": "MIT",
   "private": true,
   "type": "module",
-  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
