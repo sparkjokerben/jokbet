@@ -1,0 +1,2 @@
+# The changelog page's own URL is /changelog; the .html spelling is an alias.
+/changelog.html /changelog 301

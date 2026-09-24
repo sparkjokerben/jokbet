@@ -1,26 +1,32 @@
 # The website
 
-`jokbet.jokerben.top` — two static pages (plus three Cloudflare Pages Functions)
-served by Cloudflare Pages, with the installers in an R2 bucket. There is no
-build step: what is in this directory is what is deployed.
+`jokbet.jokerben.top` — a static site (two pages, a 404 and its assets) served
+by a Cloudflare Worker, with the installers in an R2 bucket and the Worker
+answering the three paths that need them. There is no build step: what is in
+`site/` is what is deployed.
 
 ```
+wrangler.toml           the Worker: name, entry point, the assets directory, the R2 binding
+worker/index.ts         the routes: /latest, /changelog.json, /dl/<name>, /changelog, then the assets
+worker/mirror.ts        the bucket-then-baked JSON door, shared by the two JSON routes
+worker/download.ts      the installer proxy: R2 first, then GitHub
+worker/index.test.ts    vitest coverage of all of it, with a stub bucket
+worker/tsconfig.json    type-checks the Worker (@cloudflare/workers-types)
+
 site/
   index.html            the home page: hero, downloads, what it does, install, privacy, limits, licence
   changelog.html        every version, its notes and its installers
+  404.html              what an unknown path gets (noindex, with the way home)
   styles.css            the app's palette, the layout, the pet's own looks
   app.js                the language switch, the download list, the changelog, and the page's half of the pet
   lang-boot.js          picks zh/en before the first paint (the app's own rule)
-  _headers _routes.json robots.txt sitemap.xml
+  _headers              security headers (CSP) and cache rules
+  _redirects            /changelog.html → /changelog
+  .assetsignore         what lives beside the site but is not part of it (this README)
+  robots.txt sitemap.xml
   latest.baked.json     the last-known-good manifest, served when R2 cannot be
   releases.baked.json   the same, for the changelog (empty until the first release)
   assets/               generated: the pet bundle, the poster, the wordmark, the fonts, the icons, the OG card
-  functions/mirror.ts   the one JSON door to the bucket: bucket, then baked copy
-  functions/latest.ts         GET /latest         — the newest release's manifest
-  functions/changelog.json.ts GET /changelog.json — every published release
-  functions/dl/               GET /dl/<name>      — the installer: R2 first, then GitHub
-  wrangler.toml         the Pages project: name, output dir, the R2 binding
-  tests/                vitest coverage of the functions
 ```
 
 ## The pet on the page
@@ -49,33 +55,42 @@ The page never talks to R2 or GitHub itself; it links `/dl/<name>?v=<version>`
 and says which source answered.
 
 1. `/latest` → the newest release's manifest. It comes from `latest.json` in the
-   bucket; if the bucket cannot be reached, from `latest.baked.json` in this
-   directory; the page is told which one it got (`source: "r2" | "baked"`) and
-   says so.
+   bucket; if the bucket cannot be reached, from `latest.baked.json` in `site/`;
+   the page is told which one it got (`source: "r2" | "baked"`) and says so.
 2. `/changelog.json` → every published release (the same fallback order, with
    `releases.baked.json`). The release job writes it from the GitHub releases
    API, so the page needs no third-party API at view time.
 3. `/dl/<name>` → the installer is streamed from the bucket (ranges included,
-   `cache-control: immutable`, since the names carry the version). If the object
-   is not there — the older versions are never mirrored — or R2 is unreachable,
-   the browser is redirected to the same file on GitHub, so no link on the page
-   can dead-end.
-4. When the manifest came from the baked copy and there is no version in it yet,
-   the page skips `/dl/` altogether and points at GitHub.
+   `cache-control: immutable`, since the names carry the version, and
+   `x-robots-tag: noindex`, since an installer is not a page). If the object is
+   not there — older versions are never mirrored — or R2 is unreachable, the
+   browser is redirected to the same file on GitHub, so no link on the page can
+   dead-end.
+4. Everything else is the assets layer's: a file if one matches, and `404.html`
+   with a 404 status if none does.
 
-The bucket stays private; the function is the only door to it, and the names it
+The bucket stays private; the Worker is the only door to it, and the names it
 will serve are checked against what Tauri produces.
 
 ## Working on it
 
 ```sh
-npm run site:assets    # regenerate assets/ from src/sprites and src/pet (pixel-exact)
+npm run site:dev       # the whole thing locally: assets, routes, headers and the R2 binding
+npm run site:deploy    # deploy it by hand (the Git build does this on every push to main)
+npm run site:assets    # regenerate site/assets from src/sprites and src/pet (pixel-exact)
 npm run site:check     # fail if assets/ or the pet bundle has drifted, or a manifest is invalid
-npm test               # includes site/tests: the functions, with a stub bucket
-npx tsc -p site/functions/tsconfig.json
+npm test               # includes worker/index.test.ts, with a stub bucket
+npx tsc -p worker/tsconfig.json
 ```
 
-To look at the page without Cloudflare, serve the directory and stub the two
+`npm run site:dev` is `wrangler dev`, which reads `wrangler.toml` — so the routes,
+the `_headers` (CSP included) and the bindings are all the real ones, and the
+bucket starts empty: `/latest` and `/changelog.json` answer from the baked
+copies, and every `/dl/` link redirects to GitHub. That is the fallback path, end
+to end; `npm test` covers the R2 path instead, and the deployed site is the real
+check.
+
+To look at the pages without the Worker at all, serve `site/` and stub the two
 JSON endpoints:
 
 ```sh
@@ -85,58 +100,40 @@ cp site/releases.baked.json /tmp/site-preview/changelog.json
 python3 -m http.server -d /tmp/site-preview 8099     # then open http://127.0.0.1:8099/
 ```
 
-`/latest` and `/changelog.json` are functions, so a plain file server needs those
-two files; the page fetches the endpoints first and treats what it gets as the
-mirror's answer.
-
-`npm run site:dev` runs the functions for real, under `wrangler pages dev`
-(`--r2=DOWNLOADS`, since the dev server takes the binding from the flag rather
-than from `wrangler.toml`) — this also applies `_headers`, so it is the way to
-check the page under its real CSP. The bucket starts empty, so `/latest` answers
-from `latest.baked.json`, `/changelog.json` from `releases.baked.json`, and every
-`/dl/` link redirects to GitHub — the fallback path, end to end. Seeding an
-object into the local bucket is fiddly (the CLI's `r2 object put --local` and the
-dev server have to agree on `--persist-to`); `npm test` covers the R2 path
-instead, and the deployed site is the real check.
-
 The poster, the favicons and the Open Graph card are generated from the same
 sprite code the app draws, so the site can never drift from the pet. The Latin
 display face is [Silkscreen](https://github.com/googlefonts/silkscreen) (SIL Open
-Font License, see `assets/fonts/OFL.txt`); the Chinese text uses the system font,
-which is why the pixel face is scoped to `U+0000-00FF`.
+Font License, see `site/assets/fonts/OFL.txt`); the Chinese text uses the system
+font, which is why the pixel face is scoped to `U+0000-00FF`.
 
-## Setting it up (once, in the Cloudflare dashboard)
+## Search engines
 
-1. **R2** → *Create bucket* → `jokbet-downloads`. Leave it private:
-   the download function is the only way in.
-2. **R2** → *Account details* → *Manage* API tokens → **Create Account API
-   token** → permissions **Object Read & Write**, scoped to that bucket → copy
-   the **Access Key ID** and **Secret Access Key** (shown once), and the
-   **Account ID**.
-3. **Workers & Pages** → *Create* → **Pages** → *Connect to Git* → pick this
-   repository. Production branch `main`, **framework preset None**, **build
-   command empty**, **root directory `site`**, **build output directory `.`**.
-   `wrangler.toml` in this directory carries the project name and the R2
-   binding, and Pages treats the file as the source of truth for both (those
-   fields then become read-only in the dashboard). If the form refuses `.` as
-   the output directory, set the root directory to the repository root, the
-   output directory to `site`, and move `functions/` and `wrangler.toml` up to
-   the repository root instead — Pages wants `functions/` at the project root,
-   not inside the published directory.
-4. **Pages** → the project → *Custom domains* → *Set up a domain* →
-   `jokbet.jokerben.top`. With `jokerben.top` in the same Cloudflare account the
-   CNAME is added for you; skipping this step leaves the hostname returning 522.
-5. **GitHub** → the repository → *Settings* → *Secrets and variables* →
-   *Actions* → **New repository secret**, three of them:
+- Both pages carry a title, a description, a canonical URL, `robots` directives
+  and an Open Graph set; the home page also carries JSON-LD
+  (`WebSite` + `SoftwareApplication` + `SoftwareSourceCode`, the licence and the
+  repository included), the changelog a `BreadcrumbList`.
+- `sitemap.xml` lists the two canonical URLs and `robots.txt` points at it, with
+  `/dl/`, `/latest` and `/changelog.json` excluded — none of them is a page.
+- The `<title>` in the markup is bilingual, so it reads the same to a crawler as
+  to a visitor who has not picked a language; the tab title follows the language
+  only once someone switches it.
+- `/changelog.html` redirects to `/changelog`, so the page has one URL.
+- The installers are served with `x-robots-tag: noindex`, and `404.html` is
+  `noindex` as well.
 
-   | Secret | Value |
-   |---|---|
-   | `R2_ACCOUNT_ID` | the Cloudflare account id from step 2 |
-   | `R2_ACCESS_KEY_ID` | the R2 token's access key id |
-   | `R2_SECRET_ACCESS_KEY` | the R2 token's secret access key |
+## What is already set up (Cloudflare)
 
-The bucket name is written into `wrangler.toml` and the publish workflow, so it
-is not a secret; only the three values above are.
+The account has, in `jokbet.jokerben.top`'s Cloudflare account:
+
+| Thing | Name | Notes |
+|---|---|---|
+| Worker | `jokbet-site` | the Git-connected build runs `npx wrangler deploy`; `wrangler.toml` is the source of truth for the name and the bindings |
+| Custom domain | `jokbet.jokerben.top` | attached to that Worker (Workers → `jokbet-site` → Settings → Domains & Routes) |
+| R2 bucket | `jokbet-downloads` | private; the `/dl` route is the only way in |
+| GitHub secrets | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | used by the *Publish to R2* workflow |
+
+The bucket name is written into `wrangler.toml` and the publish workflow, so it is
+not a secret; only the three secret values are.
 
 ## Releasing
 

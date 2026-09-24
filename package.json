@@ -18,7 +18,8 @@
     "site:check": "node scripts/render-site-assets.ts check site/assets && node scripts/build-site-pet.ts check site/assets && node scripts/make-manifest.ts check site/latest.baked.json site/releases.baked.json",
     "site:manifest": "node scripts/make-manifest.ts baked --out site/latest.baked.json",
     "site:releases": "gh api 'repos/sparkjokerben/jokbet/releases?per_page=100' | node scripts/make-manifest.ts changelog --stdin --out site/releases.baked.json",
-    "site:dev": "cd site && npx --yes wrangler pages dev . --r2=DOWNLOADS"
+    "site:dev": "npx --yes wrangler dev",
+    "site:deploy": "npx --yes wrangler deploy"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",

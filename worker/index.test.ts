@@ -1,6 +1,7 @@
-// The two Pages Functions: the manifest's R2-then-baked fallback, and the
-// download proxy's R2-then-GitHub fallback. Node has Request/Response/Headers,
-// so the functions run here with a stub bucket — no Workers runtime needed.
+// The Worker's three routes: the two JSON endpoints with their R2-then-baked
+// fallback, and the download proxy's R2-then-GitHub fallback. Node has
+// Request/Response/Headers, so the Worker runs here with a stub bucket — no
+// Workers runtime needed.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -38,57 +39,51 @@ function bucket(objects: Record<string, Uint8Array> = {}, fail = false) {
   };
 }
 
-/** The site's own static files, standing in for the ASSETS fetcher. */
+/** The site's own static files, standing in for the ASSETS binding. */
 const assets = (body: unknown, ok = true) => ({
   fetch: async () => new Response(JSON.stringify(body), { status: ok ? 200 : 404 }),
 });
 
-interface TestContext {
-  request: Request;
-  env: { DOWNLOADS: unknown; ASSETS: unknown };
-  params: { path?: string | string[] };
+interface Env {
+  DOWNLOADS: unknown;
+  ASSETS: unknown;
 }
-type Handler = (context: TestContext) => Promise<Response>;
 
-let dl: Handler;
-let latest: Handler;
-let changelog: Handler;
+/** The Worker's export, as the two routes call it. */
+type Worker = { fetch: (request: Request, env: Env) => Promise<Response> };
+
+let worker: Worker;
 
 beforeEach(async () => {
   vi.resetModules();
-  dl = (await import("../functions/dl/[[path]].ts")).onRequest as unknown as Handler;
-  latest = (await import("../functions/latest.ts")).onRequest as unknown as Handler;
-  changelog = (await import("../functions/changelog.json.ts")).onRequest as unknown as Handler;
+  worker = (await import("../worker/index.ts")).default as unknown as Worker;
 });
 
-const call = (handler: Handler, request: Request, env: TestContext["env"], path: string[] = []) =>
-  handler({ request, env, params: { path } } as TestContext);
+const call = (request: Request, env: Env) => worker.fetch(request, env);
+const page = (path: string, init?: RequestInit) => new Request(`https://jokbet.jokerben.top${path}`, init);
 
 const installer = "Jokbet_0.1.0_x64.dmg";
-const at = (name: string, init?: RequestInit) => new Request(`https://jokbet.jokerben.top/dl/${name}`, init);
 
 describe("the download proxy", () => {
   it("streams an installer from R2", async () => {
     const bytes = new Uint8Array(4096).fill(7);
-    const response = await call(dl, at(installer), { DOWNLOADS: bucket({ [installer]: bytes }), ASSETS: assets({}) }, [
-      installer,
-    ]);
+    const response = await call(page(`/dl/${installer}`), { DOWNLOADS: bucket({ [installer]: bytes }), ASSETS: assets({}) });
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("application/x-apple-diskimage");
     expect(response.headers.get("content-length")).toBe("4096");
     expect(response.headers.get("cache-control")).toContain("immutable");
     expect(response.headers.get("x-download-source")).toBe("r2");
+    // A file download is not a page, and search engines should leave it alone.
+    expect(response.headers.get("x-robots-tag")).toBe("noindex");
   });
 
   it("passes a range request through as 206", async () => {
     const bytes = new Uint8Array(4096).fill(7);
-    const response = await call(
-      dl,
-      at(installer, { headers: { range: "bytes=0-99" } }),
-      { DOWNLOADS: bucket({ [installer]: bytes }), ASSETS: assets({}) },
-      [installer],
-    );
+    const response = await call(page(`/dl/${installer}`, { headers: { range: "bytes=0-99" } }), {
+      DOWNLOADS: bucket({ [installer]: bytes }),
+      ASSETS: assets({}),
+    });
 
     expect(response.status).toBe(206);
     expect(response.headers.get("content-range")).toBe("bytes 0-99/4096");
@@ -97,12 +92,10 @@ describe("the download proxy", () => {
 
   it("answers a probe without reading the file", async () => {
     const name = "Jokbet_0.1.0_amd64.deb";
-    const response = await call(
-      dl,
-      at(name, { method: "HEAD" }),
-      { DOWNLOADS: bucket({ [name]: new Uint8Array(10) }), ASSETS: assets({}) },
-      [name],
-    );
+    const response = await call(page(`/dl/${name}`, { method: "HEAD" }), {
+      DOWNLOADS: bucket({ [name]: new Uint8Array(10) }),
+      ASSETS: assets({}),
+    });
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("");
@@ -110,56 +103,45 @@ describe("the download proxy", () => {
   });
 
   it("sends a missing installer to GitHub, at the version the page named", async () => {
-    const response = await call(
-      dl,
-      at(`${installer}?v=0.1.0`),
-      { DOWNLOADS: bucket(), ASSETS: assets({}) },
-      [installer],
-    );
+    const response = await call(page(`/dl/${installer}?v=0.1.0`), { DOWNLOADS: bucket(), ASSETS: assets({}) });
 
     expect(response.status).toBe(302);
-    expect(response.headers.get("location")).toBe(
-      `https://github.com/${REPO}/releases/download/v0.1.0/${installer}`,
-    );
+    expect(response.headers.get("location")).toBe(`https://github.com/${REPO}/releases/download/v0.1.0/${installer}`);
     expect(response.headers.get("x-download-source")).toBe("github");
   });
 
   it("reads the version from the manifest when the link does not say", async () => {
     const manifest = new TextEncoder().encode(JSON.stringify({ version: "0.2.0" }));
-    const response = await call(dl, at(installer), { DOWNLOADS: bucket({ "latest.json": manifest }), ASSETS: assets({}) }, [
-      installer,
-    ]);
+    const response = await call(page(`/dl/${installer}`), {
+      DOWNLOADS: bucket({ "latest.json": manifest }),
+      ASSETS: assets({}),
+    });
 
     expect(response.headers.get("location")).toBe(`https://github.com/${REPO}/releases/download/v0.2.0/${installer}`);
   });
 
   it("falls back to GitHub when R2 cannot be reached at all", async () => {
-    const response = await call(
-      dl,
-      at(`${installer}?v=0.1.0`),
-      { DOWNLOADS: bucket({}, true), ASSETS: assets({}) },
-      [installer],
-    );
+    const response = await call(page(`/dl/${installer}?v=0.1.0`), { DOWNLOADS: bucket({}, true), ASSETS: assets({}) });
 
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toContain("releases/download/v0.1.0/");
   });
 
   it("sends everything it cannot place to the releases page", async () => {
-    const response = await call(dl, at(installer), { DOWNLOADS: bucket({}, true), ASSETS: assets({}) }, [installer]);
+    const response = await call(page(`/dl/${installer}`), { DOWNLOADS: bucket({}, true), ASSETS: assets({}) });
 
     expect(response.headers.get("location")).toBe(`https://github.com/${REPO}/releases`);
   });
 
   it("refuses names that are not ours", async () => {
     for (const name of ["evil.dmg", "Jokbet_/../x.dmg", ""]) {
-      const response = await call(dl, at(name), { DOWNLOADS: bucket(), ASSETS: assets({}) }, [name]);
+      const response = await call(page(`/dl/${name}`), { DOWNLOADS: bucket(), ASSETS: assets({}) });
       expect(response.status, name).toBe(404);
     }
   });
 
   it("refuses a nested path", async () => {
-    const response = await call(dl, at("a/b"), { DOWNLOADS: bucket(), ASSETS: assets({}) }, ["a", "b"]);
+    const response = await call(page("/dl/a/b"), { DOWNLOADS: bucket(), ASSETS: assets({}) });
     expect(response.status).toBe(404);
   });
 });
@@ -167,16 +149,13 @@ describe("the download proxy", () => {
 describe("the manifest", () => {
   it("comes from R2 when the bucket has it", async () => {
     const manifest = new TextEncoder().encode(JSON.stringify({ version: "0.1.0", files: {} }));
-    const response = await call(latest, new Request("https://jokbet.jokerben.top/latest"), {
-      DOWNLOADS: bucket({ "latest.json": manifest }),
-      ASSETS: assets({}, false),
-    });
+    const response = await call(page("/latest"), { DOWNLOADS: bucket({ "latest.json": manifest }), ASSETS: assets({}, false) });
 
     expect(await response.json()).toMatchObject({ version: "0.1.0", source: "r2" });
   });
 
   it("falls back to the baked copy", async () => {
-    const response = await call(latest, new Request("https://jokbet.jokerben.top/latest"), {
+    const response = await call(page("/latest"), {
       DOWNLOADS: bucket({}, true),
       ASSETS: assets({ version: "0.0.1", files: {} }),
     });
@@ -185,21 +164,17 @@ describe("the manifest", () => {
   });
 
   it("says so when neither is available", async () => {
-    const response = await call(latest, new Request("https://jokbet.jokerben.top/latest"), {
-      DOWNLOADS: bucket({}, true),
-      ASSETS: assets({}, false),
-    });
+    const response = await call(page("/latest"), { DOWNLOADS: bucket({}, true), ASSETS: assets({}, false) });
 
     expect(await response.json()).toMatchObject({ version: null, source: "unavailable" });
   });
 });
 
 describe("the changelog", () => {
-  const page = () => new Request("https://jokbet.jokerben.top/changelog.json");
   const list = { schema: 1, generatedAt: "2026-09-24T00:00:00Z", releases: [{ version: "0.1.0", tag: "v0.1.0" }] };
 
   it("comes from R2 when the bucket has it", async () => {
-    const response = await call(changelog, page(), {
+    const response = await call(page("/changelog.json"), {
       DOWNLOADS: bucket({ "changelog.json": new TextEncoder().encode(JSON.stringify(list)) }),
       ASSETS: assets({}, false),
     });
@@ -208,23 +183,56 @@ describe("the changelog", () => {
   });
 
   it("falls back to the baked copy", async () => {
-    const response = await call(changelog, page(), {
-      DOWNLOADS: bucket({}, true),
-      ASSETS: assets(list),
-    });
+    const response = await call(page("/changelog.json"), { DOWNLOADS: bucket({}, true), ASSETS: assets(list) });
 
     expect(await response.json()).toMatchObject({ source: "baked", releases: [{ tag: "v0.1.0" }] });
   });
 
   it("answers with an empty list rather than inventing a version", async () => {
-    const response = await call(changelog, page(), { DOWNLOADS: bucket({}, true), ASSETS: assets({}, false) });
+    const response = await call(page("/changelog.json"), { DOWNLOADS: bucket({}, true), ASSETS: assets({}, false) });
 
     expect(await response.json()).toMatchObject({ releases: [], source: "unavailable" });
   });
 
   it("is a JSON endpoint, not a page", async () => {
-    const response = await call(changelog, page(), { DOWNLOADS: bucket({}), ASSETS: assets({}, false) });
+    const response = await call(page("/changelog.json"), { DOWNLOADS: bucket({}), ASSETS: assets({}, false) });
 
     expect(response.headers.get("content-type")).toContain("application/json");
+  });
+});
+
+describe("the rest of the site", () => {
+  it("hands everything else to the assets layer", async () => {
+    const request = page("/styles.css");
+    const env = { DOWNLOADS: bucket({}, true), ASSETS: assets({}, false) };
+    const response = await call(request, env);
+
+    // The stub answers 404 for everything, which is enough to prove the route:
+    // an unmatched path is not this Worker's business.
+    expect(response.status).toBe(404);
+  });
+
+  it("serves /changelog from changelog.html, its clean URL", async () => {
+    let asked = "";
+    const env = {
+      DOWNLOADS: bucket({}, true),
+      ASSETS: {
+        fetch: async (input: Request | URL) => {
+          asked = typeof input === "string" ? input : "url" in input ? input.url : String(input);
+          return new Response("<html></html>", { status: 200 });
+        },
+      },
+    };
+    const response = await call(page("/changelog"), env);
+
+    expect(response.status).toBe(200);
+    expect(asked).toContain("/changelog.html");
+  });
+
+  it("refuses anything but GET and HEAD on the JSON endpoints", async () => {
+    const response = await call(page("/latest", { method: "POST" }), { DOWNLOADS: bucket({}), ASSETS: assets({}) });
+
+    expect(response.status).toBe(405);
+    expect(response.headers.get("allow")).toBe("GET, HEAD");
   });
 });

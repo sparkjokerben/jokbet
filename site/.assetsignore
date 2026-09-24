@@ -1,0 +1,7 @@
+# Files that live beside the site but are not part of it. Everything else in
+# this directory is published as-is (wrangler.toml uploads it as static assets).
+README.md
+
+# Local dev state: created by `wrangler dev` when it is run from this directory,
+# and never anything to publish.
+.wrangler/

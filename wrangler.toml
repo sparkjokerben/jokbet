@@ -1,0 +1,28 @@
+# Cloudflare Workers configuration for the site.
+#
+# The project is a Worker (not Pages): the Git-connected build runs
+# `npx wrangler deploy`, the static site in site/ is uploaded as assets, and
+# worker/index.ts answers the paths that need the R2 bucket. `npm run site:dev`
+# runs the same thing locally.
+#
+# The file is the source of truth for the name and the bindings: renaming the
+# Worker here renames the deployment.
+
+name = "jokbet-site"
+# Bump this to a newer date when convenient; it only pins runtime defaults.
+compatibility_date = "2026-01-01"
+main = "worker/index.ts"
+
+# Everything in site/ is published as-is (there is no build step). Files listed
+# in site/.assetsignore are left out of the upload.
+[assets]
+directory = "site"
+binding = "ASSETS"
+# Unknown paths are the Worker's business (it answers /latest, /changelog.json
+# and /dl/); anything left over becomes site/404.html with a 404 status.
+not_found_handling = "404-page"
+
+# The installers live here; the /dl route is the only way to reach them.
+[[r2_buckets]]
+binding = "DOWNLOADS"
+bucket_name = "jokbet-downloads"

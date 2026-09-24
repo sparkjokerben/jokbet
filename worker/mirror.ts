@@ -16,6 +16,9 @@ export interface Env {
 /** How long an isolate keeps an object to itself before asking the bucket again. */
 const TTL_MS = 60_000;
 
+/** The last answer per key, so a busy minute does not hammer the bucket. */
+const cache = new Map<string, { at: number; body: string }>();
+
 const json = (body: string) =>
   new Response(body, {
     status: 200,
@@ -27,13 +30,14 @@ const json = (body: string) =>
 
 /** The object from the bucket, else the baked copy, else `empty`. */
 async function read(
-  context: EventContext<Env, string, unknown>,
+  request: Request,
+  env: Env,
   key: string,
   baked: string,
   empty: Record<string, unknown>,
 ): Promise<string> {
   try {
-    const object = await context.env.DOWNLOADS.get(key);
+    const object = await env.DOWNLOADS.get(key);
     if (object) {
       const body = (await object.json()) as Record<string, unknown>;
       return JSON.stringify({ ...body, source: "r2" });
@@ -42,7 +46,7 @@ async function read(
     // Bucket missing, binding missing, R2 down: the baked copy is next.
   }
   try {
-    const response = await context.env.ASSETS.fetch(new URL(baked, context.request.url));
+    const response = await env.ASSETS.fetch(new URL(baked, request.url));
     if (response.ok) {
       const body = (await response.json()) as Record<string, unknown>;
       return JSON.stringify({ ...body, source: "baked" });
@@ -53,16 +57,20 @@ async function read(
   return JSON.stringify(empty);
 }
 
-/** A handler for one such object, with its own minute of memory. */
-export function mirror(key: string, baked: string, empty: Record<string, unknown>) {
-  let cached: { at: number; body: string } | null = null;
-  return async (context: EventContext<Env, string, unknown>): Promise<Response> => {
-    if (context.request.method !== "GET" && context.request.method !== "HEAD") {
-      return new Response("Method not allowed", { status: 405, headers: { allow: "GET, HEAD" } });
-    }
-    if (!cached || Date.now() - cached.at >= TTL_MS) {
-      cached = { at: Date.now(), body: await read(context, key, baked, empty) };
-    }
-    return json(cached.body);
-  };
+/** GET (or HEAD) one such object, with its own minute of memory. */
+export async function mirror(
+  request: Request,
+  env: Env,
+  key: string,
+  baked: string,
+  empty: Record<string, unknown>,
+): Promise<Response> {
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return new Response("Method not allowed", { status: 405, headers: { allow: "GET, HEAD" } });
+  }
+  const remembered = cache.get(key);
+  if (!remembered || Date.now() - remembered.at >= TTL_MS) {
+    cache.set(key, { at: Date.now(), body: await read(request, env, key, baked, empty) });
+  }
+  return json(cache.get(key)!.body);
 }

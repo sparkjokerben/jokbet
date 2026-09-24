@@ -47,9 +47,9 @@ jobs:
         if: runner.os == 'Linux'
         run: npm run site:check
 
-      - name: type-check the Pages functions
+      - name: type-check the Worker
         if: runner.os == 'Linux'
-        run: npx tsc -p site/functions/tsconfig.json
+        run: npx tsc -p worker/tsconfig.json
 
       - name: cargo fmt
         working-directory: src-tauri

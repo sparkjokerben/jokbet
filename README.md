@@ -89,7 +89,7 @@ python3 tools/extract-reference-frames/build-frames.py --help  # re-derive the v
 
 With `npm run dev` running, `http://localhost:1420/preview.html?view=stats` (or `settings`, `onboarding`, `pet`) renders a window in a normal browser with fake data, which is handy for layout work.
 
-The website in [`site/`](site/README.md) is plain static files served by Cloudflare Pages, with the installers in an R2 bucket and Pages Functions in front of them. The pet on the home page is not a copy: it runs the app's own controller and sprites, bundled for the browser by `scripts/build-site-pet.ts`. `npm run site:assets` regenerates that bundle and the page's pixel art; `npm run site:check` fails if they drift from `src/`; `npm test` covers the functions; `site/README.md` has the Cloudflare setup and the release flow.
+The website in [`site/`](site/README.md) is plain static files served by a Cloudflare Worker, with the installers in an R2 bucket and the Worker in front of them. The pet on the home page is not a copy: it runs the app's own controller and sprites, bundled for the browser by `scripts/build-site-pet.ts`. `npm run site:assets` regenerates that bundle and the page's pixel art; `npm run site:check` fails if they drift from `src/`; `npm test` covers the functions; `site/README.md` has the Cloudflare setup and the release flow.
 
 On macOS, `tauri dev` runs the app as a child of your terminal, so grant Input Monitoring to the terminal app. To test the real permission flow, build a bundle with `npm run tauri build -- --debug --bundles app`. Every rebuild changes an ad-hoc signature, so clear the stale grant with:
 

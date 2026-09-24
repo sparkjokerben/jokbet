@@ -26,6 +26,6 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["src/**/*.test.ts", "scripts/**/*.test.ts", "site/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "scripts/**/*.test.ts", "worker/**/*.test.ts"],
   },
 });

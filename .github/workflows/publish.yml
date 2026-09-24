@@ -2,7 +2,7 @@ name: Publish to R2
 
 # Copies a published release's installers to Cloudflare R2, where the download
 # page serves them from (https://jokbet.jokerben.top/dl/<name>), and writes the
-# latest.json that page reads.
+# latest.json and changelog.json the page reads.
 #
 # It runs on `release: published` rather than on the tag push, because a draft
 # release's assets are not reachable on GitHub yet — and the download page's
