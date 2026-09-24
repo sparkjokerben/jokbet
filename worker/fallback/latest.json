@@ -1,42 +1,52 @@
 {
  "schema": 1,
- "version": "0.1.1",
- "tag": "v0.1.1",
- "pubDate": "2026-09-24T11:50:01Z",
+ "version": "0.1.2",
+ "tag": "v0.1.2",
+ "pubDate": "2026-09-24T14:18:26Z",
  "draft": false,
- "notes": "更新多了一条路。\n\n- 检查更新时先问 [jokbet.jokerben.top](https://jokbet.jokerben.top)，没有回应再问 GitHub\n- 下载更新时，一边失败就自动换另一边重试；两边的安装包完全相同，都用同一个签名校验\n- 连不上或下载中途卡住会及时放弃，换另一条路，不会一直等下去\n\n从 0.1.0 升到这一版仍然走 GitHub；从这一版往后，每次更新都有两条路。\n\n---\n\nUpdates now have a second route.\n\n- Checking for updates asks [jokbet.jokerben.top](https://jokbet.jokerben.top) first, and GitHub if it does not answer\n- A download that fails on one is retried on the other; both serve the same files, checked against the same signature\n- A connection that cannot be made, or a download that stalls, is given up on and the other route tried, instead of waiting forever\n\nUpdating from 0.1.0 to this version still goes through GitHub; from this version on, every update has both routes.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见 [下载页](https://jokbet.jokerben.top/download)。",
- "releaseUrl": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.1.1",
- "downloadBase": "https://github.com/sparkjokerben/jokbet/releases/download/v0.1.1",
+ "notes": "这一版让 macOS 安装不再被拦两次，也让它的两个数字对得上。\n\n- **macOS 一行装好，系统不拦。** 浏览器下载的安装包会被 macOS 拦下：dmg 打开时拦一次，里面的 app 再拦一次。在终端运行 `curl -fsSL https://jokbet.jokerben.top/install.sh | sh` 就没有这一步——它下载最新版、核对校验值、装进「应用程序」并打开；再跑一次就是更新。\n- **macOS 多了一个 zip。** 不想用终端的话，zip 只会被拦一次（dmg 是两次）。下载页两个都列着，并写明各会被拦几次。\n- **不再戴眼罩。** 之前开着「安全键盘输入」时它会戴上眼罩，但那时候点击、鼠标和修饰键其实还在计数——眼罩在说谎。现在只有真的什么都看不到（没给「输入监控」权限）才会一脸问号。安全输入期间普通按键确实不计数，这点在 [关于](https://jokbet.jokerben.top/about) 里写明了。\n- **里程碑和头顶计数的口径一致。** 内置的当天／累计里程碑原来只数按键，而头顶计数默认是「按键+点击」，两个数字会打架；现在两者用同一个设置。统计页也多了一个「按键+点击」的选项。\n\n---\n\nThis release gets macOS past Gatekeeper's two stops, and makes the pet's two numbers agree.\n\n- **One line on a Mac, and nothing stops it.** A browser download is stopped twice by macOS: once for the disk image, once for the app inside it. `curl -fsSL https://jokbet.jokerben.top/install.sh | sh` in Terminal skips all of it — it downloads the newest release, checks its SHA-256, installs it in Applications and opens it; run it again to update.\n- **macOS also ships as a zip.** If you would rather not use Terminal, a zip is stopped once (a disk image twice). The download page lists both and says how many stops each costs.\n- **The blindfold is gone.** The pet used to wear one while macOS Secure Keyboard Entry was on, yet clicks, the mouse and the modifier keys were still being counted — the blindfold was lying. Now it only looks baffled when it really cannot see anything (no Input Monitoring permission). Ordinary keys typed during Secure Input are still not counted, which [About](https://jokbet.jokerben.top/about) says plainly.\n- **Milestones count what the head counter counts.** The built-in daily and all-time milestones used to count key presses only while the head counter defaulted to keys + clicks, so the two numbers disagreed; they now come from the same setting. The stats page gained the same keys + clicks option.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见 [下载页](https://jokbet.jokerben.top/download)。",
+ "releaseUrl": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.1.2",
+ "downloadBase": "https://github.com/sparkjokerben/jokbet/releases/download/v0.1.2",
  "files": {
+  "macos-aarch64-zip": {
+   "name": "Jokbet_0.1.2_aarch64.app.zip",
+   "size": 3073247,
+   "sha256": "cbe370d6352d95c62f3b783d755b22ac575bf556b9375e9d3badd7468139ed4f"
+  },
   "macos-aarch64": {
-   "name": "Jokbet_0.1.1_aarch64.dmg",
-   "size": 3117642,
-   "sha256": "c715c266e8a5fecc860a9c53e9a84c50a5242310c3c6497dd30293804810d74f"
+   "name": "Jokbet_0.1.2_aarch64.dmg",
+   "size": 3115564,
+   "sha256": "975a28da0ca1e489d643bcdd8b6f380e69b1ce9c55ac7b87ff6815aef16585f9"
+  },
+  "macos-x64-zip": {
+   "name": "Jokbet_0.1.2_x64.app.zip",
+   "size": 3375929,
+   "sha256": "287e0cd310165465778d82a461d34571d4be7d99e5c844a01afbda8ff58b9002"
   },
   "macos-x64": {
-   "name": "Jokbet_0.1.1_x64.dmg",
-   "size": 3411450,
-   "sha256": "9b2c59b4d7cbcf9e5fa926a22f1f346f56ff7adc9446dc971017eb0e63420929"
+   "name": "Jokbet_0.1.2_x64.dmg",
+   "size": 3409358,
+   "sha256": "b75a9185204214db6438661a4d44d3221f6490464565c6e25b7e70befbd36454"
   },
   "windows-x64": {
-   "name": "Jokbet_0.1.1_x64-setup.exe",
-   "size": 2565362,
-   "sha256": "97f150a0bfed1e26fb3e72291135b1200ea8958f6f59ddefbc7691734f983569"
+   "name": "Jokbet_0.1.2_x64-setup.exe",
+   "size": 2565670,
+   "sha256": "9aaa899dd0f3098b925ada94d28b27ab84f51c82e8b63bb86fc6d8160866aa9c"
   },
   "windows-x64-msi": {
-   "name": "Jokbet_0.1.1_x64_en-US.msi",
+   "name": "Jokbet_0.1.2_x64_en-US.msi",
    "size": 3399680,
-   "sha256": "fe4d179e091068da22b1e5b54f7015777dc43a2aa17c85a6a700d9fb2a123953"
+   "sha256": "ab78c030a1ffa73f1b6af7a1754a902da098bfbae16f4e15e8a13fc8b5ec85c6"
   },
   "linux-appimage": {
-   "name": "Jokbet_0.1.1_amd64.AppImage",
+   "name": "Jokbet_0.1.2_amd64.AppImage",
    "size": 81844728,
-   "sha256": "e9cf5bfcc22a7d49e3549c8afd1ffce73ccb3dc5c3bf237d85d61f66d9ca2491"
+   "sha256": "75314fe6e021a67791b99b75f1f4667cb357a396ab676fffc4fc4fccba23769f"
   },
   "linux-deb": {
-   "name": "Jokbet_0.1.1_amd64.deb",
-   "size": 3406140,
-   "sha256": "5ddb6433b22ac2832e7ff3f56277d8d02f3a9a70b79182cc2b2c21e1a7e76afe"
+   "name": "Jokbet_0.1.2_amd64.deb",
+   "size": 3405244,
+   "sha256": "8f6591a0c59c93722457dd8f263538f38ba6db5406efabc3ba8010c9ee501d03"
   }
  }
 }
