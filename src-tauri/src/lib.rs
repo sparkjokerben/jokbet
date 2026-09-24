@@ -71,6 +71,13 @@ pub fn run() {
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+            // What a bug report's log is from.
+            log::info!(
+                "Jokbet {} starting on {} {}",
+                app.package_info().version,
+                std::env::consts::OS,
+                std::env::consts::ARCH
+            );
 
             let config_dir = app.path().app_config_dir()?;
             let data_dir = app.path().app_data_dir()?;

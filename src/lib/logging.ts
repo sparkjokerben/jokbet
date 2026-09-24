@@ -12,4 +12,8 @@ export function forwardErrors(page: string) {
   const send = (what: string) => void error(`[${page}] ${what}`).catch(() => {});
   window.addEventListener("error", (e) => send(describe(e.error ?? e.message)));
   window.addEventListener("unhandledrejection", (e) => send(`unhandled rejection: ${describe(e.reason)}`));
+  // Whatever the content security policy stops would otherwise fail unseen.
+  document.addEventListener("securitypolicyviolation", (e) =>
+    send(`blocked by ${e.effectiveDirective}: ${e.blockedURI || "inline"} (${e.sourceFile}:${e.lineNumber})`),
+  );
 }
