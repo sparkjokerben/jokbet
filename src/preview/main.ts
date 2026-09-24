@@ -73,7 +73,10 @@ const storage = !params.has("nostorage");
 const READY = {
   state: "ready",
   version: "0.2.0",
-  notes: "- Hide the pet while another app is full screen\n- Global shortcuts\n- Choose the interface language",
+  notes:
+    "这一版让它懂得在全屏时让开。\n\n- **全屏时自动让开。** 别的应用全屏时它会先藏起来。\n- **全局快捷键。** 到「设置 › 快捷键」里录，比如 `⌃⌥J`。\n\n---\n\n" +
+    "This release teaches the pet to step aside for full-screen apps.\n\n- **It steps aside in full screen.** A setting turns this off.\n- **Global shortcuts.** Record one, such as `⌃⌥J`.\n\n---\n\n" +
+    "Unofficial fan project, not affiliated with Anthropic.\n非官方同人作品，与 Anthropic 无关。见 [下载页](https://jokbet.jokerben.top/download)。",
   date: "2026-09-25",
 };
 /** With ?update, one is downloaded already. */

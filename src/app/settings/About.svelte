@@ -3,12 +3,16 @@
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { onMount } from "svelte";
-  import { t } from "../../lib/i18n";
+  import { lang, t } from "../../lib/i18n";
+  import { notesFor, parseNotes, type Inline } from "../../lib/notes";
   import type { UpdateStatus } from "../../lib/types";
 
   let version = $state("");
   let update = $state<UpdateStatus>({ state: "idle" });
   let error = $state("");
+
+  /** The notes in the reader's language, as blocks (never as HTML). */
+  const notes = $derived(update.state === "ready" && update.notes ? parseNotes(notesFor(update.notes, lang)) : []);
 
   const statusText = $derived.by(() => {
     switch (update.state) {
@@ -51,6 +55,12 @@
   });
 </script>
 
+{#snippet inlines(parts: Inline[])}
+  {#each parts as part, i (i)}
+    {#if part.bold}<strong>{part.text}</strong>{:else if part.code}<code>{part.text}</code>{:else}{part.text}{/if}
+  {/each}
+{/snippet}
+
 <section class="card">
   <h2>{t("sectionAbout")}</h2>
   <div class="field">
@@ -66,10 +76,22 @@
       {statusText}
     </p>
   {/if}
-  {#if update.state === "ready" && update.notes}
+  {#if update.state === "ready" && notes.length}
     <details>
       <summary class="muted">{t("updateNotes")}{update.date ? ` · ${update.date}` : ""}</summary>
-      <p class="notes">{update.notes}</p>
+      <div class="notes">
+        {#each notes as block, i (i)}
+          {#if block.kind === "p"}
+            <p>{@render inlines(block.inlines)}</p>
+          {:else}
+            <ul>
+              {#each block.items as item, j (j)}
+                <li>{@render inlines(item)}</li>
+              {/each}
+            </ul>
+          {/if}
+        {/each}
+      </div>
     </details>
   {/if}
   <div class="actions">
@@ -116,11 +138,30 @@
     font-size: 12px;
   }
   .notes {
-    margin: 6px 0 0;
+    margin-top: 6px;
     font-size: 12px;
-    white-space: pre-wrap;
-    max-height: 180px;
+    line-height: 1.55;
+    max-height: 220px;
     overflow: auto;
+  }
+  .notes p {
+    margin: 0 0 6px;
+  }
+  .notes ul {
+    margin: 0 0 6px;
+    padding-left: 18px;
+  }
+  .notes li + li {
+    margin-top: 4px;
+  }
+  .notes strong {
+    font-weight: 600;
+  }
+  .notes code {
+    font-size: 11px;
+    padding: 0 3px;
+    border-radius: 3px;
+    background: var(--surface-2);
   }
   .actions {
     display: flex;
