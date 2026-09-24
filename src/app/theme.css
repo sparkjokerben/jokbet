@@ -11,23 +11,6 @@
   --accent-ink: #b85a3a;
   --danger: #c7362f;
   --focus: #2a78d6;
-  --heat-0: #fbe3d8;
-  --heat-1: #f5c4ad;
-  --heat-2: #eea383;
-  --heat-3: #e4825f;
-  --heat-4: #d0643f;
-  --heat-5: #ae4e2f;
-  --heat-6: #8a3c23;
-  --heat-7: #662c19;
-  /* label ink on each heat bin, chosen for contrast */
-  --heat-ink-0: #1f1e1d;
-  --heat-ink-1: #1f1e1d;
-  --heat-ink-2: #1f1e1d;
-  --heat-ink-3: #1f1e1d;
-  --heat-ink-4: #1f1e1d;
-  --heat-ink-5: #ffffff;
-  --heat-ink-6: #ffffff;
-  --heat-ink-7: #ffffff;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -43,22 +26,6 @@
     --accent-ink: #e8906f;
     --danger: #e66767;
     --focus: #3987e5;
-    --heat-0: #4a2a1f;
-    --heat-1: #6b3624;
-    --heat-2: #8e4429;
-    --heat-3: #b4552f;
-    --heat-4: #d26f4f;
-    --heat-5: #e48f6f;
-    --heat-6: #f0b296;
-    --heat-7: #f8d6c4;
-    --heat-ink-0: #f5f4f0;
-    --heat-ink-1: #f5f4f0;
-    --heat-ink-2: #f5f4f0;
-    --heat-ink-3: #f5f4f0;
-    --heat-ink-4: #1a1a19;
-    --heat-ink-5: #1a1a19;
-    --heat-ink-6: #1a1a19;
-    --heat-ink-7: #1a1a19;
   }
 }
 :root[data-theme="dark"] {
@@ -74,6 +41,106 @@
   --accent-ink: #e8906f;
   --danger: #e66767;
   --focus: #3987e5;
+}
+
+/* Heatmap palettes, eight steps from least to most, chosen in the settings.
+   "heat" is ColorBrewer's YlOrRd on light (more is darker and redder) and
+   matplotlib's inferno on dark (more is brighter); "brand" is the pet's orange
+   in one hue, light to dark, flipped for dark. Each step's label ink is the
+   one of near-black and white with the higher contrast (4.2:1 at worst). */
+[data-heat="heat"] {
+  --heat-0: #ffeda0;
+  --heat-1: #fed976;
+  --heat-2: #feb24c;
+  --heat-3: #fd8d3c;
+  --heat-4: #fc4e2a;
+  --heat-5: #e31a1c;
+  --heat-6: #bd0026;
+  --heat-7: #800026;
+  --heat-ink-0: #1f1e1d;
+  --heat-ink-1: #1f1e1d;
+  --heat-ink-2: #1f1e1d;
+  --heat-ink-3: #1f1e1d;
+  --heat-ink-4: #1f1e1d;
+  --heat-ink-5: #ffffff;
+  --heat-ink-6: #ffffff;
+  --heat-ink-7: #ffffff;
+}
+[data-heat="brand"] {
+  --heat-0: #fbe3d8;
+  --heat-1: #f5c4ad;
+  --heat-2: #eea383;
+  --heat-3: #e4825f;
+  --heat-4: #d0643f;
+  --heat-5: #ae4e2f;
+  --heat-6: #8a3c23;
+  --heat-7: #662c19;
+  --heat-ink-0: #1f1e1d;
+  --heat-ink-1: #1f1e1d;
+  --heat-ink-2: #1f1e1d;
+  --heat-ink-3: #1f1e1d;
+  --heat-ink-4: #1f1e1d;
+  --heat-ink-5: #ffffff;
+  --heat-ink-6: #ffffff;
+  --heat-ink-7: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) [data-heat="heat"] {
+    --heat-0: #6a176e;
+    --heat-1: #932667;
+    --heat-2: #bc3754;
+    --heat-3: #dd513a;
+    --heat-4: #f37819;
+    --heat-5: #fca50a;
+    --heat-6: #f6d746;
+    --heat-7: #fcffa4;
+    --heat-ink-0: #ffffff;
+    --heat-ink-1: #ffffff;
+    --heat-ink-2: #ffffff;
+    --heat-ink-3: #1a1a19;
+    --heat-ink-4: #1a1a19;
+    --heat-ink-5: #1a1a19;
+    --heat-ink-6: #1a1a19;
+    --heat-ink-7: #1a1a19;
+  }
+  :root:not([data-theme="light"]) [data-heat="brand"] {
+    --heat-0: #4a2a1f;
+    --heat-1: #6b3624;
+    --heat-2: #8e4429;
+    --heat-3: #b4552f;
+    --heat-4: #d26f4f;
+    --heat-5: #e48f6f;
+    --heat-6: #f0b296;
+    --heat-7: #f8d6c4;
+    --heat-ink-0: #ffffff;
+    --heat-ink-1: #ffffff;
+    --heat-ink-2: #ffffff;
+    --heat-ink-3: #ffffff;
+    --heat-ink-4: #1a1a19;
+    --heat-ink-5: #1a1a19;
+    --heat-ink-6: #1a1a19;
+    --heat-ink-7: #1a1a19;
+  }
+}
+:root[data-theme="dark"] [data-heat="heat"] {
+  --heat-0: #6a176e;
+  --heat-1: #932667;
+  --heat-2: #bc3754;
+  --heat-3: #dd513a;
+  --heat-4: #f37819;
+  --heat-5: #fca50a;
+  --heat-6: #f6d746;
+  --heat-7: #fcffa4;
+  --heat-ink-0: #ffffff;
+  --heat-ink-1: #ffffff;
+  --heat-ink-2: #ffffff;
+  --heat-ink-3: #1a1a19;
+  --heat-ink-4: #1a1a19;
+  --heat-ink-5: #1a1a19;
+  --heat-ink-6: #1a1a19;
+  --heat-ink-7: #1a1a19;
+}
+:root[data-theme="dark"] [data-heat="brand"] {
   --heat-0: #4a2a1f;
   --heat-1: #6b3624;
   --heat-2: #8e4429;
@@ -82,10 +149,10 @@
   --heat-5: #e48f6f;
   --heat-6: #f0b296;
   --heat-7: #f8d6c4;
-  --heat-ink-0: #f5f4f0;
-  --heat-ink-1: #f5f4f0;
-  --heat-ink-2: #f5f4f0;
-  --heat-ink-3: #f5f4f0;
+  --heat-ink-0: #ffffff;
+  --heat-ink-1: #ffffff;
+  --heat-ink-2: #ffffff;
+  --heat-ink-3: #ffffff;
   --heat-ink-4: #1a1a19;
   --heat-ink-5: #1a1a19;
   --heat-ink-6: #1a1a19;

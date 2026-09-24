@@ -5,9 +5,14 @@
   import { t } from "../../lib/i18n";
   import { platform } from "../../lib/platform";
   import { HEAT_BINS, heatBin } from "./chart";
+  import type { HeatmapPalette } from "../../lib/types";
   import { keyboardLayout, layoutFor, type KeyboardKind, type KeyCap } from "./keyboard";
 
-  let { counts, everPressed = [] }: { counts: Record<string, number>; everPressed?: string[] } = $props();
+  let {
+    counts,
+    everPressed = [],
+    palette = "heat",
+  }: { counts: Record<string, number>; everPressed?: string[]; palette?: HeatmapPalette } = $props();
 
   const GAP = 3;
   /** What the system says the keyboard is; only macOS says. */
@@ -49,7 +54,9 @@
   };
 </script>
 
-<div class="wrap">
+<!-- The palette's colours are set on this element (theme.css), for the keys
+     and the legend alike. -->
+<div class="wrap" data-heat={palette}>
   <div
     class="board"
     bind:clientWidth={width}

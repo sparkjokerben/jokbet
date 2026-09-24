@@ -89,6 +89,17 @@ pub fn parse_shortcut(accelerator: &str) -> Result<tauri_plugin_global_shortcut:
         .map_err(|e| format!("shortcut {accelerator}: {e}"))
 }
 
+/// The key heatmap's colours.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum HeatmapPalette {
+    /// Yellow to red on light, dark red to yellow on dark: the usual heat scale.
+    #[default]
+    Heat,
+    /// The pet's orange, in one hue.
+    Brand,
+}
+
 /// What the pet does while nothing else is going on.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
@@ -182,6 +193,7 @@ pub struct Settings {
     /// Take the pet off screen while another app is full screen or presenting.
     pub hide_in_fullscreen: bool,
     pub shortcuts: Shortcuts,
+    pub heatmap_palette: HeatmapPalette,
 }
 
 impl Default for Settings {
@@ -205,6 +217,7 @@ impl Default for Settings {
             language: Language::System,
             hide_in_fullscreen: true,
             shortcuts: Shortcuts::default(),
+            heatmap_palette: HeatmapPalette::Heat,
         }
     }
 }
@@ -525,6 +538,7 @@ mod tests {
         assert!(!s.liquid_glass, "the material starts switched off");
         assert_eq!(s.language, Language::System);
         assert!(s.hide_in_fullscreen);
+        assert_eq!(s.heatmap_palette, HeatmapPalette::Heat);
     }
 
     #[test]

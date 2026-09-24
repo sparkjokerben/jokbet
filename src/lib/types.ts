@@ -13,6 +13,8 @@ export type Activity = "typing" | "click";
 export type Permission = "granted" | "denied" | "notRequired" | "unsupported";
 export type IdleAnim = "breathe" | "soccer" | "lookAround";
 export type ActionAnim = "poke" | "hearts" | "soccer" | "wave";
+/** The key heatmap's colours: the usual heat scale, or the pet's orange. */
+export type HeatmapPalette = "heat" | "brand";
 /** The interface language: "system" follows the system locale. */
 export type Language = "system" | "zh" | "en";
 
@@ -59,6 +61,7 @@ export interface Settings {
   /** Take the pet off screen while another app is full screen or presenting. */
   hideInFullscreen: boolean;
   shortcuts: Shortcuts;
+  heatmapPalette: HeatmapPalette;
 }
 
 export interface Totals {

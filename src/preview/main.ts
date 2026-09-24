@@ -10,6 +10,8 @@ import "../app/theme.css";
 import { setLang } from "../lib/i18n";
 import type { Settings } from "../lib/types";
 
+const params = new URLSearchParams(location.search);
+
 const FREQ = "ETAOINSHRDLCUMWFGYPBVKJXQZ";
 
 function fakeStats(days: number) {
@@ -61,9 +63,9 @@ let settings: Settings = {
   language: "system",
   hideInFullscreen: true,
   shortcuts: { togglePet: "Control+Alt+KeyJ", pause: null },
+  heatmapPalette: params.get("palette") === "brand" ? "brand" : "heat",
 };
 
-const params = new URLSearchParams(location.search);
 const view = params.get("view");
 /** With ?nostorage, the database "could not be opened". */
 const storage = !params.has("nostorage");
@@ -76,6 +78,9 @@ const READY = {
 };
 /** With ?update, one is downloaded already. */
 const update = params.has("update") ? READY : { state: "idle" };
+/** With ?theme=light or ?theme=dark, that theme whatever the system's. */
+const previewTheme = params.get("theme");
+if (previewTheme === "light" || previewTheme === "dark") document.documentElement.dataset.theme = previewTheme;
 /** With ?lang=en or ?lang=zh, the pages speak that language. */
 const previewLang = params.get("lang");
 if (previewLang === "en" || previewLang === "zh") setLang(previewLang);

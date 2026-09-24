@@ -4,7 +4,8 @@
   import { onMount } from "svelte";
   import { clicks, formatCount, formatDistance } from "../../lib/format";
   import { t, type MessageKey } from "../../lib/i18n";
-  import type { Metric, Status, Totals } from "../../lib/types";
+  import { listen } from "@tauri-apps/api/event";
+  import type { HeatmapPalette, Metric, Settings, Status, Totals } from "../../lib/types";
   import Segmented from "../ui/Segmented.svelte";
   import Heatmap from "./Heatmap.svelte";
   import Trend from "./Trend.svelte";
@@ -29,6 +30,7 @@
   let error = $state("");
   /** False when the database could not be opened: counts live only in memory. */
   let storage = $state(true);
+  let palette = $state<HeatmapPalette>("heat");
 
   const METRIC_LABEL: Record<Metric, MessageKey> = {
     keys: "metricKeys",
@@ -104,8 +106,13 @@
 
   onMount(() => {
     invoke<Status>("get_status").then((s) => (storage = s.storage), () => {});
+    invoke<Settings>("get_settings").then((s) => (palette = s.heatmapPalette), () => {});
+    const un = listen<Settings>("settings://changed", (e) => (palette = e.payload.heatmapPalette));
     const id = setInterval(load, REFRESH_MS);
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      un.then((f) => f());
+    };
   });
 </script>
 
@@ -165,7 +172,7 @@
 
     <section class="card">
       <h2>{t("heatmapTitle")}</h2>
-      <Heatmap counts={data?.keys ?? {}} everPressed={data?.everPressed ?? []} />
+      <Heatmap counts={data?.keys ?? {}} everPressed={data?.everPressed ?? []} {palette} />
     </section>
 
     <div class="actions">

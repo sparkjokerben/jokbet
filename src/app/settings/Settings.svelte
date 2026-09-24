@@ -10,6 +10,7 @@
     PET_SCALE_MIN,
     type ActionAnim,
     type IdleAnim,
+    type HeatmapPalette,
     type Language,
     type Settings,
     type Shortcuts,
@@ -244,6 +245,21 @@
       <p class="muted small">{t("milestonesBuiltin")}</p>
       <h3>{t("customMilestones")}</h3>
       <MilestoneEditor items={s.customMilestones} onchange={(next) => update({ customMilestones: next })} />
+    </section>
+
+    <section class="card">
+      <h2>{t("sectionStats")}</h2>
+      <div class="field">
+        <span>{t("heatmapPalette")}</span>
+        <Segmented
+          label={t("heatmapPalette")}
+          bind:value={() => s!.heatmapPalette, (v: HeatmapPalette) => update({ heatmapPalette: v })}
+          options={[
+            { value: "heat", label: t("paletteHeat") },
+            { value: "brand", label: t("paletteBrand") },
+          ]}
+        />
+      </div>
     </section>
 
     <section class="card">
