@@ -10,7 +10,7 @@ Jokbet 是一只统计键鼠操作的桌宠。它用 Claude Code 吉祥物的像
 
 <img src="docs/screenshot.zh-CN.png" alt="桌宠头顶显示 6,502，悬浮卡片列出今天的按键、点击、滚动和鼠标移动距离" width="440">
 
-支持 macOS 11+、Windows 和 Linux（X11）。界面中英双语，跟随系统语言。
+支持 macOS 11+、Windows 和 Linux（X11）。界面中英双语，默认跟随系统语言，也可以在设置里指定。
 
 ## 功能
 
@@ -19,7 +19,9 @@ Jokbet 是一只统计键鼠操作的桌宠。它用 Claude Code 吉祥物的像
 - 光标停在它身上看今天的数据；右键它或点托盘图标打开菜单
 - 你打字时它掏出笔记本一起敲，点击时会缩一下，眼睛跟着光标转，你走开它就睡，也可以拖到屏幕任意位置
 - 空闲时的动作和点击反应都能自己挑：踢球、东张西望、挥手、比心，或者只是呼吸
-- 统计窗口：每日趋势、键盘热力图，还能导出 CSV
+- 别的应用全屏或演示时它会自动让开，结束后再回来（可在设置里关掉，默认开启）
+- 全局快捷键：显示/隐藏桌宠、暂停计数，在设置里自己录制，默认不占用任何组合键
+- 统计窗口：每日趋势、键盘热力图（按你用的键盘画：PC 或 Apple 键盘，ANSI 或 ISO），还能导出 CSV
 - 里程碑：当天第 1,000 次按键、累计第 100 万次，以及你自己设的任何阈值，它都会庆祝一下
 
 ## 安装
@@ -66,14 +68,22 @@ curl -fsSL https://jokbet.jokerben.top/install.sh | sh
 | Windows | `%APPDATA%\io.github.sparkjokerben.jokbet\` | 同一目录 |
 | Linux | `~/.local/share/io.github.sparkjokerben.jokbet/` | `~/.config/io.github.sparkjokerben.jokbet/` |
 
-两个文件都删掉，Jokbet 就回到初次运行的状态。从项目旧名 `jokerben-desktop-pet` 升级上来的安装，会在首次启动时把这两个文件迁移过来。
+两个文件都删掉，Jokbet 就回到初次运行的状态。从项目旧名 `jokerben-desktop-pet` 升级上来的安装，会在首次启动时把这两个文件迁移过来。`settings.json` 损坏时，Jokbet 会保留还能读出的设置，并把原文件另存为 `settings.bad-<时间>.json`。
+
+Jokbet 还会写日志 `Jokbet.log`（超过 1 MB 自动轮转），只记录错误和写日志的版本，不记录任何输入。**设置 → 关于 → 打开日志文件夹**可以直接打开它，报 bug 时附上这个文件即可。
+
+| 平台 | 日志 |
+|---|---|
+| macOS | `~/Library/Logs/io.github.sparkjokerben.jokbet/` |
+| Windows | `%LOCALAPPDATA%\io.github.sparkjokerben.jokbet\logs\` |
+| Linux | `~/.local/share/io.github.sparkjokerben.jokbet/logs/` |
 
 ## 已知限制
 
 - **macOS**——开着「安全键盘输入」时（密码框里，或终端、iTerm 的这项设置），系统不让别的程序看到按键，这些按键不会计数；点击、鼠标移动和修饰键照常计数。
 - **Windows**——管理员权限窗口里的输入看不到（除非 Jokbet 也以管理员运行）；它会留在启动时所在的那个虚拟桌面。
 - **Linux**——只支持 X11。
-- 它会待在别的窗口上面，包括全屏应用；挡到内容时可以从托盘菜单隐藏。
+- 它会待在别的窗口上面。遇到全屏应用和演示会自动让开（除非关掉了这项设置）；挡到别的内容时，可以从托盘菜单或用快捷键隐藏，也可以从菜单把它移回角落。
 
 ## 开发
 

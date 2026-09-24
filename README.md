@@ -14,7 +14,8 @@ you typed.
 <img src="docs/screenshot.png" alt="The pet with 6,502 above its head, and a hover card listing today's keys, clicks, scrolls and mouse travel" width="440">
 
 It runs on macOS 11+, Windows, and Linux (X11). The interface is in English and
-Simplified Chinese, following the system language.
+Simplified Chinese: it follows the system language unless you pick one in the
+settings.
 
 ## Features
 
@@ -28,7 +29,12 @@ Simplified Chinese, following the system language.
   anywhere on screen
 - Idle behaviour and click reactions are yours to choose: juggle a ball, look
   around, wave, blush, or simply breathe
-- A stats window with a per-day trend, a keyboard heatmap, and CSV export
+- It steps aside while another app is full screen or presenting, and comes back
+  after (a setting, on by default)
+- Global shortcuts to show or hide it and to pause counting, which you record
+  in the settings; none is set until you do
+- A stats window with a per-day trend, a keyboard heatmap drawn on the layout
+  you have (a PC or an Apple board, ANSI or ISO), and CSV export
 - Milestones: it celebrates your thousandth key of the day, your millionth key
   all time, and any threshold you set yourself
 
@@ -102,6 +108,18 @@ Analytics, which sets no cookies and does not identify anyone.
 
 Deleting both files resets Jokbet to a first run. An install upgrading from the
 project's former name `jokerben-desktop-pet` brings them across on first launch.
+If `settings.json` is damaged, Jokbet keeps every setting it can still read and
+sets the original aside as `settings.bad-<time>.json`.
+
+Jokbet also writes a log, `Jokbet.log`, rotated at 1 MB. It records errors and
+the version that wrote them, never input. **Settings → About → Open Logs
+Folder** opens it, which is the file to attach to a bug report.
+
+| Platform | Log |
+|---|---|
+| macOS | `~/Library/Logs/io.github.sparkjokerben.jokbet/` |
+| Windows | `%LOCALAPPDATA%\io.github.sparkjokerben.jokbet\logs\` |
+| Linux | `~/.local/share/io.github.sparkjokerben.jokbet/logs/` |
 
 ## Known limitations
 
@@ -113,8 +131,10 @@ project's former name `jokerben-desktop-pet` brings them across on first launch.
   unless Jokbet also runs as administrator, and the pet stays on the virtual
   desktop it was started on.
 - **Linux** — X11 only.
-- It stays above other windows, fullscreen applications included; hide it from
-  the tray menu when it is in the way.
+- It stays above other windows. It steps aside for full-screen apps and
+  presentations unless that setting is off; anything else it covers, hide it
+  from the tray menu or with a shortcut, or move it back to its corner from the
+  menu.
 
 ## Development
 
