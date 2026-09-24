@@ -1,22 +1,22 @@
-// GET /dl/<name> — the installers, served from R2, with a way out.
+// GET /dl/<tag>/<name> — every file of every release, from the mirror first.
 //
-// The bucket is private and the page never talks to it: this route streams the
-// object (ranges and all), and when the object is not there — or R2 cannot be
-// reached at all — it hands the browser over to the same file on GitHub.
-// A download link on the site therefore cannot dead-end.
+// The bucket keeps each release under releases/<tag>/, named exactly as on
+// GitHub, so this path and GitHub's releases/download/<tag>/<name> are one
+// address on two hosts. That is the whole fallback: when the object is not in
+// the bucket, or R2 cannot be reached, the browser is sent to the same file on
+// GitHub, and the app's updater does the same in the other direction when a
+// download fails (src-tauri/src/updater.rs). A link on the site cannot
+// dead-end, and a version in the path means a URL never changes what it serves.
 
 /// <reference types="@cloudflare/workers-types" />
 
-import type { Env } from "./mirror.ts";
+import { GITHUB_RELEASES, type Env } from "./api.ts";
 
-/** Where the GitHub copies live; the repo is the one in scripts/site-manifest.ts. */
-const REPO = "sparkjokerben/jokbet";
-const RELEASES = `https://github.com/${REPO}/releases`;
-
-/** The names Tauri produces, and nothing else: no slashes, no traversal. */
+const TAG = /^v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
+/** The names Tauri produces, and nothing else. */
 const NAME = /^(?:Jokbet|jokbet)_[A-Za-z0-9][A-Za-z0-9._-]{0,180}$/;
 const VERSION = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
-/** Version-stamped names never change under a URL, so they may be cached hard. */
+/** The path carries the version, so what it serves never changes. */
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
 /** R2 keeps what was uploaded (aws s3 cp guesses by extension); this is the belt. */
@@ -33,29 +33,50 @@ const TYPES: [string, string][] = [
 const contentType = (name: string) =>
   TYPES.find(([extension]) => name.endsWith(extension))?.[1] ?? "application/octet-stream";
 
+const notFound = () => new Response("Not found", { status: 404 });
+
+const redirect = (location: string, status: 301 | 302) =>
+  new Response(null, {
+    status,
+    headers: {
+      location,
+      "cache-control": status === 301 ? "public, max-age=86400" : "no-store",
+      "x-robots-tag": "noindex",
+      ...(status === 302 ? { "x-download-source": "github" } : {}),
+    },
+  });
+
 export async function download(request: Request, env: Env): Promise<Response> {
-  const name = new URL(request.url).pathname.slice("/dl/".length);
-  if (name.includes("/") || !NAME.test(name)) return new Response("Not found", { status: 404 });
+  const parts = new URL(request.url).pathname.slice("/dl/".length).split("/");
+  if (parts.length === 1) return legacy(request, parts[0]);
+  const [tag, name] = parts;
+  if (parts.length !== 2 || !TAG.test(tag) || !NAME.test(name)) return notFound();
 
   const method = request.method;
+  if (method !== "GET" && method !== "HEAD") return notFound();
   // What the answer should be is the request's business, not the bucket's: R2
   // reports a range covering the whole object even when nothing asked for one,
   // and a 206 to a request that carried no Range header is a broken download to
-  // a browser — Safari refuses to save the file at all. So ask the request.
+  // a browser. So ask the request.
   const asked = request.headers.has("range");
-  if (method === "GET" || method === "HEAD") {
-    try {
-      // HEAD asks the bucket for the metadata only, so a probe costs nothing.
-      const object =
-        method === "HEAD"
-          ? await env.DOWNLOADS.head(name)
-          : await env.DOWNLOADS.get(name, { range: request.headers });
-      if (object && object.size > 0) return served(object, method, name, asked);
-    } catch {
-      // R2 unreachable, bucket gone: GitHub is the fallback.
-    }
+  try {
+    const key = `releases/${tag}/${name}`;
+    // HEAD asks the bucket for the metadata only, so a probe costs nothing.
+    const object = method === "HEAD" ? await env.DOWNLOADS.head(key) : await env.DOWNLOADS.get(key, { range: request.headers });
+    if (object && object.size > 0) return served(object, method, name, asked);
+  } catch {
+    // R2 unreachable, bucket gone: GitHub is the fallback.
   }
-  return github(request, env, name);
+  return redirect(`${GITHUB_RELEASES}/download/${tag}/${name}`, 302);
+}
+
+/** The 0.1.0 page linked /dl/<name>?v=<version>; those links still land. */
+function legacy(request: Request, name: string): Response {
+  if (!NAME.test(name)) return notFound();
+  const hint = new URL(request.url).searchParams.get("v");
+  const version = hint && VERSION.test(hint) ? hint : name.match(/^(?:Jokbet|jokbet)_(\d+\.\d+\.\d+)_/)?.[1];
+  if (!version) return redirect(GITHUB_RELEASES, 302);
+  return redirect(new URL(`/dl/v${version}/${name}`, request.url).toString(), 301);
 }
 
 function served(object: R2Object | R2ObjectBody, method: string, name: string, asked: boolean): Response {
@@ -67,7 +88,7 @@ function served(object: R2Object | R2ObjectBody, method: string, name: string, a
   headers.set("content-disposition", `attachment; filename="${name}"`);
   headers.set("cache-control", IMMUTABLE);
   headers.set("x-download-source", "r2");
-  // An installer is not a page: keep it out of search results entirely.
+  // A file download is not a page: keep it out of search results entirely.
   headers.set("x-robots-tag", "noindex");
   const body = method === "HEAD" || !("body" in object) ? null : object.body;
   // A probe gets the whole length rather than a range it cannot describe: the
@@ -80,31 +101,4 @@ function served(object: R2Object | R2ObjectBody, method: string, name: string, a
   }
   headers.set("content-length", String(object.size));
   return new Response(body, { status: 200, headers });
-}
-
-/** The same file on GitHub, or the releases page when even the version is unknown. */
-async function github(request: Request, env: Env, name: string): Promise<Response> {
-  // The page says which version it is offering; only the probe (or a stale
-  // bookmark) has to ask the bucket.
-  const hint = new URL(request.url).searchParams.get("v");
-  let version = hint && VERSION.test(hint) ? hint : null;
-  if (!version) {
-    try {
-      const object = await env.DOWNLOADS.get("latest.json");
-      const manifest = object ? ((await object.json()) as { version?: unknown }) : null;
-      if (typeof manifest?.version === "string" && VERSION.test(manifest.version)) version = manifest.version;
-    } catch {
-      // fall through to the releases page
-    }
-  }
-  const location = version ? `https://github.com/${REPO}/releases/download/v${version}/${name}` : RELEASES;
-  return new Response(null, {
-    status: 302,
-    headers: {
-      location,
-      "cache-control": "no-store",
-      "x-download-source": "github",
-      "x-robots-tag": "noindex",
-    },
-  });
 }

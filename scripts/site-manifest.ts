@@ -1,13 +1,25 @@
-// The download manifest the site reads. Shared by the release job (which builds
-// it from the published assets), CI (which validates the baked fallback) and the
-// download function (which needs the repo and the file names).
+// The manifests the site and the app read. Shared by the release job (which
+// builds them from the published release), CI (which validates the fallback
+// copies compiled into the Worker) and the tests.
+//
+// Every file has two addresses, one per host, with the same shape:
+//
+//   https://jokbet.jokerben.top/dl/<tag>/<name>                  the mirror
+//   https://github.com/<repo>/releases/download/<tag>/<name>     GitHub
+//
+// The site's download links, the Worker's fallback and the app's updater all
+// rely on that: each can go from one to the other without looking anything up.
 
 export const REPO = "sparkjokerben/jokbet";
+export const SITE = "https://jokbet.jokerben.top";
+
+export const githubUrl = (tag: string, name: string) => `https://github.com/${REPO}/releases/download/${tag}/${name}`;
+export const mirrorUrl = (tag: string, name: string) => `${SITE}/dl/${tag}/${name}`;
 
 /** One installer, as the download page offers it. */
 export interface ManifestFile {
   name: string;
-  /** Bytes; null in the baked fallback, where nothing was downloaded. */
+  /** Bytes; null when nothing was there to measure (the empty manifest before a release). */
   size: number | null;
   sha256: string | null;
 }
@@ -142,6 +154,80 @@ export function changelogFrom(releases: GithubRelease[], generatedAt = new Date(
   }
   records.sort((a, b) => (b.pubDate ?? "").localeCompare(a.pubDate ?? ""));
   return { schema: 1, generatedAt, releases: records };
+}
+
+/**
+ * The newest release the download buttons should offer, as the releases API
+ * describes it: GitHub's "latest" — neither a draft nor a prerelease. Sizes and
+ * checksums come from the API (GitHub's own `digest`), so this needs no
+ * download; the release job builds its copy from the files themselves instead.
+ */
+export function latestFrom(releases: GithubRelease[]): Manifest {
+  const newest = releases
+    .filter((r) => r.tag_name && !r.draft && !r.prerelease)
+    .sort((a, b) => (b.published_at ?? "").localeCompare(a.published_at ?? ""))[0];
+  if (!newest?.tag_name) return emptyManifest();
+  const tag = newest.tag_name;
+  const version = tag.replace(/^v/, "");
+  const files: Record<string, ManifestFile> = {};
+  for (const platform of PLATFORMS) {
+    const name = platform.file(version);
+    const asset = newest.assets?.find((a) => a.name === name);
+    files[platform.id] = {
+      name,
+      size: typeof asset?.size === "number" ? asset.size : null,
+      sha256: asset?.digest?.replace(/^sha256:/, "") ?? null,
+    };
+  }
+  return {
+    schema: 1,
+    version,
+    tag,
+    pubDate: newest.published_at ?? newest.created_at ?? null,
+    draft: false,
+    notes: (newest.body ?? "").trim() || null,
+    releaseUrl: releaseUrl(tag),
+    downloadBase: downloadBase(tag),
+    files,
+  };
+}
+
+// --- the updater's manifest ---------------------------------------------------
+
+/** Tauri's updater manifest, as tauri-action writes it into every release. */
+export interface UpdaterManifest {
+  version: string;
+  notes?: string;
+  pub_date?: string;
+  platforms: Record<string, { url: string; signature: string }>;
+}
+
+/**
+ * The updater manifest the mirror serves: the release's own, with every
+ * download moved to the same file on the mirror. The signatures stay as they
+ * are — they sign the file, not its address — so the copy on either host
+ * verifies against them, which is what lets the app retry one on the other.
+ *
+ * Throws rather than write a manifest that points at nothing: every URL must be
+ * this release's own file on GitHub, and that file must be among `present`
+ * (what the release job is about to upload).
+ */
+export function updaterForMirror(manifest: UpdaterManifest, tag: string, present: ReadonlySet<string>): UpdaterManifest {
+  if (manifest.version?.replace(/^v/, "") !== tag.replace(/^v/, "")) {
+    throw new Error(`the updater manifest is for ${manifest.version}, not ${tag}`);
+  }
+  const entries = Object.entries(manifest.platforms ?? {});
+  if (!entries.length) throw new Error("the updater manifest lists no platforms");
+  const prefix = githubUrl(tag, "");
+  const platforms: UpdaterManifest["platforms"] = {};
+  for (const [target, { url, signature }] of entries) {
+    const name = url.startsWith(prefix) ? url.slice(prefix.length) : "";
+    if (!name || name.includes("/")) throw new Error(`${target}: ${url} is not a file of ${tag} on GitHub`);
+    if (!present.has(name)) throw new Error(`${target}: ${name} is not among the release's files`);
+    if (!signature) throw new Error(`${target}: no signature`);
+    platforms[target] = { url: mirrorUrl(tag, name), signature };
+  }
+  return { ...manifest, platforms };
 }
 
 /** Everything wrong with a changelog, as messages; empty means it is usable. */

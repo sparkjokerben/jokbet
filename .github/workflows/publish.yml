@@ -1,14 +1,21 @@
 name: Publish to R2
 
-# Copies a published release's installers to Cloudflare R2, where the download
-# page serves them from (https://jokbet.jokerben.top/dl/<name>), and writes the
-# latest.json and changelog.json the page reads.
+# Mirrors a published release into Cloudflare R2, which the site serves:
+#
+#   releases/<tag>/<name>     every file of the release, named as on GitHub
+#                             → https://jokbet.jokerben.top/dl/<tag>/<name>
+#   manifests/releases.json   every published release    → /api/releases.json
+#   manifests/latest.json     the newest release         → /api/latest.json
+#   manifests/update.json     the app's updater manifest → /api/update.json
 #
 # It runs on `release: published` rather than on the tag push, because a draft
-# release's assets are not reachable on GitHub yet — and the download page's
-# fallback links point there. Publish the draft and both sides go live together.
+# release's assets are not reachable on GitHub yet — and every mirror address
+# falls back to the same file there. Publish the draft and both go live
+# together.
 #
 # Re-runnable by hand: Actions → Publish to R2 → Run workflow, with the tag.
+# Re-running an older tag re-mirrors its files and the changelog, but leaves
+# latest.json and update.json alone: those only ever describe GitHub's latest.
 
 on:
   release:
@@ -34,6 +41,7 @@ jobs:
       # R2 answers with CRC-32 only; the v2 CLI's default checksums can upset it.
       AWS_REQUEST_CHECKSUM_CALCULATION: when_required
       AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -41,60 +49,56 @@ jobs:
         with:
           node-version: 24
 
-      - name: Decide which tag to publish
+      - name: Decide which tag to publish, and whether it is the latest
         id: tag
-        run: echo "name=${{ github.event.release.tag_name || inputs.tag }}" >> "$GITHUB_OUTPUT"
+        run: |
+          tag="${{ github.event.release.tag_name || inputs.tag }}"
+          latest="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
+          echo "name=$tag" >> "$GITHUB_OUTPUT"
+          echo "latest=$([ "$tag" = "$latest" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "publishing $tag (GitHub's latest is $latest)"
 
-      - name: Download the release assets
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download the release
         run: |
           mkdir -p release-assets
           gh release download "${{ steps.tag.outputs.name }}" --repo "$GITHUB_REPOSITORY" --dir release-assets
           gh release view "${{ steps.tag.outputs.name }}" --repo "$GITHUB_REPOSITORY" \
-            --json body,createdAt,isDraft > release.json
+            --json body,createdAt,publishedAt,isDraft > release.json
           ls -l release-assets
 
-      - name: Build the manifest the site reads
+      - name: Build the manifests
+        # Each step fails unless every file it names is among the release's, so
+        # a change in Tauri's asset names stops here instead of going live.
         run: |
-          node scripts/make-manifest.ts full \
-            --tag "${{ steps.tag.outputs.name }}" \
-            --dir release-assets \
-            --release-json release.json \
-            --out site-manifest.json
-
-      - name: Build the changelog the site reads
-        # Every published release, so the changelog page needs no third-party
-        # API (and no rate limit) when someone opens it.
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
+          mkdir -p manifests
+          node scripts/make-manifest.ts full --tag "${{ steps.tag.outputs.name }}" \
+            --dir release-assets --release-json release.json --out manifests/latest.json
           gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
-            | node scripts/make-manifest.ts changelog --stdin --out changelog.json
+            | node scripts/make-manifest.ts changelog --stdin --out manifests/releases.json
+          node scripts/make-manifest.ts update --tag "${{ steps.tag.outputs.name }}" \
+            --dir release-assets --out manifests/update.json
 
-      - name: Upload the installers
+      - name: Upload the release's files
         run: |
           set -euo pipefail
           for file in release-assets/*; do
-            name="$(basename "$file")"
-            if [ "$name" = "latest.json" ]; then
-              # Tauri's own updater manifest (a different schema): keep it, but
-              # out of the way of the site's.
-              aws s3 cp "$file" "s3://$BUCKET/updater/latest.json" --endpoint-url "$ENDPOINT" \
-                --content-type application/json --cache-control "public, max-age=300" --no-progress
-            else
-              aws s3 cp "$file" "s3://$BUCKET/$name" --endpoint-url "$ENDPOINT" \
-                --cache-control "public, max-age=31536000, immutable" --no-progress
-            fi
+            aws s3 cp "$file" "s3://$BUCKET/releases/${{ steps.tag.outputs.name }}/$(basename "$file")" \
+              --endpoint-url "$ENDPOINT" --cache-control "public, max-age=31536000, immutable" --no-progress
           done
 
-      - name: Publish the manifest and the changelog, last
-        # Last, so they never describe a file that has not arrived yet. The
-        # changelog is what the changelog page lists; latest.json is the one the
-        # download page reads, and /latest falls back to the copy in the repo.
+      - name: Publish the manifests, last
+        # Last, so they never describe a file that has not arrived yet.
         run: |
-          aws s3 cp site-manifest.json "s3://$BUCKET/latest.json" --endpoint-url "$ENDPOINT" \
-            --content-type application/json --cache-control "public, max-age=300" --no-progress
-          aws s3 cp changelog.json "s3://$BUCKET/changelog.json" --endpoint-url "$ENDPOINT" \
-            --content-type application/json --cache-control "public, max-age=300" --no-progress
+          set -euo pipefail
+          put() {
+            aws s3 cp "manifests/$1" "s3://$BUCKET/manifests/$1" --endpoint-url "$ENDPOINT" \
+              --content-type application/json --cache-control "public, max-age=60" --no-progress
+          }
+          put releases.json
+          if [ "${{ steps.tag.outputs.latest }}" = "true" ]; then
+            put latest.json
+            put update.json
+          else
+            echo "${{ steps.tag.outputs.name }} is not GitHub's latest release: latest.json and update.json stay as they are"
+          fi
           echo "published ${{ steps.tag.outputs.name }} to s3://$BUCKET"

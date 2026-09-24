@@ -1,2 +1,8 @@
-# The changelog page's own URL is /changelog; the .html spelling is an alias.
-/changelog.html /changelog 301
+# Each page's address is the clean one; the .html spellings are aliases.
+/download.html   /download   301
+/changelog.html  /changelog  301
+/about.html      /about      301
+
+# Where the site's JSON lived before it had an /api/ (the 0.1.0 page read these).
+/latest          /api/latest.json    301
+/changelog.json  /api/releases.json  301
