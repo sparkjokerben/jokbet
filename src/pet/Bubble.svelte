@@ -15,9 +15,9 @@
     tick: Tick;
     showSpeed: boolean;
     paused: boolean;
-    /** False when counts cannot be saved: said above everything else. */
+    /** False when counts cannot be saved: said beside the title, first. */
     storage?: boolean;
-    /** The version of a downloaded update, said at the bottom. */
+    /** The version of a downloaded update, said beside the title. */
     updateReady?: string | null;
     glass?: boolean;
     tint?: number;
@@ -27,10 +27,16 @@
 </script>
 
 <div class="bubble" class:glass style:--tint={String(tint)}>
-  {#if !storage}
-    <div class="warn">{t("storageWarning")}</div>
-  {/if}
-  <div class="title">{paused ? t("paused") : t("today")}</div>
+  <!-- Notices share the title's line: the window above the pet has room for
+       the card as it is, not for more lines. -->
+  <div class="title">
+    <span>{paused ? t("paused") : t("today")}</span>
+    {#if !storage}
+      <span class="warn">{t("storageWarning")}</span>
+    {:else if updateReady}
+      <span class="note">{t("updateBubble", { v: updateReady })}</span>
+    {/if}
+  </div>
   <dl>
     <dt>{t("keys")}</dt>
     <dd>{formatCount(d.keys)}</dd>
@@ -48,9 +54,6 @@
       <dd>{t("perSecond", { n: formatRate(tick.kps) })}</dd>
     {/if}
   </dl>
-  {#if updateReady}
-    <div class="update">{t("updateBubble", { v: updateReady })}</div>
-  {/if}
 </div>
 
 <style>
@@ -106,10 +109,16 @@
       --line: rgba(245, 240, 232, 0.16);
     }
   }
-  .warn {
-    margin-bottom: 4px;
+  .warn,
+  .note {
+    font-size: 10px;
     font-weight: 600;
+  }
+  .warn {
     color: #c7362f;
+  }
+  .note {
+    color: var(--muted);
   }
   @media (prefers-color-scheme: dark) {
     .warn {
@@ -117,6 +126,10 @@
     }
   }
   .title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
     font-weight: 600;
     margin-bottom: 2px;
   }
@@ -132,13 +145,6 @@
   dd {
     margin: 0;
     text-align: right;
-  }
-  .update {
-    margin-top: 4px;
-    padding-top: 4px;
-    border-top: 1px solid var(--line);
-    font-size: 11px;
-    color: var(--muted);
   }
   .sub {
     display: block;
