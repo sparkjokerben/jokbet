@@ -27,7 +27,11 @@ not_found_handling = "404-page"
 # only shows up in a browser — curl and fetch are not navigations, so they went
 # straight through and hid it. Everything else is still served from the assets
 # layer without waking the Worker.
-run_worker_first = ["/latest", "/changelog.json", "/changelog", "/dl/*"]
+#
+# `/changelog` is deliberately not in the list: the assets layer already serves
+# it from changelog.html, and the Worker asking for that file by name would meet
+# the _redirects rule that points the other way — a loop.
+run_worker_first = ["/latest", "/changelog.json", "/dl/*"]
 
 # The installers live here; the /dl route is the only way to reach them.
 [[r2_buckets]]

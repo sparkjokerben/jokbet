@@ -7,7 +7,7 @@ answering the three paths that need them. There is no build step: what is in
 
 ```
 wrangler.toml           the Worker: name, entry point, the assets directory, run_worker_first, the R2 binding
-worker/index.ts         the routes: /latest, /changelog.json, /dl/<name>, /changelog, then the assets
+worker/index.ts         the routes: /latest, /changelog.json, /dl/<name>, then the assets
 worker/mirror.ts        the bucket-then-baked JSON door, shared by the two JSON routes
 worker/download.ts      the installer proxy: R2 first, then GitHub
 worker/index.test.ts    vitest coverage of all of it, with a stub bucket
@@ -82,6 +82,11 @@ from the page 404s while `curl` and `fetch` — which are not navigations — ar
 served correctly. That is what the list is there to prevent: a download link was
 broken for days because `curl -I` said 200. Test this route the way a browser
 uses it, with `Sec-Fetch-Dest: document`, or in a browser.
+
+`/changelog` is *not* in that list, and must not be added: the assets layer
+already serves it from `changelog.html`, while asking for `changelog.html` by
+name meets the `_redirects` rule pointing back at `/changelog`, which is a
+redirect loop rather than a page.
 
 ## Working on it
 

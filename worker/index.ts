@@ -31,11 +31,9 @@ export default {
       return mirror(request, env, "changelog.json", "/releases.baked.json", NO_CHANGELOG);
     }
     if (pathname.startsWith("/dl/")) return download(request, env);
-    // `/changelog` is the changelog page's clean URL; the assets layer's own
-    // rewrite rules only speak about trailing slashes, so do it here.
-    if (pathname === "/changelog") {
-      return env.ASSETS.fetch(new Request(new URL("/changelog.html", request.url), request));
-    }
+    // `/changelog` is the assets layer's: it serves the page from changelog.html
+    // for the clean URL, and asking for changelog.html by name here would go
+    // round the _redirects rule that points back at /changelog.
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;
