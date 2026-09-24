@@ -27,7 +27,7 @@ const DEMO_TYPING_MS = 2200;
 const DEMO_TYPING_KPS = 5;
 /** How long a reduced-motion pose stays up before the pet sits again. */
 const STILL_HOLD_MS = 1600;
-/** How long a blocked face (blindfold, no permission) is shown for. */
+/** How long the blocked face (no permission) is shown for. */
 const BLOCK_HOLD_MS = 4200;
 /** Keep-proud gap around the edge of where it may be dragged. */
 const EDGE = 8;
@@ -254,8 +254,8 @@ export function createPet(host: HTMLElement, options: WebPetOptions = {}): WebPe
       return;
     }
     controller.setBlocked(blocked);
-    // On the page these are a demonstration (a blindfold, a confused face), not
-    // a state a visitor could get stuck in, so they let go on their own.
+    // On the page this is a demonstration (the confused face), not a state a
+    // visitor could get stuck in, so it lets go on its own.
     if (blocked) blockTimer = setTimeout(() => controller.setBlocked(null), holdMs);
   }
 

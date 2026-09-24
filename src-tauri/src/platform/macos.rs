@@ -22,18 +22,6 @@ struct CGRect {
     size: CGSize,
 }
 
-#[link(name = "Carbon", kind = "framework")]
-extern "C" {
-    fn IsSecureEventInputEnabled() -> u8;
-}
-
-/// True while some app has Secure Event Input on (password fields, Terminal's
-/// Secure Keyboard Entry): key events then reach no event tap.
-/// Call on the main thread.
-pub fn secure_input_enabled() -> bool {
-    unsafe { IsSecureEventInputEnabled() != 0 }
-}
-
 #[link(name = "ApplicationServices", kind = "framework")]
 extern "C" {
     fn CGEventSourceButtonState(state_id: i32, button: u32) -> bool;

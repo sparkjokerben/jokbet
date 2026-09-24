@@ -110,13 +110,11 @@ describe("typingFrameMs", () => {
 
 describe("blockedBy", () => {
   it("missing permission or a dead hook means noperm", () => {
-    expect(blockedBy({ permission: "denied", listening: false, secureInput: false })).toBe("noperm");
-    expect(blockedBy({ permission: "granted", listening: false, secureInput: true })).toBe("noperm");
-  });
-  it("secure input blindfolds the pet", () => {
-    expect(blockedBy({ permission: "granted", listening: true, secureInput: true })).toBe("secure");
+    expect(blockedBy({ permission: "denied", listening: false })).toBe("noperm");
+    expect(blockedBy({ permission: "granted", listening: false })).toBe("noperm");
   });
   it("otherwise nothing blocks", () => {
-    expect(blockedBy({ permission: "notRequired", listening: true, secureInput: false })).toBeNull();
+    expect(blockedBy({ permission: "granted", listening: true })).toBeNull();
+    expect(blockedBy({ permission: "notRequired", listening: true })).toBeNull();
   });
 });

@@ -21,18 +21,6 @@ pub fn displays() -> Vec<Display> {
     Vec::new()
 }
 
-/// Whether keyboard input is currently hidden from listeners (macOS Secure Input).
-/// Must be called on the main thread.
-#[cfg(target_os = "macos")]
-pub fn secure_input_enabled() -> bool {
-    macos::secure_input_enabled()
-}
-
-#[cfg(not(target_os = "macos"))]
-pub fn secure_input_enabled() -> bool {
-    false
-}
-
 /// Whether the primary mouse button is held right now. Needs no permission;
 /// used to tell when a window drag really ends.
 pub struct PrimaryButton {

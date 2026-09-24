@@ -58,7 +58,6 @@ export interface Pose {
   eyes?: EyeState;
   /** Eye offset, each component in -1..1. */
   gaze?: readonly [number, number];
-  blindfold?: boolean;
   fx?: readonly Effect[];
 }
 
@@ -158,31 +157,26 @@ export function compose(pose: Pose = {}): string[] {
   rect(g, bx(0), by(ARM_Y[pose.armL ?? "rest"] + sq), ARM_W, ARM_H, shadeL ? "D" : "O");
   rect(g, bx(20), by(ARM_Y[pose.armR ?? "rest"] + sq), ARM_W, ARM_H, shadeR ? "D" : "O");
 
-  if (pose.blindfold) {
-    rect(g, bx(2), by(2 + sq), TORSO_W - 2, 2, "B");
-    stamp(g, bx(19), by(2 + sq), ["B", ".B"]);
-  } else {
-    const [gx, gy] = pose.gaze ?? [0, 0];
-    for (const ex of EYE_X) {
-      const x = bx(ex + gx);
-      const y = by(2 + sq + gy);
-      switch (pose.eyes ?? "open") {
-        case "open":
-          rect(g, x, y, EYE_W, 2, "E");
-          break;
-        case "closed":
-          rect(g, x, y + 1, EYE_W, 1, "E");
-          break;
-        case "wide":
-          rect(g, x, y - 1, EYE_W, 3, "E");
-          break;
-        case "happy":
-          stamp(g, x - 1, y, [".EE.", "E..E"]);
-          break;
-        case "x":
-          stamp(g, x - 1, y - 1, ["E.E", ".E.", "E.E"]);
-          break;
-      }
+  const [gx, gy] = pose.gaze ?? [0, 0];
+  for (const ex of EYE_X) {
+    const x = bx(ex + gx);
+    const y = by(2 + sq + gy);
+    switch (pose.eyes ?? "open") {
+      case "open":
+        rect(g, x, y, EYE_W, 2, "E");
+        break;
+      case "closed":
+        rect(g, x, y + 1, EYE_W, 1, "E");
+        break;
+      case "wide":
+        rect(g, x, y - 1, EYE_W, 3, "E");
+        break;
+      case "happy":
+        stamp(g, x - 1, y, [".EE.", "E..E"]);
+        break;
+      case "x":
+        stamp(g, x - 1, y - 1, ["E.E", ".E.", "E.E"]);
+        break;
     }
   }
 
@@ -207,7 +201,6 @@ export type AnimName =
   | "wave"
   | "dragged"
   | "noperm"
-  | "secure"
   | "lookAround";
 
 const UP = { armL: "up", armR: "up" } as const;
@@ -312,13 +305,6 @@ export const ANIMS: Record<AnimName, Anim> = {
     frames: [
       { ms: 1200, pose: { eyes: "x", fx: ["question"] } },
       { ms: 600, pose: { eyes: "x", squash: 1 } },
-    ],
-  },
-  secure: {
-    loop: true,
-    frames: [
-      { ms: 900, pose: { blindfold: true, armL: "up" } },
-      { ms: 900, pose: { blindfold: true, armR: "up" } },
     ],
   },
 };

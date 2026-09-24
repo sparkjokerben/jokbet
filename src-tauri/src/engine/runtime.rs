@@ -127,8 +127,6 @@ pub struct Status {
     pub permission: Permission,
     /// The hook is installed and delivering events.
     pub listening: bool,
-    /// Keyboard input is hidden from every listener right now (macOS Secure Input).
-    pub secure_input: bool,
     pub paused: bool,
 }
 
@@ -194,7 +192,10 @@ impl<R: Runtime> Worker<R> {
             sink: EventSink::new(tx),
             events,
             hook: None,
-            milestone_defs: milestones::definitions(&settings.custom_milestones),
+            milestone_defs: milestones::definitions(
+                &settings.custom_milestones,
+                &settings.head_counter,
+            ),
             milestones_on: settings.milestones,
             reached,
             celebrations: Celebrations::default(),
@@ -227,7 +228,7 @@ impl<R: Runtime> Worker<R> {
                     Ok(Control::Settings(s)) => {
                         self.agg.paused = s.paused;
                         self.milestones_on = s.milestones;
-                        self.milestone_defs = milestones::definitions(&s.custom_milestones);
+                        self.milestone_defs = milestones::definitions(&s.custom_milestones, &s.head_counter);
                         self.housekeeping();
                     }
                     Ok(Control::Stats { days, reply }) => {
@@ -285,7 +286,6 @@ impl<R: Runtime> Worker<R> {
         let status = Status {
             permission,
             listening,
-            secure_input: self.secure_input(),
             paused: self.agg.paused,
         };
         if self.status != Some(status) {
@@ -385,16 +385,6 @@ impl<R: Runtime> Worker<R> {
         self.reached = Reached::default();
         self.celebrations.clear();
         Ok(())
-    }
-
-    /// Queries Secure Input on the main thread (the HIToolbox call is not
-    /// documented as thread-safe); assumes off if the main thread is busy.
-    fn secure_input(&self) -> bool {
-        let (tx, rx) = bounded(1);
-        let asked = self.app.run_on_main_thread(move || {
-            let _ = tx.send(platform::secure_input_enabled());
-        });
-        asked.is_ok() && rx.recv_timeout(Duration::from_millis(200)).unwrap_or(false)
     }
 
     /// Adds pending counts to the database; keeps them pending if that fails.

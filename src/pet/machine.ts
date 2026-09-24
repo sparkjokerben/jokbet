@@ -2,7 +2,7 @@
 
 import type { Anim, AnimName } from "../sprites/jokbet";
 
-export type Blocked = "noperm" | "secure";
+export type Blocked = "noperm";
 export type Activity = "typing" | "click";
 /** Animations the controller can play once and end. The ones a user may pick for
  * a click or double-click are a narrower set (ActionAnim, src/lib/types.ts). */
@@ -20,10 +20,13 @@ export interface Signals {
   sleepAfterMs: number;
 }
 
-/** Why the pet cannot see input: no hook, or keys hidden by Secure Input. */
-export function blockedBy(s: { permission: string; listening: boolean; secureInput: boolean }): Blocked | null {
+/**
+ * Why the pet cannot see input: no permission, or no hook. macOS Secure Input
+ * is not a reason: it hides only ordinary keys, while clicks, the mouse and the
+ * modifier keys still arrive, and a background app can leave it on for hours.
+ */
+export function blockedBy(s: { permission: string; listening: boolean }): Blocked | null {
   if (s.permission === "denied" || s.permission === "unsupported" || !s.listening) return "noperm";
-  if (s.secureInput) return "secure";
   return null;
 }
 

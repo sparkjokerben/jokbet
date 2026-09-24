@@ -8,7 +8,7 @@ export const PET_SCALE_DEFAULT = 3.5;
 export const GLASS_TINT_MAX = 60;
 export type CounterKind = "today" | "rate";
 export type Period = "daily" | "lifetime";
-export type Metric = "keys" | "clicks" | "scrolls" | "distance";
+export type Metric = "keys" | "clicks" | "inputs" | "scrolls" | "distance";
 export type Activity = "typing" | "click";
 export type Permission = "granted" | "denied" | "notRequired" | "unsupported";
 export type IdleAnim = "breathe" | "soccer" | "lookAround";
@@ -70,7 +70,6 @@ export interface Tick {
 export interface Status {
   permission: Permission;
   listening: boolean;
-  secureInput: boolean;
   paused: boolean;
 }
 
