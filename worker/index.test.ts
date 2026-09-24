@@ -26,15 +26,17 @@ function bucket(objects: Record<string, Uint8Array> = {}, fail = false) {
       const bytes = objects[name];
       if (!bytes) return null;
       const match = options?.range?.get("range")?.match(/^bytes=(\d+)-(\d*)$/);
-      if (!match) return { ...meta(bytes), body: bytes };
-      const offset = Number(match[1]);
-      const length = match[2] ? Number(match[2]) - offset + 1 : bytes.length - offset;
+      const offset = match ? Number(match[1]) : 0;
+      const length = match ? (match[2] ? Number(match[2]) - offset + 1 : bytes.length - offset) : bytes.length;
+      // R2 describes whatever it hands back as a range, the whole object
+      // included — so a stub that only sets `range` for a ranged request would
+      // hide the difference between a 200 and a 206.
       return { ...meta(bytes), range: { offset, length }, body: bytes.slice(offset, offset + length) };
     },
     async head(name: string) {
       if (fail) throw new Error("R2 is down");
       const bytes = objects[name];
-      return bytes ? meta(bytes) : null;
+      return bytes ? { ...meta(bytes), range: { offset: 0, length: bytes.length } } : null;
     },
   };
 }
@@ -76,6 +78,17 @@ describe("the download proxy", () => {
     expect(response.headers.get("x-download-source")).toBe("r2");
     // A file download is not a page, and search engines should leave it alone.
     expect(response.headers.get("x-robots-tag")).toBe("noindex");
+  });
+
+  it("sends the whole file when nothing asked for a range", async () => {
+    // The bucket calls this a range covering everything; answering 206 to a
+    // request that carried no Range header makes browsers refuse the download.
+    const bytes = new Uint8Array(4096).fill(7);
+    const response = await call(page(`/dl/${installer}`), { DOWNLOADS: bucket({ [installer]: bytes }), ASSETS: assets({}) });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-range")).toBe(null);
+    expect((await response.arrayBuffer()).byteLength).toBe(4096);
   });
 
   it("passes a range request through as 206", async () => {

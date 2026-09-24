@@ -38,6 +38,11 @@ export async function download(request: Request, env: Env): Promise<Response> {
   if (name.includes("/") || !NAME.test(name)) return new Response("Not found", { status: 404 });
 
   const method = request.method;
+  // What the answer should be is the request's business, not the bucket's: R2
+  // reports a range covering the whole object even when nothing asked for one,
+  // and a 206 to a request that carried no Range header is a broken download to
+  // a browser — Safari refuses to save the file at all. So ask the request.
+  const asked = request.headers.has("range");
   if (method === "GET" || method === "HEAD") {
     try {
       // HEAD asks the bucket for the metadata only, so a probe costs nothing.
@@ -45,7 +50,7 @@ export async function download(request: Request, env: Env): Promise<Response> {
         method === "HEAD"
           ? await env.DOWNLOADS.head(name)
           : await env.DOWNLOADS.get(name, { range: request.headers });
-      if (object && object.size > 0) return served(object, method, name);
+      if (object && object.size > 0) return served(object, method, name, asked);
     } catch {
       // R2 unreachable, bucket gone: GitHub is the fallback.
     }
@@ -53,7 +58,7 @@ export async function download(request: Request, env: Env): Promise<Response> {
   return github(request, env, name);
 }
 
-function served(object: R2Object | R2ObjectBody, method: string, name: string): Response {
+function served(object: R2Object | R2ObjectBody, method: string, name: string, asked: boolean): Response {
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("content-type", contentType(name));
@@ -65,7 +70,9 @@ function served(object: R2Object | R2ObjectBody, method: string, name: string): 
   // An installer is not a page: keep it out of search results entirely.
   headers.set("x-robots-tag", "noindex");
   const body = method === "HEAD" || !("body" in object) ? null : object.body;
-  const range = object.range;
+  // A probe gets the whole length rather than a range it cannot describe: the
+  // bucket's metadata read knows the size, not what the request asked for.
+  const range = asked && method !== "HEAD" ? object.range : undefined;
   if (range && "offset" in range && typeof range.offset === "number" && typeof range.length === "number") {
     headers.set("content-range", `bytes ${range.offset}-${range.offset + range.length - 1}/${object.size}`);
     headers.set("content-length", String(range.length));
