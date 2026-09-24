@@ -57,6 +57,7 @@ pub fn run() {
             commands::update_status,
             commands::check_update,
             commands::install_update,
+            commands::keyboard_kind,
         ])
         .on_window_event(|window, event| {
             // Recording a shortcut lets go of the others; closing the window

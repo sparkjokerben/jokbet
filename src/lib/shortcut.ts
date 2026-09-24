@@ -2,16 +2,7 @@
 // "Control+Alt+KeyJ", modifiers first in a fixed order, then the key's W3C
 // code. The Rust side parses the same strings.
 
-export type Platform = "mac" | "windows" | "linux";
-
-export const platform: Platform =
-  typeof navigator === "undefined"
-    ? "linux"
-    : /Mac/.test(navigator.userAgent)
-      ? "mac"
-      : /Win/.test(navigator.userAgent)
-        ? "windows"
-        : "linux";
+import { platform, type Platform } from "./platform";
 
 /** Keys a shortcut can end in: the ones the shortcut library knows, less the
  * lock keys and Escape (which cancels the recording). */

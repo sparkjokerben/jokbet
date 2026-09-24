@@ -16,6 +16,8 @@
     days: DayStat[];
     keys: Record<string, number>;
     lifetime: Totals;
+    /** Every key pressed on any day. */
+    everPressed: string[];
   }
 
   const REFRESH_MS = 15_000;
@@ -163,7 +165,7 @@
 
     <section class="card">
       <h2>{t("heatmapTitle")}</h2>
-      <Heatmap counts={data?.keys ?? {}} />
+      <Heatmap counts={data?.keys ?? {}} everPressed={data?.everPressed ?? []} />
     </section>
 
     <div class="actions">

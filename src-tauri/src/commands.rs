@@ -247,3 +247,10 @@ pub fn install_update(app: AppHandle) -> Result<(), String> {
     }
     Err("no update could be installed".into())
 }
+
+/// What the system says the keyboard is (`"ansi"`, `"iso"` or `"unknown"`),
+/// for the heatmap's board.
+#[tauri::command]
+pub fn keyboard_kind() -> &'static str {
+    crate::platform::keyboard_kind()
+}

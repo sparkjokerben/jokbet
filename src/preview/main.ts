@@ -34,7 +34,11 @@ function fakeStats(days: number) {
   const keys: Record<string, number> = { Space: 21000, Backspace: 6400, Enter: 3100, ShiftLeft: 2900, MetaLeft: 2600 };
   [...FREQ].forEach((c, i) => (keys[`Key${c}`] = Math.round(12000 / (i + 1.2))));
   for (let n = 0; n < 10; n++) keys[`Digit${n}`] = 300 + n * 40;
-  return { days: out, keys, lifetime: { ...out[0], keys: 1_234_567, moveMm: 12_345_678 } };
+  // ?iso and ?keypad make the keys that tip the heatmap to those boards.
+  const everPressed = Object.keys(keys);
+  if (params.has("iso")) everPressed.push("IntlBackslash");
+  if (params.has("keypad")) everPressed.push("Numpad5");
+  return { days: out, keys, lifetime: { ...out[0], keys: 1_234_567, moveMm: 12_345_678 }, everPressed };
 }
 
 // Mirrors the shipped defaults (see Settings::default in src-tauri).
@@ -108,6 +112,8 @@ mockIPC(
       return { permission: "denied", listening: false, paused: false, storage };
     case "plugin:autostart|is_enabled":
       return true;
+    case "keyboard_kind":
+      return params.has("iso") ? "iso" : "ansi";
     case "plugin:app|version":
       return "0.1.2";
     case "update_status":

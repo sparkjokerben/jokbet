@@ -114,6 +114,8 @@ pub struct Stats {
     /// Per-key counts over the same range.
     pub keys: HashMap<String, u64>,
     pub lifetime: Totals,
+    /// Every key pressed on any day, which tells what kind of keyboard it is.
+    pub ever_pressed: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -367,6 +369,7 @@ impl<R: Runtime> Worker<R> {
                 .collect(),
             keys: db.key_counts(from, to).map_err(err)?,
             lifetime: db.lifetime_totals().map_err(err)?,
+            ever_pressed: db.ever_pressed().map_err(err)?,
         })
     }
 

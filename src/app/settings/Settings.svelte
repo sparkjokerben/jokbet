@@ -14,7 +14,7 @@
     type Settings,
     type Shortcuts,
   } from "../../lib/types";
-  import { platform } from "../../lib/shortcut";
+  import { platform } from "../../lib/platform";
   import Segmented from "../ui/Segmented.svelte";
   import ShortcutInput from "../ui/ShortcutInput.svelte";
   import Toggle from "../ui/Toggle.svelte";
@@ -26,7 +26,7 @@
   let autostart = $state<boolean | null>(null);
   /** Which system glass is available: "none" hides the switch. */
   let glass = $state("none");
-  const isMac = navigator.userAgent.includes("Mac");
+  const isMac = platform === "mac";
 
   const IDLE_OPTIONS: { value: IdleAnim; label: string }[] = [
     { value: "breathe", label: t("animBreathe") },

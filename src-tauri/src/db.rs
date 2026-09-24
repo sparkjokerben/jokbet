@@ -179,6 +179,16 @@ impl Db {
         rows.collect()
     }
 
+    /// Every key ever pressed, whatever the day (what the heatmap draws its
+    /// board from).
+    pub fn ever_pressed(&self) -> rusqlite::Result<Vec<String>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT DISTINCT key FROM daily_keys ORDER BY key")?;
+        let rows = stmt.query_map([], |row| row.get(0))?;
+        rows.collect()
+    }
+
     /// All days as CSV: date, totals.
     pub fn daily_csv(&self) -> rusqlite::Result<String> {
         let mut out =
@@ -362,6 +372,16 @@ mod tests {
         assert_eq!(k["KeyA"], 5);
         assert_eq!(k["Space"], 1);
         assert_eq!(k.len(), 2);
+    }
+
+    #[test]
+    fn ever_pressed_spans_every_day() {
+        let mut db = Db::open_in_memory().unwrap();
+        db.add_day(day(2025, 1, 1), &delta(1, &[("IntlBackslash", 1)]))
+            .unwrap();
+        db.add_day(day(2026, 9, 23), &delta(2, &[("KeyA", 2)]))
+            .unwrap();
+        assert_eq!(db.ever_pressed().unwrap(), ["IntlBackslash", "KeyA"]);
     }
 
     #[test]

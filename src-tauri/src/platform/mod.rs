@@ -136,6 +136,15 @@ pub fn pin_to_all_spaces<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>, fu
     }
 }
 
+/// The physical layout of the keyboard: `"ansi"`, `"iso"`, or `"unknown"`
+/// where the system does not say (everywhere but macOS).
+pub fn keyboard_kind() -> &'static str {
+    #[cfg(target_os = "macos")]
+    return macos::keyboard_kind();
+    #[allow(unreachable_code)]
+    "unknown"
+}
+
 /// A rectangle as `(x, y, w, h)`.
 pub type Bounds = (f64, f64, f64, f64);
 

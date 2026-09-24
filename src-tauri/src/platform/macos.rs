@@ -322,6 +322,26 @@ fn frame_in_view(rect: (f64, f64, f64, f64), height: f64, flipped: objc2::runtim
     )
 }
 
+#[link(name = "Carbon", kind = "framework")]
+extern "C" {
+    fn LMGetKbdType() -> u8;
+    fn KBGetLayoutType(keyboard_type: i16) -> u32;
+}
+
+const KEYBOARD_ISO: u32 = u32::from_be_bytes(*b"ISO ");
+const KEYBOARD_ANSI: u32 = u32::from_be_bytes(*b"ANSI");
+const KEYBOARD_JIS: u32 = u32::from_be_bytes(*b"JIS ");
+
+/// The physical layout of the keyboard last typed on. JIS is drawn as ANSI.
+pub fn keyboard_kind() -> &'static str {
+    // SAFETY: plain queries of the current keyboard type.
+    match unsafe { KBGetLayoutType(i16::from(LMGetKbdType())) } {
+        KEYBOARD_ISO => "iso",
+        KEYBOARD_ANSI | KEYBOARD_JIS => "ansi",
+        _ => "unknown",
+    }
+}
+
 const COMBINED_SESSION_STATE: i32 = 0;
 const LEFT_BUTTON: u32 = 0;
 

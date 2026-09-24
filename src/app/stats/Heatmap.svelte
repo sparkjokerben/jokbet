@@ -1,17 +1,23 @@
 <script lang="ts">
+  import { invoke } from "@tauri-apps/api/core";
+  import { onMount } from "svelte";
   import { formatCount } from "../../lib/format";
   import { t } from "../../lib/i18n";
+  import { platform } from "../../lib/platform";
   import { HEAT_BINS, heatBin } from "./chart";
-  import { KEYBOARD_H, KEYBOARD_W, keyboardLayout, type KeyCap } from "./keyboard";
+  import { keyboardLayout, layoutFor, type KeyboardKind, type KeyCap } from "./keyboard";
 
-  let { counts }: { counts: Record<string, number> } = $props();
+  let { counts, everPressed = [] }: { counts: Record<string, number>; everPressed?: string[] } = $props();
 
   const GAP = 3;
-  const caps = keyboardLayout();
+  /** What the system says the keyboard is; only macOS says. */
+  let kind = $state<KeyboardKind>("unknown");
+  const board = $derived(keyboardLayout(layoutFor(platform, everPressed, kind)));
+  const caps = $derived(board.caps);
   let width = $state(700);
   let hover = $state<KeyCap | null>(null);
 
-  const unit = $derived(width / KEYBOARD_W);
+  const unit = $derived(width / board.width);
   const max = $derived(Math.max(0, ...Object.values(counts)));
   const total = $derived(Object.values(counts).reduce((a, b) => a + b, 0));
   const top = $derived(
@@ -21,19 +27,33 @@
       .slice(0, 10),
   );
 
+  onMount(() => {
+    if (platform === "mac") invoke<KeyboardKind>("keyboard_kind").then((k) => (kind = k), () => {});
+  });
+
   const nameOf = (code: string) => {
     const cap = caps.find((k) => k.code === code);
     return cap?.label ? `${cap.label}` : code;
   };
   const fill = (bin: number) => (bin < 0 ? "var(--surface-2)" : `var(--heat-${bin})`);
   const ink = (bin: number) => (bin < 0 ? "var(--text-muted)" : `var(--heat-ink-${bin})`);
+  /** The L of an ISO Enter: the cap's box less its bottom-left notch, with
+   * the notch's edges on the same gaps as the keys around it. */
+  const clip = (k: KeyCap) => {
+    if (!k.notch) return undefined;
+    const w = k.w * unit - GAP;
+    const h = k.h * unit - GAP;
+    const nx = k.notch.w * unit;
+    const ny = (k.h - k.notch.h) * unit - GAP;
+    return `polygon(0 0, ${w}px 0, ${w}px ${h}px, ${nx}px ${h}px, ${nx}px ${ny}px, 0 ${ny}px)`;
+  };
 </script>
 
 <div class="wrap">
   <div
     class="board"
     bind:clientWidth={width}
-    style:height="{KEYBOARD_H * unit}px"
+    style:height="{board.height * unit}px"
     role="img"
     aria-label={t("heatmapTitle")}
   >
@@ -50,6 +70,7 @@
         style:height="{k.h * unit - GAP}px"
         style:background={fill(bin)}
         style:color={ink(bin)}
+        style:clip-path={clip(k)}
         onpointerenter={() => (hover = k)}
         onpointerleave={() => (hover = null)}
       >
