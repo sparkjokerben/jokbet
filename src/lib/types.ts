@@ -95,3 +95,9 @@ export interface MilestoneHit {
   metric: Metric;
   level: number;
 }
+
+/** Where updating stands (UpdateStatus in Rust). */
+export type UpdateStatus =
+  | { state: "idle" | "checking" | "upToDate" }
+  | { state: "ready"; version: string; notes: string | null; date: string | null }
+  | { state: "failed"; error: string };

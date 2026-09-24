@@ -1,5 +1,6 @@
-//! Background updates: check at start and every 6 h, download silently, and
-//! install when the user picks "Restart to Update" or quits.
+//! Background updates: check at start and every 6 h (or when the settings ask),
+//! download silently, and install when the user picks "Restart to Update" or
+//! quits.
 //!
 //! Both steps have two sources. The check asks the site's mirror first and
 //! GitHub second (the `endpoints` in tauri.conf.json; the plugin walks them in
@@ -10,9 +11,11 @@
 //! carries is the file's, so either copy verifies against it.
 
 use crate::menu::AppMenu;
+use serde::Serialize;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
-use tauri::{AppHandle, Manager, Runtime, Url};
+use tauri::{AppHandle, Emitter, Manager, Runtime, Url};
 use tauri_plugin_updater::{Update, UpdaterExt};
 
 const CHECK_EVERY: Duration = Duration::from_secs(6 * 60 * 60);
@@ -28,8 +31,52 @@ const STALL_TIMEOUT: Duration = Duration::from_secs(60);
 const MIRROR: &str = "https://jokbet.jokerben.top/dl/";
 const GITHUB: &str = "https://github.com/sparkjokerben/jokbet/releases/download/";
 
-#[derive(Default)]
-pub struct PendingUpdate(Mutex<Option<(Update, Vec<u8>)>>);
+/// Where updating stands, as the settings window and the pet show it.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(tag = "state", rename_all = "camelCase")]
+pub enum UpdateStatus {
+    /// Not checked yet this run.
+    Idle,
+    Checking,
+    UpToDate,
+    /// Downloaded and verified; installed on restart or quit.
+    #[serde(rename_all = "camelCase")]
+    Ready {
+        version: String,
+        notes: Option<String>,
+        date: Option<String>,
+    },
+    Failed {
+        error: String,
+    },
+}
+
+pub struct Updates {
+    /// A downloaded update and its bytes, until it is installed.
+    pending: Mutex<Option<(Update, Vec<u8>)>>,
+    status: Mutex<UpdateStatus>,
+    /// A check is under way (the background one or one asked for).
+    checking: AtomicBool,
+}
+
+impl Default for Updates {
+    fn default() -> Self {
+        Self {
+            pending: Mutex::new(None),
+            status: Mutex::new(UpdateStatus::Idle),
+            checking: AtomicBool::new(false),
+        }
+    }
+}
+
+pub fn status<R: Runtime>(app: &AppHandle<R>) -> UpdateStatus {
+    app.state::<Updates>().status.lock().unwrap().clone()
+}
+
+fn set_status<R: Runtime>(app: &AppHandle<R>, status: UpdateStatus) {
+    *app.state::<Updates>().status.lock().unwrap() = status.clone();
+    let _ = app.emit("app://update", status);
+}
 
 pub fn spawn<R: Runtime>(app: AppHandle<R>) {
     // Dev builds have no release to compare against.
@@ -39,18 +86,48 @@ pub fn spawn<R: Runtime>(app: AppHandle<R>) {
     std::thread::Builder::new()
         .name("updater".into())
         .spawn(move || loop {
-            let ready = app.state::<PendingUpdate>().0.lock().unwrap().is_some();
-            if !ready {
-                if let Err(e) = tauri::async_runtime::block_on(check(&app)) {
-                    log::warn!("update check failed: {e}");
-                }
-            }
+            tauri::async_runtime::block_on(check_now(&app));
             std::thread::sleep(CHECK_EVERY);
         })
         .expect("spawn updater thread");
 }
 
-async fn check<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_updater::Error> {
+/// Checks for an update and downloads it, unless one is downloaded already
+/// or a check is under way; answers with where things stand after.
+pub async fn check_now<R: Runtime>(app: &AppHandle<R>) -> UpdateStatus {
+    let updates = app.state::<Updates>();
+    if updates.pending.lock().unwrap().is_some() || updates.checking.swap(true, Ordering::AcqRel) {
+        return status(app);
+    }
+    set_status(app, UpdateStatus::Checking);
+    let next = match check(app).await {
+        Ok(None) => UpdateStatus::UpToDate,
+        Ok(Some((update, bytes))) => {
+            let ready = UpdateStatus::Ready {
+                version: update.version.clone(),
+                notes: update.body.clone().filter(|n| !n.trim().is_empty()),
+                date: update.date.map(|d| d.date().to_string()),
+            };
+            let version = update.version.clone();
+            *updates.pending.lock().unwrap() = Some((update, bytes));
+            app.state::<AppMenu<R>>().show_update(app, &version);
+            ready
+        }
+        Err(e) => {
+            log::warn!("update check failed: {e}");
+            UpdateStatus::Failed {
+                error: e.to_string(),
+            }
+        }
+    };
+    updates.checking.store(false, Ordering::Release);
+    set_status(app, next.clone());
+    next
+}
+
+async fn check<R: Runtime>(
+    app: &AppHandle<R>,
+) -> Result<Option<(Update, Vec<u8>)>, tauri_plugin_updater::Error> {
     let updater = app
         .updater_builder()
         .timeout(CHECK_TIMEOUT)
@@ -60,14 +137,10 @@ async fn check<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri_plugin_update
                 .read_timeout(STALL_TIMEOUT)
         })
         .build()?;
-    let Some(update) = updater.check().await? else {
-        return Ok(());
-    };
-    let (update, bytes) = download(update).await?;
-    let version = update.version.clone();
-    *app.state::<PendingUpdate>().0.lock().unwrap() = Some((update, bytes));
-    app.state::<AppMenu<R>>().show_update(app, &version);
-    Ok(())
+    match updater.check().await? {
+        Some(update) => download(update).await.map(Some),
+        None => Ok(None),
+    }
 }
 
 /// Downloads (and verifies) the update from where the manifest says, and from
@@ -114,7 +187,7 @@ fn is_tag_and_name(rest: &str) -> bool {
 
 /// Installs a downloaded update; returns true if one was installed.
 pub fn install_pending<R: Runtime>(app: &AppHandle<R>) -> bool {
-    let Some((update, bytes)) = app.state::<PendingUpdate>().0.lock().unwrap().take() else {
+    let Some((update, bytes)) = app.state::<Updates>().pending.lock().unwrap().take() else {
         return false;
     };
     match update.install(bytes) {

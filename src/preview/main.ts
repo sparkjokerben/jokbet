@@ -63,6 +63,15 @@ const params = new URLSearchParams(location.search);
 const view = params.get("view");
 /** With ?nostorage, the database "could not be opened". */
 const storage = !params.has("nostorage");
+/** An update as the updater reports one once downloaded. */
+const READY = {
+  state: "ready",
+  version: "0.2.0",
+  notes: "- Hide the pet while another app is full screen\n- Global shortcuts\n- Choose the interface language",
+  date: "2026-09-25",
+};
+/** With ?update, one is downloaded already. */
+const update = params.has("update") ? READY : { state: "idle" };
 /** With ?lang=en or ?lang=zh, the pages speak that language. */
 const previewLang = params.get("lang");
 if (previewLang === "en" || previewLang === "zh") setLang(previewLang);
@@ -99,6 +108,12 @@ mockIPC(
       return { permission: "denied", listening: false, paused: false, storage };
     case "plugin:autostart|is_enabled":
       return true;
+    case "plugin:app|version":
+      return "0.1.2";
+    case "update_status":
+      return update;
+    case "check_update":
+      return READY;
     case "update_settings":
       settings = { ...settings, ...(a.patch as object) } as Settings;
       return settings;

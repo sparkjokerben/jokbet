@@ -18,6 +18,7 @@
   import Segmented from "../ui/Segmented.svelte";
   import ShortcutInput from "../ui/ShortcutInput.svelte";
   import Toggle from "../ui/Toggle.svelte";
+  import About from "./About.svelte";
   import MilestoneEditor from "./MilestoneEditor.svelte";
 
   let s = $state<Settings | null>(null);
@@ -287,6 +288,8 @@
         {/if}
       </div>
     </section>
+
+    <About />
 
     {#if error}
       <p class="error" role="alert">{error}</p>

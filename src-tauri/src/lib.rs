@@ -34,7 +34,7 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
-        .manage(updater::PendingUpdate::default())
+        .manage(updater::Updates::default())
         .on_menu_event(menu::handle_event)
         .invoke_handler(tauri::generate_handler![
             commands::get_settings,
@@ -54,6 +54,9 @@ pub fn run() {
             commands::restart_app,
             commands::open_external,
             commands::suspend_shortcuts,
+            commands::update_status,
+            commands::check_update,
+            commands::install_update,
         ])
         .on_window_event(|window, event| {
             // Recording a shortcut lets go of the others; closing the window

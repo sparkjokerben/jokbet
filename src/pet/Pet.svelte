@@ -4,6 +4,7 @@
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { onMount } from "svelte";
   import { celebrationText, headValue } from "../lib/format";
+  import { t } from "../lib/i18n";
   import { blockedBy } from "./machine";
   import {
     PET_SCALE_DEFAULT,
@@ -13,6 +14,7 @@
     type Settings,
     type Status,
     type Tick,
+    type UpdateStatus,
   } from "../lib/types";
   import type { AnimName } from "../sprites/jokbet";
   import { GRID_H, GRID_W, PET_H, PET_W, PET_X, PET_Y } from "../sprites/jokbet";
@@ -26,6 +28,8 @@
   /** Typing animation speed (keys per second) when live typing speed is turned off. */
   const FIXED_KPS = 2.5;
   const CELEBRATE_MS = 3500;
+  /** How long the pet says a new version is ready. */
+  const UPDATE_BANNER_MS = 6000;
   /** Gap between the top of the pet's box and whatever sits above it. */
   const ABOVE_LIFT = 8;
 
@@ -39,6 +43,8 @@
   });
   let paused = $state(false);
   let storage = $state(true);
+  /** A downloaded update's version, until the app restarts into it. */
+  let updateReady = $state<string | null>(null);
   let blocked = $state<ReturnType<typeof blockedBy>>(null);
   let hovering = $state(false);
   let bubbleEl: HTMLDivElement | undefined = $state();
@@ -123,11 +129,24 @@
     if (t.activity) pet.input(t.activity);
   }
 
-  function celebrate(hits: MilestoneHit[]) {
-    banner = celebrationText(hits);
-    pet.celebrate(CELEBRATE_MS);
+  function say(text: string, ms: number) {
+    banner = text;
     clearTimeout(bannerTimer);
-    bannerTimer = setTimeout(() => (banner = ""), CELEBRATE_MS);
+    bannerTimer = setTimeout(() => (banner = ""), ms);
+  }
+
+  function celebrate(hits: MilestoneHit[]) {
+    say(celebrationText(hits), CELEBRATE_MS);
+    pet.celebrate(CELEBRATE_MS);
+  }
+
+  /** Says once that an update is downloaded; the bubble keeps saying it. */
+  function applyUpdate(status: UpdateStatus, announce: boolean) {
+    if (status.state !== "ready" || status.version === updateReady) return;
+    updateReady = status.version;
+    if (!announce) return;
+    say(t("updateBanner", { v: status.version }), UPDATE_BANNER_MS);
+    pet.oneShot("wave");
   }
 
   $effect(() => {
@@ -173,7 +192,9 @@
       listen<Settings>("settings://changed", (e) => applySettings(e.payload)),
       listen<{ hits: MilestoneHit[] }>("pet://celebrate", (e) => celebrate(e.payload.hits)),
       listen("pet://drag-end", () => pet.setDragging(false)),
+      listen<UpdateStatus>("app://update", (e) => applyUpdate(e.payload, true)),
     ];
+    invoke<UpdateStatus>("update_status").then((s) => applyUpdate(s, false), () => {});
 
     invoke<string>("glass_support").then((name) => (glassSupport = name));
     invoke<Settings>("get_settings").then(async (s) => {
@@ -205,6 +226,7 @@
           showSpeed={settings.typingSpeed}
           {paused}
           {storage}
+          {updateReady}
           glass={glassBubble}
           tint={(settings.glassTint ?? 18) / 100}
         />

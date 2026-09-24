@@ -8,6 +8,7 @@
     showSpeed,
     paused,
     storage = true,
+    updateReady = null,
     glass = false,
     tint = 0.18,
   }: {
@@ -16,6 +17,8 @@
     paused: boolean;
     /** False when counts cannot be saved: said above everything else. */
     storage?: boolean;
+    /** The version of a downloaded update, said at the bottom. */
+    updateReady?: string | null;
     glass?: boolean;
     tint?: number;
   } = $props();
@@ -45,6 +48,9 @@
       <dd>{t("perSecond", { n: formatRate(tick.kps) })}</dd>
     {/if}
   </dl>
+  {#if updateReady}
+    <div class="update">{t("updateBubble", { v: updateReady })}</div>
+  {/if}
 </div>
 
 <style>
@@ -126,6 +132,13 @@
   dd {
     margin: 0;
     text-align: right;
+  }
+  .update {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid var(--line);
+    font-size: 11px;
+    color: var(--muted);
   }
   .sub {
     display: block;

@@ -226,3 +226,24 @@ pub fn open_external(app: AppHandle, target: String) -> Result<(), String> {
 pub fn suspend_shortcuts(app: AppHandle, suspended: bool) {
     crate::shortcuts::suspend(&app, suspended);
 }
+
+#[tauri::command]
+pub fn update_status(app: AppHandle) -> crate::updater::UpdateStatus {
+    crate::updater::status(&app)
+}
+
+/// Checks for an update now (and downloads it), rather than at the next
+/// background check.
+#[tauri::command]
+pub async fn check_update(app: AppHandle) -> crate::updater::UpdateStatus {
+    crate::updater::check_now(&app).await
+}
+
+/// Installs the downloaded update and restarts into it.
+#[tauri::command]
+pub fn install_update(app: AppHandle) -> Result<(), String> {
+    if crate::updater::install_pending(&app) {
+        app.restart();
+    }
+    Err("no update could be installed".into())
+}
