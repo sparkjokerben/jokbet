@@ -4,6 +4,8 @@ use crate::i18n::{t, Lang, Text};
 use crate::panels::{self, Panel};
 use crate::pet_window::PET_LABEL;
 use crate::settings::SettingsStore;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 use tauri::image::Image;
 use tauri::menu::{CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
@@ -18,33 +20,36 @@ const ID_QUIT: &str = "quit";
 
 pub struct AppMenu<R: Runtime> {
     pub menu: Menu<R>,
+    stats: MenuItem<R>,
+    settings: MenuItem<R>,
     toggle: MenuItem<R>,
     pause: CheckMenuItem<R>,
-    lang: Lang,
+    quit: MenuItem<R>,
+    /// "Restart to Update" and its version, once an update is downloaded.
+    update: Mutex<Option<(MenuItem<R>, String)>>,
+    lang: Mutex<Lang>,
+    /// What the toggle item says: "Hide" while the pet is shown.
+    pet_shown: AtomicBool,
 }
 
 impl<R: Runtime> AppMenu<R> {
     pub fn build(app: &AppHandle<R>) -> tauri::Result<Self> {
-        let lang = Lang::system();
-        let paused = app.state::<SettingsStore>().get().paused;
-        let toggle = MenuItem::with_id(app, ID_TOGGLE, t(lang, Text::HidePet), true, None::<&str>)?;
-        let stats = MenuItem::with_id(app, ID_STATS, t(lang, Text::Stats), true, None::<&str>)?;
-        let settings = MenuItem::with_id(
-            app,
-            ID_SETTINGS,
-            t(lang, Text::Settings),
-            true,
-            None::<&str>,
-        )?;
+        let current = app.state::<SettingsStore>().get();
+        let lang = Lang::resolve(current.language);
+        let item =
+            |id: &str, text: Text| MenuItem::with_id(app, id, t(lang, text), true, None::<&str>);
+        let toggle = item(ID_TOGGLE, Text::HidePet)?;
+        let stats = item(ID_STATS, Text::Stats)?;
+        let settings = item(ID_SETTINGS, Text::Settings)?;
         let pause = CheckMenuItem::with_id(
             app,
             ID_PAUSE,
             t(lang, Text::PauseCounting),
             true,
-            paused,
+            current.paused,
             None::<&str>,
         )?;
-        let quit = MenuItem::with_id(app, ID_QUIT, t(lang, Text::Quit), true, None::<&str>)?;
+        let quit = item(ID_QUIT, Text::Quit)?;
         let menu = Menu::with_items(
             app,
             &[
@@ -59,10 +64,32 @@ impl<R: Runtime> AppMenu<R> {
         )?;
         Ok(Self {
             menu,
+            stats,
+            settings,
             toggle,
             pause,
-            lang,
+            quit,
+            update: Mutex::new(None),
+            lang: Mutex::new(lang),
+            pet_shown: AtomicBool::new(true),
         })
+    }
+
+    pub fn lang(&self) -> Lang {
+        *self.lang.lock().unwrap()
+    }
+
+    /// Says everything again in `lang`.
+    pub fn set_lang(&self, lang: Lang) {
+        *self.lang.lock().unwrap() = lang;
+        let _ = self.stats.set_text(t(lang, Text::Stats));
+        let _ = self.settings.set_text(t(lang, Text::Settings));
+        let _ = self.pause.set_text(t(lang, Text::PauseCounting));
+        let _ = self.quit.set_text(t(lang, Text::Quit));
+        self.sync_toggle(self.pet_shown.load(Ordering::Relaxed));
+        if let Some((item, version)) = &*self.update.lock().unwrap() {
+            let _ = item.set_text(update_text(lang, version));
+        }
     }
 
     pub fn sync_paused(&self, paused: bool) {
@@ -71,20 +98,33 @@ impl<R: Runtime> AppMenu<R> {
 
     /// Adds "Restart to Update to vX" at the top once an update is downloaded.
     pub fn show_update(&self, app: &AppHandle<R>, version: &str) {
-        let text = format!("{} v{version}", t(self.lang, Text::RestartToUpdate));
+        let mut update = self.update.lock().unwrap();
+        if let Some((item, shown)) = &mut *update {
+            let _ = item.set_text(update_text(self.lang(), version));
+            *shown = version.to_string();
+            return;
+        }
+        let text = update_text(self.lang(), version);
         if let Ok(item) = MenuItem::with_id(app, ID_RESTART_UPDATE, text, true, None::<&str>) {
-            let _ = self.menu.prepend(&item);
+            if self.menu.prepend(&item).is_ok() {
+                *update = Some((item, version.to_string()));
+            }
         }
     }
 
     fn sync_toggle(&self, visible: bool) {
+        self.pet_shown.store(visible, Ordering::Relaxed);
         let text = if visible {
             Text::HidePet
         } else {
             Text::ShowPet
         };
-        let _ = self.toggle.set_text(t(self.lang, text));
+        let _ = self.toggle.set_text(t(self.lang(), text));
     }
+}
+
+fn update_text(lang: Lang, version: &str) -> String {
+    format!("{} v{version}", t(lang, Text::RestartToUpdate))
 }
 
 pub fn create_tray<R: Runtime>(app: &AppHandle<R>, menu: &AppMenu<R>) -> tauri::Result<()> {
@@ -137,13 +177,28 @@ pub fn handle_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
 }
 
 pub fn open_panel<R: Runtime>(app: &AppHandle<R>, panel: Panel) {
-    let lang = app.state::<AppMenu<R>>().lang;
-    let title = match panel {
+    let lang = app.state::<AppMenu<R>>().lang();
+    if let Err(e) = panels::open(app, panel, &panel_title(lang, panel)) {
+        log::error!("opening {panel:?} failed: {e}");
+    }
+}
+
+/// A panel's window title: the menu item that opens it, without the ellipsis.
+pub fn panel_title(lang: Lang, panel: Panel) -> String {
+    match panel {
         Panel::Stats => t(lang, Text::Stats),
         Panel::Settings => t(lang, Text::Settings),
         Panel::Onboarding | Panel::Tour => "Jokbet",
-    };
-    if let Err(e) = panels::open(app, panel, title.trim_end_matches('…')) {
-        log::error!("opening {panel:?} failed: {e}");
+    }
+    .trim_end_matches('…')
+    .to_string()
+}
+
+/// Retitles whichever panels are open, after the language changed.
+pub fn retitle_panels<R: Runtime>(app: &AppHandle<R>, lang: Lang) {
+    for panel in [Panel::Stats, Panel::Settings] {
+        if let Some(window) = app.get_webview_window(panel.label()) {
+            let _ = window.set_title(&panel_title(lang, panel));
+        }
     }
 }

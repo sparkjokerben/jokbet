@@ -10,6 +10,7 @@
     PET_SCALE_MIN,
     type ActionAnim,
     type IdleAnim,
+    type Language,
     type Settings,
   } from "../../lib/types";
   import Segmented from "../ui/Segmented.svelte";
@@ -27,6 +28,12 @@
     { value: "breathe", label: t("animBreathe") },
     { value: "soccer", label: t("animSoccer") },
     { value: "lookAround", label: t("animLookAround") },
+  ];
+  // Each language names itself, so it can be found from either.
+  const LANGUAGE_OPTIONS: { value: Language; label: string }[] = [
+    { value: "system", label: t("languageSystem") },
+    { value: "zh", label: "中文" },
+    { value: "en", label: "English" },
   ];
   const ACTION_OPTIONS: { value: ActionAnim; label: string }[] = [
     { value: "poke", label: t("animPoke") },
@@ -215,6 +222,14 @@
 
     <section class="card">
       <h2>{t("sectionGeneral")}</h2>
+      <div class="field">
+        <span>{t("language")}</span>
+        <Segmented
+          label={t("language")}
+          bind:value={() => s!.language, (v: Language) => update({ language: v })}
+          options={LANGUAGE_OPTIONS}
+        />
+      </div>
       {#if autostart !== null}
         <Toggle label={t("autostart")} checked={autostart} onchange={setAutostart} />
       {/if}

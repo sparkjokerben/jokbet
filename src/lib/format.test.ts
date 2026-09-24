@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { celebrationText, formatCount, formatDistance, formatRate, headValue } from "./format";
-import { detectLang, messages, t } from "./i18n";
+import { detectLang, messages, resolveLang, t } from "./i18n";
 import type { HeadCounter, MilestoneHit, Tick } from "./types";
 
 const tick: Tick = {
@@ -63,6 +63,12 @@ describe("i18n", () => {
     expect(detectLang("zh-Hant-TW")).toBe("zh");
     expect(detectLang("en-US")).toBe("en");
     expect(detectLang(undefined)).toBe("en");
+  });
+  it("lets a chosen language win over the system", () => {
+    expect(resolveLang("en", "zh-CN")).toBe("en");
+    expect(resolveLang("zh", "en-US")).toBe("zh");
+    expect(resolveLang("system", "zh-TW")).toBe("zh");
+    expect(resolveLang("system", "fr-FR")).toBe("en");
   });
   it("fills placeholders", () => {
     expect(t("clickSplit", { l: 1, r: 2, m: 3 }, "en")).toBe("L 1 · R 2 · M 3");

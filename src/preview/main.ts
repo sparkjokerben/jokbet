@@ -7,6 +7,7 @@ import { mount } from "svelte";
 import App from "../app/App.svelte";
 import Pet from "../pet/Pet.svelte";
 import "../app/theme.css";
+import { setLang } from "../lib/i18n";
 import type { Settings } from "../lib/types";
 
 const FREQ = "ETAOINSHRDLCUMWFGYPBVKJXQZ";
@@ -53,12 +54,16 @@ let settings: Settings = {
   sleepAfterMin: 1,
   paused: false,
   onboarded: true,
+  language: "system",
 };
 
 const params = new URLSearchParams(location.search);
 const view = params.get("view");
 /** With ?nostorage, the database "could not be opened". */
 const storage = !params.has("nostorage");
+/** With ?lang=en or ?lang=zh, the pages speak that language. */
+const previewLang = params.get("lang");
+if (previewLang === "en" || previewLang === "zh") setLang(previewLang);
 
 mockWindows(view === "pet-frame" ? "pet" : "stats");
 mockIPC(
@@ -106,7 +111,9 @@ if (view === "pet") {
   // A frame the size of the real pet window, over a mid-gray "desktop".
   document.body.style.cssText = "margin:0;background:#8a8d93;position:relative";
   const frame = document.createElement("iframe");
-  frame.src = `/preview.html?view=pet-frame${storage ? "" : "&nostorage"}`;
+  const pass = new URLSearchParams(params);
+  pass.set("view", "pet-frame");
+  frame.src = `/preview.html?${pass}`;
   // The size of the real pet window at the scale in the fake settings below.
   frame.style.cssText = "width:220px;height:271px;border:1px dashed #555;margin:20px";
   document.body.append(frame);

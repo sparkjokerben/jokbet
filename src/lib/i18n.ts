@@ -1,4 +1,4 @@
-// zh/en UI strings, following the system language.
+// zh/en UI strings, in the language the settings ask for (the system's by default).
 
 const zh = {
   today: "今天",
@@ -77,6 +77,8 @@ const zh = {
   sectionGeneral: "通用",
   autostart: "开机自动启动",
   pauseCounting: "暂停计数",
+  language: "语言",
+  languageSystem: "跟随系统",
   saveFailed: "保存失败：{error}",
   celebrateDaily: "今天{metric} {n}！",
   celebrateLifetime: "累计{metric} {n}！",
@@ -192,6 +194,8 @@ const en: Record<MessageKey, string> = {
   sectionGeneral: "General",
   autostart: "Start at login",
   pauseCounting: "Pause counting",
+  language: "Language",
+  languageSystem: "Follow system",
   saveFailed: "Could not save: {error}",
   celebrateDaily: "{n} {metric} today!",
   celebrateLifetime: "{n} {metric} all time!",
@@ -235,7 +239,19 @@ export function detectLang(locale: string | undefined): Lang {
   return locale?.toLowerCase().startsWith("zh") ? "zh" : "en";
 }
 
-export const lang: Lang = detectLang(typeof navigator === "undefined" ? undefined : navigator.language);
+const systemLocale = () => (typeof navigator === "undefined" ? undefined : navigator.language);
+
+/** The language pages speak; set once from the settings before they mount. */
+export let lang: Lang = detectLang(systemLocale());
+
+/** The language a setting stands for ("system" follows the system locale). */
+export function resolveLang(setting: Lang | "system", locale: string | undefined = systemLocale()): Lang {
+  return setting === "system" ? detectLang(locale) : setting;
+}
+
+export function setLang(next: Lang) {
+  lang = next;
+}
 
 export function t(key: MessageKey, vars: Record<string, string | number> = {}, l: Lang = lang): string {
   return messages[l][key].replace(/\{(\w+)\}/g, (_, v: string) => String(vars[v] ?? `{${v}}`));

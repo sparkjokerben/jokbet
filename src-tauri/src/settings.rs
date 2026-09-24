@@ -57,6 +57,17 @@ impl Default for HeadCounter {
     }
 }
 
+/// The language of the interface.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum Language {
+    /// Whatever the system is set to (Chinese for any Chinese locale, else English).
+    #[default]
+    System,
+    Zh,
+    En,
+}
+
 /// What the pet does while nothing else is going on.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
@@ -146,6 +157,7 @@ pub struct Settings {
     pub paused: bool,
     /// The first-run onboarding has been completed.
     pub onboarded: bool,
+    pub language: Language,
 }
 
 impl Default for Settings {
@@ -166,6 +178,7 @@ impl Default for Settings {
             sleep_after_min: 1,
             paused: false,
             onboarded: false,
+            language: Language::System,
         }
     }
 }
@@ -461,6 +474,7 @@ mod tests {
         assert_eq!(s.double_click_anim, ActionAnim::Hearts);
         assert_eq!(s.sleep_after_min, 1);
         assert!(!s.liquid_glass, "the material starts switched off");
+        assert_eq!(s.language, Language::System);
     }
 
     #[test]

@@ -22,6 +22,11 @@ pub fn apply_patch<R: Runtime>(
     if next.paused != before.paused {
         app.state::<AppMenu<R>>().sync_paused(next.paused);
     }
+    if next.language != before.language {
+        let lang = crate::i18n::Lang::resolve(next.language);
+        app.state::<AppMenu<R>>().set_lang(lang);
+        crate::menu::retitle_panels(app, lang);
+    }
     if before.liquid_glass && !next.liquid_glass {
         // The bubble is told to take it away too, but it must not stay if the
         // setting flips while it is up.

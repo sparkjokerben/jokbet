@@ -14,7 +14,7 @@ pub enum Panel {
 }
 
 impl Panel {
-    fn label(self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Panel::Stats => "stats",
             Panel::Settings => "settings",

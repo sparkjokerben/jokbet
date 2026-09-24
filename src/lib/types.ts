@@ -13,6 +13,8 @@ export type Activity = "typing" | "click";
 export type Permission = "granted" | "denied" | "notRequired" | "unsupported";
 export type IdleAnim = "breathe" | "soccer" | "lookAround";
 export type ActionAnim = "poke" | "hearts" | "soccer" | "wave";
+/** The interface language: "system" follows the system locale. */
+export type Language = "system" | "zh" | "en";
 
 export interface HeadCounter {
   enabled: boolean;
@@ -47,6 +49,7 @@ export interface Settings {
   sleepAfterMin: number;
   paused: boolean;
   onboarded: boolean;
+  language: Language;
 }
 
 export interface Totals {

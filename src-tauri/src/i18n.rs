@@ -1,4 +1,7 @@
-//! zh/en strings for native UI (tray, menus, dialogs), following the system locale.
+//! zh/en strings for native UI (tray, menus, dialogs), in the language the
+//! settings ask for (the system's by default).
+
+use crate::settings::Language;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Lang {
@@ -16,6 +19,15 @@ impl Lang {
 
     pub fn system() -> Self {
         Self::from_locale(sys_locale::get_locale().as_deref())
+    }
+
+    /// The language a setting stands for.
+    pub fn resolve(setting: Language) -> Self {
+        match setting {
+            Language::System => Self::system(),
+            Language::Zh => Lang::Zh,
+            Language::En => Lang::En,
+        }
     }
 }
 
@@ -58,6 +70,13 @@ mod tests {
         for l in ["zh-CN", "zh-Hans-CN", "zh_TW", "ZH"] {
             assert_eq!(Lang::from_locale(Some(l)), Lang::Zh, "{l}");
         }
+    }
+
+    #[test]
+    fn a_chosen_language_wins_over_the_system() {
+        assert_eq!(Lang::resolve(Language::Zh), Lang::Zh);
+        assert_eq!(Lang::resolve(Language::En), Lang::En);
+        assert_eq!(Lang::resolve(Language::System), Lang::system());
     }
 
     #[test]
