@@ -1,6 +1,6 @@
 {
   "name": "jokbet",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A lightweight desktop pet that counts your keyboard and mouse activity",
   "private": true,
   "type": "module",
