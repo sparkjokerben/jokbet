@@ -1,8 +1,12 @@
+# The one outside party the pages talk to is Cloudflare Web Analytics: the edge
+# injects its beacon into every page, which loads from static.cloudflareinsights.com
+# and reports to cloudflareinsights.com. No cookies, nothing about who you are
+# (the privacy section on /about says so too).
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), camera=(), microphone=(), interest-cohort=()
-  Content-Security-Policy: default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; style-src-attr 'none'; script-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; style-src-attr 'none'; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   X-Frame-Options: DENY
 
 # Rules are merged when more than one matches, so they must not overlap: the
