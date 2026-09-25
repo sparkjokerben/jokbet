@@ -11,6 +11,16 @@ the fuller entries elsewhere:
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] — 2026-09-25
+
+### Fixed
+
+- **The charts' tooltips land on what you are pointing at.** Hovering the daily
+  trend, or the activity-by-hour chart that arrived in 0.3.0, highlighted a
+  column about two columns to the left of the cursor: the width of the y-axis
+  was taken off the pointer's position twice, once by the hit area and once
+  again by the arithmetic. It had been that way since the stats window existed.
+
 ## [0.3.0] — 2026-09-25
 
 ### Added
@@ -114,6 +124,7 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the tray; milestones; a stats window with a trend and a keyboard heatmap; and
   an interface in English and Simplified Chinese.
 
+[0.3.1]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.1
 [0.3.0]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.0
 [0.2.0]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.2.0
 [0.1.2]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.1.2
