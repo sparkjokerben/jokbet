@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { columnPath, labelIndexes, niceMax } from "./chart";
+  import { columnAt, columnPath, labelIndexes, niceMax } from "./chart";
 
   let {
     points,
@@ -34,9 +34,10 @@
   const shortDate = (d: string) => d.slice(5);
 
   function onMove(e: PointerEvent) {
+    // The handler is on the hit rectangle, so its own left edge is the first
+    // column: measuring from it needs no margin of its own.
     const rect = (e.currentTarget as SVGElement).getBoundingClientRect();
-    const i = Math.floor((e.clientX - rect.left - M.left) / band);
-    hover = i >= 0 && i < points.length ? i : null;
+    hover = columnAt(e.clientX, rect.left, band, points.length);
   }
 </script>
 

@@ -39,3 +39,20 @@ export function labelIndexes(n: number, max = 5): number[] {
   for (let i = 0; i < max; i++) out.add(Math.round((i * (n - 1)) / (max - 1)));
   return [...out];
 }
+
+/**
+ * The column a pointer is over. `left` is the left edge of the area the pointer
+ * is measured in — the bounding box of the element the pointer event is bound
+ * to — so a caller that passes a hit rectangle's own `rect.left` is already
+ * measuring from the first column and must not take the margin off again.
+ */
+export function columnAt(
+  clientX: number,
+  left: number,
+  band: number,
+  count: number,
+): number | null {
+  if (!(band > 0) || count <= 0) return null;
+  const i = Math.floor((clientX - left) / band);
+  return i >= 0 && i < count ? i : null;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { columnPath, heatBin, labelIndexes, niceMax } from "./chart";
+import { columnAt, columnPath, heatBin, labelIndexes, niceMax } from "./chart";
 
 describe("niceMax", () => {
   it("rounds up to the next clean step", () => {
@@ -37,5 +37,22 @@ describe("labelIndexes", () => {
     expect(labelIndexes(3)).toEqual([0, 1, 2]);
     expect(labelIndexes(30)).toEqual([0, 7, 15, 22, 29]);
     expect(labelIndexes(0)).toEqual([]);
+  });
+});
+
+describe("columnAt", () => {
+  // Bands 40 wide starting 48 in, as they are on a hit rectangle that starts
+  // after the y-axis: the columns run 48..88, 88..128 and so on.
+  it("counts from the left edge it is given", () => {
+    expect(columnAt(48, 48, 40, 24)).toBe(0);
+    expect(columnAt(87, 48, 40, 24)).toBe(0);
+    expect(columnAt(88, 48, 40, 24)).toBe(1);
+    expect(columnAt(1000, 48, 40, 24)).toBe(23);
+  });
+  it("has nothing to report outside the area", () => {
+    expect(columnAt(47, 48, 40, 24)).toBeNull();
+    expect(columnAt(1008, 48, 40, 24)).toBeNull();
+    expect(columnAt(48, 48, 0, 24)).toBeNull();
+    expect(columnAt(48, 48, 40, 0)).toBeNull();
   });
 });

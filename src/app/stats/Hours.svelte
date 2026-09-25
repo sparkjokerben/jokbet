@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t } from "../../lib/i18n";
-  import { columnPath, niceMax } from "./chart";
+  import { columnAt, columnPath, niceMax } from "./chart";
 
   let {
     counts,
@@ -37,9 +37,10 @@
   const clock = (hour: number) => `${String(hour).padStart(2, "0")}:00`;
 
   function onMove(e: PointerEvent) {
+    // The handler is on the hit rectangle, so its own left edge is the first
+    // column: measuring from it needs no margin of its own.
     const rect = (e.currentTarget as SVGElement).getBoundingClientRect();
-    const i = Math.floor((e.clientX - rect.left - M.left) / band);
-    hover = i >= 0 && i < HOURS.length ? i : null;
+    hover = columnAt(e.clientX, rect.left, band, HOURS.length);
   }
 </script>
 
