@@ -90,6 +90,27 @@ export interface Status {
   storage: boolean;
 }
 
+export interface DayStat extends Totals {
+  date: string;
+}
+
+export interface Stats {
+  /** Oldest first, ending today; days without data are zero. */
+  days: DayStat[];
+  /** Per-key counts over the same range. */
+  keys: Record<string, number>;
+  /** Totals per hour of the day over the same range; index 0 is midnight. */
+  hours: Totals[];
+  /**
+   * Every day that has counts, oldest first. Days without counts are never
+   * stored, so this is sparse and shorter than the span it covers.
+   */
+  history: DayStat[];
+  lifetime: Totals;
+  /** Every key pressed on any day. */
+  everPressed: string[];
+}
+
 
 
 export interface MilestoneHit {

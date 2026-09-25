@@ -9,7 +9,7 @@ use crate::input::{self, EventSink, InputHandle, Permission};
 use crate::pet_window::PET_LABEL;
 use crate::platform;
 use crate::settings::{Period, Settings};
-use chrono::{Local, NaiveDate};
+use chrono::{Local, NaiveDate, Timelike};
 use crossbeam_channel::{bounded, select, tick, Receiver, Sender};
 use serde::Serialize;
 use std::collections::HashMap;
@@ -113,6 +113,12 @@ pub struct Stats {
     pub days: Vec<DayStat>,
     /// Per-key counts over the same range.
     pub keys: HashMap<String, u64>,
+    /// Totals per hour of the day over the same range; index 0 is midnight.
+    pub hours: [Totals; 24],
+    /// Every day that has counts, oldest first. The insights look past the
+    /// selected range, and days without counts are never stored, so this is
+    /// smaller than the span it covers.
+    pub history: Vec<DayStat>,
     pub lifetime: Totals,
     /// Every key pressed on any day, which tells what kind of keyboard it is.
     pub ever_pressed: Vec<String>,
@@ -152,6 +158,10 @@ struct Worker<R: Runtime> {
     /// Lifetime totals already on disk; live lifetime adds `agg.pending`.
     lifetime_saved: Totals,
     date: NaiveDate,
+    /// The local hour of day, refreshed about once a second while the loop
+    /// runs. Events carry a monotonic timestamp, not a clock, so the hour has
+    /// to be read here and handed to the aggregator.
+    hour: u8,
     displays: DisplayMap,
     sink: EventSink,
     events: Receiver<input::TimedEvent>,
@@ -171,7 +181,8 @@ impl<R: Runtime> Worker<R> {
         if input::permission() == Permission::Denied {
             input::request_permission();
         }
-        let date = Local::now().date_naive();
+        let now = Local::now();
+        let date = now.date_naive();
         let today = db
             .as_ref()
             .and_then(|db| db.load_day(date).ok())
@@ -192,6 +203,7 @@ impl<R: Runtime> Worker<R> {
             db,
             lifetime_saved,
             date,
+            hour: now.hour() as u8,
             displays: DisplayMap(platform::displays()),
             sink: EventSink::new(tx),
             events,
@@ -214,10 +226,13 @@ impl<R: Runtime> Worker<R> {
         let mut ticks: u32 = 0;
         self.housekeeping();
         loop {
+            // Unbiased on purpose: crossbeam shuffles the ready handles each
+            // time round, so a flood of events cannot starve the ticker that
+            // refreshes the hour. A `biased;` here would let it.
             select! {
                 recv(self.events) -> e => {
                     if let Ok(e) = e {
-                        if let Some(a) = self.agg.ingest(e, &self.displays) {
+                        if let Some(a) = self.agg.ingest(e, &self.displays, self.hour) {
                             self.activity = Some(a);
                         }
                     }
@@ -298,7 +313,12 @@ impl<R: Runtime> Worker<R> {
             let _ = self.app.emit("app://status", status);
         }
 
-        let today = Local::now().date_naive();
+        // One reading of the clock for both, so the day and the hour can never
+        // be a boundary apart. Events are filed under the hour cached here,
+        // which is at most a second old: nothing against an hour of counts,
+        // and the same slop the day boundary already has.
+        let now = Local::now();
+        let today = now.date_naive();
         if today != self.date {
             self.flush();
             self.date = today;
@@ -308,6 +328,7 @@ impl<R: Runtime> Worker<R> {
                 let _ = db.prune_reached(today);
             }
         }
+        self.hour = now.hour() as u8;
     }
 
     /// Records newly crossed milestones and celebrates them (at most once a minute).
@@ -362,12 +383,19 @@ impl<R: Runtime> Worker<R> {
                 .range(from, to)
                 .map_err(err)?
                 .into_iter()
-                .map(|(d, totals)| DayStat {
-                    date: d.format("%Y-%m-%d").to_string(),
+                .map(|(date, totals)| DayStat {
+                    date: date.format("%Y-%m-%d").to_string(),
                     totals,
                 })
                 .collect(),
             keys: db.key_counts(from, to).map_err(err)?,
+            hours: db.hours(from, to).map_err(err)?,
+            history: db
+                .history()
+                .map_err(err)?
+                .into_iter()
+                .map(|(date, totals)| DayStat { date, totals })
+                .collect(),
             lifetime: db.lifetime_totals().map_err(err)?,
             ever_pressed: db.ever_pressed().map_err(err)?,
         })
@@ -377,8 +405,10 @@ impl<R: Runtime> Worker<R> {
         self.flush();
         let db = self.db()?;
         let daily = db.daily_csv().map_err(|e| e.to_string())?;
+        let hourly = db.hourly_csv().map_err(|e| e.to_string())?;
         let keys = db.keys_csv().map_err(|e| e.to_string())?;
         std::fs::write(dir.join("jokbet-daily.csv"), daily).map_err(|e| e.to_string())?;
+        std::fs::write(dir.join("jokbet-hourly.csv"), hourly).map_err(|e| e.to_string())?;
         std::fs::write(dir.join("jokbet-keys.csv"), keys).map_err(|e| e.to_string())
     }
 
@@ -425,5 +455,48 @@ impl<R: Runtime> Worker<R> {
             let _ = self.app.emit_to(PET_LABEL, "pet://tick", &tick);
             self.last_tick = Some(tick);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The shape the stats window reads back: `hours` is twenty-four totals in
+    /// order, and a history entry is a day like any other.
+    #[test]
+    fn stats_serialize_the_way_the_window_reads_them() {
+        let stats = Stats {
+            days: vec![DayStat {
+                date: "2026-09-25".into(),
+                totals: Totals {
+                    keys: 7,
+                    move_mm: 1.5,
+                    ..Default::default()
+                },
+            }],
+            keys: HashMap::new(),
+            hours: std::array::from_fn(|hour| Totals {
+                keys: hour as u64,
+                ..Default::default()
+            }),
+            history: vec![DayStat {
+                date: "2026-09-24".into(),
+                totals: Totals::default(),
+            }],
+            lifetime: Totals::default(),
+            ever_pressed: vec![],
+        };
+        let value = serde_json::to_value(&stats).unwrap();
+
+        let hours = value["hours"].as_array().expect("hours is an array");
+        assert_eq!(hours.len(), 24);
+        assert_eq!(hours[0]["keys"].as_u64(), Some(0));
+        assert_eq!(hours[23]["keys"].as_u64(), Some(23));
+        // camelCase reaches an hour's totals the same way it reaches a day's.
+        assert_eq!(hours[0]["clickLeft"].as_u64(), Some(0));
+        assert_eq!(value["days"][0]["clickLeft"].as_u64(), Some(0));
+        assert_eq!(value["days"][0]["moveMm"].as_f64(), Some(1.5));
+        assert_eq!(value["history"][0]["date"].as_str(), Some("2026-09-24"));
     }
 }

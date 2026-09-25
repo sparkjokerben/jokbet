@@ -14,24 +14,32 @@ const params = new URLSearchParams(location.search);
 
 const FREQ = "ETAOINSHRDLCUMWFGYPBVKJXQZ";
 
+/** The rest of a day's totals, given how many keys were pressed. */
+const withKeys = (keys: number) => ({
+  keys,
+  clickLeft: Math.round(keys * 0.18),
+  clickRight: Math.round(keys * 0.02),
+  clickMiddle: Math.round(keys * 0.004),
+  scrolls: Math.round(keys * 0.05),
+  movePx: keys * 40,
+  moveMm: keys * 9,
+});
+
+const fakeDay = (date: string, keys: number) => ({ date, ...withKeys(keys) });
+
+/** Quieter at the weekend, and busier on some days than others. */
+function fakeKeys(day: Date, i: number, quiet: number, busy: number) {
+  const weekend = day.getDay() === 0 || day.getDay() === 6;
+  return Math.round((weekend ? quiet : busy) * (0.6 + Math.abs(Math.sin(i * 1.7)) * 0.8));
+}
+
 function fakeStats(days: number) {
   const today = new Date();
   const out = [];
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    const weekend = d.getDay() === 0 || d.getDay() === 6;
-    const keys = Math.round((weekend ? 2500 : 9000) * (0.6 + Math.abs(Math.sin(i * 1.7)) * 0.8));
-    out.push({
-      date: d.toISOString().slice(0, 10),
-      keys,
-      clickLeft: Math.round(keys * 0.18),
-      clickRight: Math.round(keys * 0.02),
-      clickMiddle: Math.round(keys * 0.004),
-      scrolls: Math.round(keys * 0.05),
-      movePx: keys * 40,
-      moveMm: keys * 9,
-    });
+    out.push(fakeDay(d.toISOString().slice(0, 10), fakeKeys(d, i, 2500, 9000)));
   }
   const keys: Record<string, number> = { Space: 21000, Backspace: 6400, Enter: 3100, ShiftLeft: 2900, MetaLeft: 2600 };
   [...FREQ].forEach((c, i) => (keys[`Key${c}`] = Math.round(12000 / (i + 1.2))));
@@ -40,7 +48,39 @@ function fakeStats(days: number) {
   const everPressed = Object.keys(keys);
   if (params.has("iso")) everPressed.push("IntlBackslash");
   if (params.has("keypad")) everPressed.push("Numpad5");
-  return { days: out, keys, lifetime: { ...out[0], keys: 1_234_567, moveMm: 12_345_678 }, everPressed };
+  return {
+    days: out,
+    keys,
+    // ?nohours is what an upgrade from before the hourly table looks like, and
+    // ?nohistory what a fresh install looks like.
+    hours: params.has("nohours") ? fakeHours(days).map(() => withKeys(0)) : fakeHours(days),
+    history: params.has("nohistory") ? [] : fakeHistory(Math.max(days, 120)),
+    lifetime: { ...out[0], keys: 1_234_567, moveMm: 12_345_678 },
+    everPressed,
+  };
+}
+
+/** A working day: quiet at night, a morning peak and a bigger evening one. */
+function fakeHours(days: number) {
+  return Array.from({ length: 24 }, (_, h) => {
+    const morning = Math.exp(-((h - 10) ** 2) / 8);
+    const evening = Math.exp(-((h - 21) ** 2) / 6) * 0.8;
+    return withKeys(Math.round((morning + evening + (h < 7 ? 0.02 : 0)) * 9000 * (days / 30)));
+  });
+}
+
+/** The days that have counts, with gaps, so the streaks have an edge. */
+function fakeHistory(span: number) {
+  const today = new Date();
+  const out = [];
+  for (let i = span - 1; i >= 0; i--) {
+    // A day off a fortnight back, and a longer break before that.
+    if (i === 12 || i === 37 || i === 38 || i === 61) continue;
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    out.push(fakeDay(d.toISOString().slice(0, 10), fakeKeys(d, i, 2200, 8500)));
+  }
+  return out;
 }
 
 // Mirrors the shipped defaults (see Settings::default in src-tauri).

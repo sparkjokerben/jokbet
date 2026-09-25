@@ -2,24 +2,16 @@
   import { invoke } from "@tauri-apps/api/core";
   import { ask, message, open } from "@tauri-apps/plugin-dialog";
   import { onMount } from "svelte";
-  import { clicks, formatCount, formatDistance } from "../../lib/format";
-  import { t, type MessageKey } from "../../lib/i18n";
+  import { formatCount, formatDistance } from "../../lib/format";
+  import { t } from "../../lib/i18n";
   import { listen } from "@tauri-apps/api/event";
-  import type { HeatmapPalette, Metric, Settings, Status, Totals } from "../../lib/types";
+  import type { HeatmapPalette, Metric, Settings, Stats, Status } from "../../lib/types";
   import Segmented from "../ui/Segmented.svelte";
   import Heatmap from "./Heatmap.svelte";
+  import Hours from "./Hours.svelte";
   import Trend from "./Trend.svelte";
-
-  interface DayStat extends Totals {
-    date: string;
-  }
-  interface Stats {
-    days: DayStat[];
-    keys: Record<string, number>;
-    lifetime: Totals;
-    /** Every key pressed on any day. */
-    everPressed: string[];
-  }
+  import { busiestDay, streaks, weekOverWeek } from "./insights";
+  import { METRIC_LABEL, METRICS, valueOf } from "./metric";
 
   const REFRESH_MS = 15_000;
 
@@ -32,33 +24,64 @@
   let storage = $state(true);
   let palette = $state<HeatmapPalette>("brand");
 
-  const METRIC_LABEL: Record<Metric, MessageKey> = {
-    keys: "metricKeys",
-    clicks: "metricClicks",
-    inputs: "metricInputs",
-    scrolls: "metricScrolls",
-    distance: "metricDistance",
-  };
-
-  const VALUE: Record<Metric, (x: Totals) => number> = {
-    keys: (x) => x.keys,
-    clicks,
-    inputs: (x) => x.keys + clicks(x),
-    scrolls: (x) => x.scrolls,
-    distance: (x) => x.moveMm,
-  };
-  const valueOf = (x: Totals, m: Metric) => VALUE[m](x);
   const fmt = $derived((v: number) => (metric === "distance" ? formatDistance(v) : formatCount(Math.round(v))));
 
   const points = $derived(data?.days.map((d) => ({ date: d.date, value: valueOf(d, metric) })) ?? []);
   const rangeTotal = $derived(points.reduce((a, p) => a + p.value, 0));
+  /** One value per hour of the day, for the hours chart and its table. */
+  const hourValues = $derived((data?.hours ?? []).map((h) => valueOf(h, metric)));
+
   const tiles = $derived(
     data
       ? [
-          { label: t("tileToday"), value: fmt(points.at(-1)?.value ?? 0) },
-          { label: t("tileRange"), value: fmt(rangeTotal) },
-          { label: t("tileAverage"), value: fmt(rangeTotal / Math.max(1, points.length)) },
-          { label: t("tileLifetime"), value: fmt(valueOf(data.lifetime, metric)) },
+          { label: t("tileToday"), value: fmt(points.at(-1)?.value ?? 0), sub: "" },
+          { label: t("tileRange"), value: fmt(rangeTotal), sub: "" },
+          { label: t("tileAverage"), value: fmt(rangeTotal / Math.max(1, points.length)), sub: "" },
+          { label: t("tileLifetime"), value: fmt(valueOf(data.lifetime, metric)), sub: "" },
+        ]
+      : [],
+  );
+
+  const change = (now: number, before: number) => {
+    if (before <= 0) return "";
+    const pct = Math.round(((now - before) / before) * 100);
+    return `${pct >= 0 ? "+" : ""}${pct}%`;
+  };
+
+  /** What the selected range cannot say, from the history behind it. */
+  const insights = $derived.by(() => {
+    const today = data?.days.at(-1);
+    if (!data || !today) return null;
+    const week = weekOverWeek(data.history, metric, today.date);
+    return {
+      best: busiestDay(data.history, metric, today.date),
+      streak: streaks(data.history, metric, today.date, valueOf(today, metric)),
+      week,
+      weekChange: change(week.thisWeek, week.lastWeek),
+    };
+  });
+
+  const insightTiles = $derived(
+    insights
+      ? [
+          {
+            label: t("insightBusiestDay"),
+            value: insights.best ? fmt(valueOf(insights.best, metric)) : "—",
+            sub: insights.best?.date ?? "",
+          },
+          { label: t("insightStreak"), value: t("daysUnit", { n: insights.streak.current }), sub: "" },
+          {
+            label: t("insightStreakLongest"),
+            value: t("daysUnit", { n: insights.streak.longest }),
+            sub: "",
+          },
+          {
+            label: t("insightWeek"),
+            value: fmt(insights.week.thisWeek),
+            sub: [t("vsLastWeek", { value: fmt(insights.week.lastWeek) }), insights.weekChange]
+              .filter(Boolean)
+              .join(" · "),
+          },
         ]
       : [],
   );
@@ -131,10 +154,7 @@
     <Segmented
       label={t("value")}
       bind:value={metric}
-      options={(["keys", "clicks", "scrolls", "distance"] as const).map((m) => ({
-        value: m,
-        label: t(METRIC_LABEL[m]),
-      }))}
+      options={METRICS.map((m) => ({ value: m, label: t(METRIC_LABEL[m]) }))}
     />
   </div>
 
@@ -150,9 +170,26 @@
         <div class="card tile">
           <div class="muted">{tile.label}</div>
           <div class="big">{tile.value}</div>
+          {#if tile.sub}
+            <div class="sub muted">{tile.sub}</div>
+          {/if}
         </div>
       {/each}
     </div>
+
+    {#if insightTiles.length}
+      <div class="tiles">
+        {#each insightTiles as tile (tile.label)}
+          <div class="card tile">
+            <div class="muted">{tile.label}</div>
+            <div class="big">{tile.value}</div>
+            {#if tile.sub}
+              <div class="sub muted">{tile.sub}</div>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
 
     <section class="card">
       <h2>{t("trendTitle", { metric: t(METRIC_LABEL[metric]) })}</h2>
@@ -168,6 +205,24 @@
           </tbody>
         </table>
       </details>
+    </section>
+
+    <section class="card">
+      <h2>{t("hourlyTitle")}</h2>
+      <Hours counts={hourValues} format={fmt} label={t("hourlyTitle")} />
+      {#if hourValues.some((v) => v > 0)}
+        <details>
+          <summary class="muted">{t("dataTable")}</summary>
+          <table>
+            <thead><tr><th>{t("hour")}</th><th class="num">{t(METRIC_LABEL[metric])}</th></tr></thead>
+            <tbody>
+              {#each hourValues as value, hour (hour)}
+                <tr><td>{String(hour).padStart(2, "0")}:00</td><td class="num">{fmt(value)}</td></tr>
+              {/each}
+            </tbody>
+          </table>
+        </details>
+      {/if}
     </section>
 
     <section class="card">
@@ -218,6 +273,10 @@
   .tile .big {
     font-size: 22px;
     font-weight: 600;
+    margin-top: 2px;
+  }
+  .tile .sub {
+    font-size: 12px;
     margin-top: 2px;
   }
   details {

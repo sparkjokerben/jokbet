@@ -1,4 +1,5 @@
-//! Turns raw input events into today's counters. Pure: time comes from events.
+//! Turns raw input events into today's counters. Pure: the caller supplies the
+//! clock, so an event is counted into whichever hour it is handed.
 
 use super::distance::{DisplayMap, DistanceTracker};
 use super::rate::RateWindow;
@@ -39,13 +40,25 @@ impl Totals {
 pub struct DayCounters {
     pub totals: Totals,
     pub per_key: HashMap<String, u64>,
+    /// Totals per hour of the day, so a day can say when it was busy. It rides
+    /// along with the counters it belongs to, which is what keeps merges, day
+    /// rollovers and retried flushes from dropping the hour.
+    pub per_hour: [Totals; 24],
 }
 
 impl DayCounters {
-    fn apply(&mut self, f: impl Fn(&mut Totals)) {
+    /// Adds to the day's totals and to the hour it happened in. `hour` is
+    /// 0..24 from the caller's clock; anything else updates the totals alone.
+    fn apply(&mut self, hour: u8, f: impl Fn(&mut Totals)) {
         f(&mut self.totals);
+        if let Some(hourly) = self.per_hour.get_mut(hour as usize) {
+            f(hourly);
+        }
     }
 
+    /// Every hourly bucket is written by `apply`, which touches `totals` in the
+    /// same call, so an empty `totals` implies empty hours. The flush skips work
+    /// on this, and moving a count off `apply` would quietly break that.
     pub fn is_empty(&self) -> bool {
         self.totals == Totals::default() && self.per_key.is_empty()
     }
@@ -55,10 +68,13 @@ impl DayCounters {
         for (key, n) in other.per_key {
             *self.per_key.entry(key).or_default() += n;
         }
+        for (mine, theirs) in self.per_hour.iter_mut().zip(other.per_hour.iter()) {
+            mine.add(theirs);
+        }
     }
 
-    fn bump_key(&mut self, code: &str) {
-        self.totals.keys += 1;
+    fn bump_key(&mut self, code: &str, hour: u8) {
+        self.apply(hour, |t| t.keys += 1);
         match self.per_key.get_mut(code) {
             Some(n) => *n += 1,
             None => {
@@ -99,7 +115,8 @@ impl Aggregator {
     }
 
     /// Counts one event; returns the kind of activity the pet should react to.
-    pub fn ingest(&mut self, e: TimedEvent, displays: &DisplayMap) -> Option<Activity> {
+    /// `hour` is the local hour the event happened in, 0..24.
+    pub fn ingest(&mut self, e: TimedEvent, displays: &DisplayMap, hour: u8) -> Option<Activity> {
         match e.ev {
             RawEvent::Key { code, down: true } => {
                 let prev = self.held.insert(code, e.t_ms);
@@ -108,8 +125,8 @@ impl Aggregator {
                 }
                 if !self.paused {
                     self.keys_rate.record(e.t_ms);
-                    self.today.bump_key(code);
-                    self.pending.bump_key(code);
+                    self.today.bump_key(code, hour);
+                    self.pending.bump_key(code, hour);
                 }
                 Some(Activity::Typing)
             }
@@ -128,8 +145,8 @@ impl Aggregator {
                     if button != MouseButton::Other {
                         self.clicks_rate.record(e.t_ms);
                     }
-                    self.today.apply(bump);
-                    self.pending.apply(bump);
+                    self.today.apply(hour, bump);
+                    self.pending.apply(hour, bump);
                 }
                 Some(Activity::Click)
             }
@@ -138,8 +155,8 @@ impl Aggregator {
             // Scrolls are counted but do not change what the pet is doing.
             RawEvent::Scroll { momentum: false } => {
                 if self.scroll.feed(e.t_ms) && !self.paused {
-                    self.today.apply(|t| t.scrolls += 1);
-                    self.pending.apply(|t| t.scrolls += 1);
+                    self.today.apply(hour, |t| t.scrolls += 1);
+                    self.pending.apply(hour, |t| t.scrolls += 1);
                 }
                 None
             }
@@ -147,8 +164,10 @@ impl Aggregator {
                 let (px, mm) = self.distance.feed(x, y, displays);
                 if !self.paused && px > 0.0 {
                     for day in [&mut self.today, &mut self.pending] {
-                        day.totals.move_px += px;
-                        day.totals.move_mm += mm;
+                        day.apply(hour, |t| {
+                            t.move_px += px;
+                            t.move_mm += mm;
+                        });
                     }
                 }
                 None
@@ -200,9 +219,12 @@ mod tests {
         ]
     }
     fn feed(a: &mut Aggregator, events: impl IntoIterator<Item = TimedEvent>) {
+        feed_at(a, 12, events);
+    }
+    fn feed_at(a: &mut Aggregator, hour: u8, events: impl IntoIterator<Item = TimedEvent>) {
         let map = DisplayMap(vec![Display::new(0.0, 0.0, 1000.0, 1000.0, 200.0)]);
         for e in events {
-            a.ingest(e, &map);
+            a.ingest(e, &map, hour);
         }
     }
 
@@ -290,7 +312,10 @@ mod tests {
             ..Default::default()
         };
         let map = DisplayMap::default();
-        assert_eq!(a.ingest(key(0, "KeyA", true), &map), Some(Activity::Typing));
+        assert_eq!(
+            a.ingest(key(0, "KeyA", true), &map, 12),
+            Some(Activity::Typing)
+        );
         feed(&mut a, click(10, MouseButton::Left));
         assert!(a.today.is_empty());
         assert_eq!(a.keys_per_second(100), 0.0);
@@ -303,7 +328,7 @@ mod tests {
                 keys: 100,
                 ..Default::default()
             },
-            per_key: HashMap::new(),
+            ..Default::default()
         });
         feed(&mut a, [key(0, "KeyA", true)]);
         assert_eq!(a.today.totals.keys, 101);
@@ -323,5 +348,63 @@ mod tests {
         );
         assert_eq!(a.keys_per_second(1000), 2.0);
         assert_eq!(a.clicks_per_second(1000), 0.0);
+    }
+
+    #[test]
+    fn counts_by_hour_of_day() {
+        let mut a = Aggregator::default();
+        feed_at(
+            &mut a,
+            9,
+            [
+                key(0, "KeyA", true),
+                key(50, "KeyA", false),
+                key(100, "KeyB", true),
+            ],
+        );
+        feed_at(&mut a, 14, click(200, MouseButton::Left));
+        // Both the day and the unsaved delta carry the hour.
+        for day in [&a.today, &a.pending] {
+            assert_eq!(day.per_hour[9].keys, 2);
+            assert_eq!(day.per_hour[14].click_left, 1);
+            assert_eq!(day.per_hour[14].keys, 0);
+            assert_eq!(day.per_hour[3], Totals::default());
+        }
+        assert_eq!(a.today.totals.keys, 2);
+        assert_eq!(a.pending.totals.keys, 2);
+    }
+
+    #[test]
+    fn movement_is_counted_by_hour_too() {
+        let mut a = Aggregator::default();
+        let mv = |t, x, y| ev(t, RawEvent::Move { x, y });
+        feed_at(&mut a, 8, [mv(0, 0.0, 0.0), mv(10, 30.0, 40.0)]);
+        // 50 px across the diagonal; the hourly bucket agrees with the day.
+        assert_eq!(a.today.per_hour[8].move_px, 50.0);
+        assert_eq!(a.today.per_hour[8].move_mm, a.today.totals.move_mm);
+        assert!(a.today.per_hour[8].move_mm > 0.0);
+        assert_eq!(a.pending.per_hour[8].move_px, 50.0);
+    }
+
+    #[test]
+    fn merging_keeps_the_hourly_buckets() {
+        let mut left = DayCounters::default();
+        left.apply(20, |t| t.keys += 2);
+        let mut right = DayCounters::default();
+        right.apply(20, |t| t.keys += 3);
+        right.apply(9, |t| t.click_left += 1);
+        left.merge(right);
+        assert_eq!(left.totals.keys, 5);
+        assert_eq!(left.per_hour[20].keys, 5);
+        assert_eq!(left.per_hour[9].click_left, 1);
+    }
+
+    #[test]
+    fn roll_over_leaves_the_hourly_buckets_behind() {
+        let mut a = Aggregator::default();
+        feed_at(&mut a, 23, [key(0, "KeyA", true)]);
+        let old = a.roll_over();
+        assert_eq!(old.per_hour[23].keys, 1);
+        assert_eq!(a.today.per_hour[23], Totals::default());
     }
 }

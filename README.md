@@ -33,9 +33,11 @@ settings.
   after (a setting, on by default)
 - Global shortcuts to show or hide it and to pause counting, which you record
   in the settings; none is set until you do
-- A stats window with a per-day trend, a keyboard heatmap drawn on the layout
-  you have (a PC or an Apple board, ANSI or ISO) in the pet's orange or on the
-  usual yellow-to-red heat scale, and CSV export
+- A stats window with a per-day trend, an activity-by-hour chart for the time of
+  day you are busiest, a keyboard heatmap drawn on the layout you have (a PC or
+  an Apple board, ANSI or ISO) in the pet's orange or on the usual yellow-to-red
+  heat scale, insights such as your busiest day and your current streak, and CSV
+  export
 - Milestones: it celebrates your thousandth key of the day, your millionth key
   all time, and any threshold you set yourself
 

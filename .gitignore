@@ -21,3 +21,8 @@ references/
 
 # Local Cloudflare state (wrangler dev writes its own R2 bucket and KV here)
 .wrangler
+
+# Local Claude Code configuration: plugins and hooks for this machine, not the
+# project. settings.json is already tracked, so it has to be removed from the
+# index as well as ignored.
+.claude/

@@ -3,7 +3,7 @@ name = "jokbet"
 # The released version comes from package.json (tauri.conf.json reads it from
 # there); this one is crate metadata and is bumped alongside it. See Releasing
 # in the README.
-version = "0.2.0"
+version = "0.3.0"
 description = "A desktop pet that counts your keyboard and mouse activity, keeping the totals on your own machine"
 authors = ["sparkjokerben"]
 license = "MIT"
