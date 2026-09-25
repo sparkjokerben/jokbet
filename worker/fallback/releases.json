@@ -1,7 +1,66 @@
 {
  "schema": 1,
- "generatedAt": "2026-09-25T13:56:31.602Z",
+ "generatedAt": "2026-09-25T14:50:43.001Z",
  "releases": [
+  {
+   "version": "0.3.1",
+   "tag": "v0.3.1",
+   "name": "Jokbet v0.3.1",
+   "pubDate": "2026-09-25T14:49:31Z",
+   "prerelease": false,
+   "notes": "这一版修两个问题，其中一个是崩溃。\n\n- **开着菜单时不再闪退。** 更新下载好之后，程序会把「重启以更新」加到它和宠物右键菜单共用的那个菜单最上面——而且是在更新线程上做的，做的当下 macOS 可能正显示着那个菜单。macOS 对「显示中的菜单被改动」是直接中止进程的，发行版又是 panic 即中止，于是整个应用就没了。0.2.0 在 0.3.0 发布后一启动就撞上这个，因为它正要给自己更新。菜单建好之后现在不再增删任何项，AppKit 正在显示的结构不会再被改动；更新提示仍在——宠物气泡和「设置 › 关于」都会说，后者也是安装更新的地方。剩下的菜单改动（暂停勾选、隐藏/显示文字、语言）统一走主线程，发行版也不再 panic 即中止进程。\n- **图表提示跟着你的光标了。** 鼠标划过每日趋势图，或者 0.3.0 新增的每小时活跃分布图时，高亮和提示框会落在光标左边大约两列的位置——y 轴的宽度被减了两次，一次是命中区域本身已经让开的，一次是那段计算又减的。这个偏差从统计窗口存在起就在了。\n\n---\n\nThis release fixes two things, one of them a crash.\n\n- **No more crash when the menu is open.** Once an update had downloaded, the app added \"Restart to Update\" to the top of the menu it shares with the pet's right-click menu — from the updater's own thread, and while macOS might be displaying that menu. macOS aborts over a menu changed while it is on screen, and the release build aborts on any panic, so the whole app went with it: a 0.2.0 install hit this the moment 0.3.0 was published, launched to update itself. Nothing is added to or removed from the menu after it is built now, so the structure AppKit is showing cannot change under it. The update is still announced, by the pet's bubble and by **Settings › About**, which is where it is installed from too. The menu changes that remain — the pause tick, the hide/show title, the language — run on the main thread, and the release build no longer aborts the process over a panic.\n- **The charts' tooltips land on what you are pointing at.** Hovering the daily trend, or the activity-by-hour chart that arrived in 0.3.0, highlighted a column about two columns to the left of the cursor: the width of the y-axis was taken off the pointer's position twice, once by the hit area and once again by the arithmetic. It had been that way since the stats window existed.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+   "url": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.1",
+   "files": [
+    {
+     "platform": "macos-aarch64-zip",
+     "name": "Jokbet_0.3.1_aarch64.app.zip",
+     "size": 3887823,
+     "sha256": "3edda977990cf4f4a05ed27a382044d37f52139efd06637b2dfaf316a0a9d523"
+    },
+    {
+     "platform": "macos-aarch64",
+     "name": "Jokbet_0.3.1_aarch64.dmg",
+     "size": 3931630,
+     "sha256": "55cc978fc3224d3f67bae8ae4926ee81a600118a0172c759a0d1a744ebb4a30a"
+    },
+    {
+     "platform": "macos-x64-zip",
+     "name": "Jokbet_0.3.1_x64.app.zip",
+     "size": 4199253,
+     "sha256": "2feeac768c3a0b9c86b4c61aaa8b705e016beb48b2bc3dd555a70aee4a8af509"
+    },
+    {
+     "platform": "macos-x64",
+     "name": "Jokbet_0.3.1_x64.dmg",
+     "size": 4229638,
+     "sha256": "c1283f593098ed4d51315b417a9d2df440a90cbe83e651af6e615db2419da6ae"
+    },
+    {
+     "platform": "windows-x64",
+     "name": "Jokbet_0.3.1_x64-setup.exe",
+     "size": 3344819,
+     "sha256": "8c15b7a46e8a8967317e14a3049c95095c0a7ddd65713145fa46c60231fa77ed"
+    },
+    {
+     "platform": "windows-x64-msi",
+     "name": "Jokbet_0.3.1_x64_en-US.msi",
+     "size": 4579328,
+     "sha256": "3ee143eeb9f7acff7359b23251e0e0968fc51d940ca655b76c70844b6ca1a64a"
+    },
+    {
+     "platform": "linux-appimage",
+     "name": "Jokbet_0.3.1_amd64.AppImage",
+     "size": 82967032,
+     "sha256": "1324965e47f055a9aaaf4ed8e12b756f4e8fdba1d1c1d17a5d5336d7acf22c1f"
+    },
+    {
+     "platform": "linux-deb",
+     "name": "Jokbet_0.3.1_amd64.deb",
+     "size": 4662402,
+     "sha256": "c46d77b8bd6c63459646fa7c79dbd68b062fef48c1e5f69314db1798ad268548"
+    }
+   ]
+  },
   {
    "version": "0.3.0",
    "tag": "v0.3.0",
