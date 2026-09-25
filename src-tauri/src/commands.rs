@@ -31,11 +31,12 @@ pub fn apply_patch<R: Runtime>(
     app.state::<RuntimeHandle>()
         .send(Control::Settings(Box::new(next.clone())));
     if next.paused != before.paused {
-        app.state::<AppMenu<R>>().sync_paused(next.paused);
+        let paused = next.paused;
+        crate::menu::on_main(app, move |menu| menu.sync_paused(paused));
     }
     if next.language != before.language {
         let lang = crate::i18n::Lang::resolve(next.language);
-        app.state::<AppMenu<R>>().set_lang(lang);
+        crate::menu::on_main(app, move |menu| menu.set_lang(lang));
         crate::menu::retitle_panels(app, lang);
     }
     if before.liquid_glass && !next.liquid_glass {

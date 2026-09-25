@@ -10,7 +10,6 @@
 //! `/releases/download/<tag>/<name>` on GitHub), and the signature the manifest
 //! carries is the file's, so either copy verifies against it.
 
-use crate::menu::AppMenu;
 use serde::Serialize;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -103,14 +102,15 @@ pub async fn check_now<R: Runtime>(app: &AppHandle<R>) -> UpdateStatus {
     let next = match check(app).await {
         Ok(None) => UpdateStatus::UpToDate,
         Ok(Some((update, bytes))) => {
+            // The pet's bubble and the About section hear about this from the
+            // status below. The menu is not told: a menu on screen cannot be
+            // changed, and the crash that came of trying is why.
             let ready = UpdateStatus::Ready {
                 version: update.version.clone(),
                 notes: update.body.clone().filter(|n| !n.trim().is_empty()),
                 date: update.date.map(|d| d.date().to_string()),
             };
-            let version = update.version.clone();
             *updates.pending.lock().unwrap() = Some((update, bytes));
-            app.state::<AppMenu<R>>().show_update(app, &version);
             ready
         }
         Err(e) => {

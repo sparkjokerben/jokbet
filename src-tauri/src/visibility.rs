@@ -2,7 +2,6 @@
 //! menu or a shortcut, and another app going full screen, when the settings
 //! ask for that. It shows only when neither holds.
 
-use crate::menu::AppMenu;
 use crate::pet_window::PET_LABEL;
 use crate::settings::SettingsStore;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -47,7 +46,7 @@ fn apply<R: Runtime>(app: &AppHandle<R>) {
     }
     // The menu offers what the user can do: a pet hidden by a full-screen app
     // is still one the user has shown.
-    app.state::<AppMenu<R>>().sync_toggle(!user_hidden);
+    crate::menu::on_main(app, move |menu| menu.sync_toggle(!user_hidden));
 }
 
 /// Watches for full-screen apps on the pet's display.

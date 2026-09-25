@@ -16,7 +16,6 @@ const ID_STATS: &str = "stats";
 const ID_SETTINGS: &str = "settings";
 const ID_PAUSE: &str = "pause";
 const ID_RESET_POSITION: &str = "reset-position";
-const ID_RESTART_UPDATE: &str = "restart-update";
 const ID_QUIT: &str = "quit";
 
 pub struct AppMenu<R: Runtime> {
@@ -27,8 +26,6 @@ pub struct AppMenu<R: Runtime> {
     reset_position: MenuItem<R>,
     pause: CheckMenuItem<R>,
     quit: MenuItem<R>,
-    /// "Restart to Update" and its version, once an update is downloaded.
-    update: Mutex<Option<(MenuItem<R>, String)>>,
     lang: Mutex<Lang>,
     /// What the toggle item says: "Hide" while the pet is shown.
     pet_shown: AtomicBool,
@@ -74,7 +71,6 @@ impl<R: Runtime> AppMenu<R> {
             reset_position,
             pause,
             quit,
-            update: Mutex::new(None),
             lang: Mutex::new(lang),
             pet_shown: AtomicBool::new(true),
         })
@@ -93,29 +89,10 @@ impl<R: Runtime> AppMenu<R> {
         let _ = self.pause.set_text(t(lang, Text::PauseCounting));
         let _ = self.quit.set_text(t(lang, Text::Quit));
         self.sync_toggle(self.pet_shown.load(Ordering::Relaxed));
-        if let Some((item, version)) = &*self.update.lock().unwrap() {
-            let _ = item.set_text(update_text(lang, version));
-        }
     }
 
     pub fn sync_paused(&self, paused: bool) {
         let _ = self.pause.set_checked(paused);
-    }
-
-    /// Adds "Restart to Update to vX" at the top once an update is downloaded.
-    pub fn show_update(&self, app: &AppHandle<R>, version: &str) {
-        let mut update = self.update.lock().unwrap();
-        if let Some((item, shown)) = &mut *update {
-            let _ = item.set_text(update_text(self.lang(), version));
-            *shown = version.to_string();
-            return;
-        }
-        let text = update_text(self.lang(), version);
-        if let Ok(item) = MenuItem::with_id(app, ID_RESTART_UPDATE, text, true, None::<&str>) {
-            if self.menu.prepend(&item).is_ok() {
-                *update = Some((item, version.to_string()));
-            }
-        }
     }
 
     pub fn sync_toggle(&self, visible: bool) {
@@ -129,8 +106,21 @@ impl<R: Runtime> AppMenu<R> {
     }
 }
 
-fn update_text(lang: Lang, version: &str) -> String {
-    format!("{} v{version}", t(lang, Text::RestartToUpdate))
+/// Where a menu change has to happen.
+///
+/// Items are retitled, ticked and shown from whichever thread noticed the
+/// change — the updater, the full-screen watcher — and AppKit takes a change to
+/// a menu it is currently displaying as a reason to abort the process. Nothing
+/// here adds to or removes from `menu` any more: it is built once, so the only
+/// changes left are to items that are already in it, and they happen on the
+/// main thread.
+pub fn on_main<R: Runtime>(app: &AppHandle<R>, change: impl FnOnce(&AppMenu<R>) + Send + 'static) {
+    let handle = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        if let Some(menu) = handle.try_state::<AppMenu<R>>() {
+            change(&menu);
+        }
+    });
 }
 
 pub fn create_tray<R: Runtime>(app: &AppHandle<R>, menu: &AppMenu<R>) -> tauri::Result<()> {
@@ -164,11 +154,6 @@ pub fn handle_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
         ID_STATS => open_panel(app, Panel::Stats),
         ID_SETTINGS => open_panel(app, Panel::Settings),
         ID_PAUSE => toggle_pause(app),
-        ID_RESTART_UPDATE => {
-            if crate::updater::install_pending(app) {
-                app.restart();
-            }
-        }
         ID_QUIT => {
             crate::updater::install_pending(app);
             app.exit(0);

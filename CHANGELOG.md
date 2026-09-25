@@ -15,6 +15,16 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A crash when the update arrived with the menu open.** Once an update had
+  been downloaded, the app added "Restart to Update" to the top of the menu it
+  shares with the pet's right-click menu — from the updater's own thread, and
+  while macOS was displaying that menu. macOS aborts over a menu changed while
+  it is on screen, and the release build aborts on any panic, so the app
+  disappeared seconds after being launched with the menu open. Nothing is added
+  to the menu after it is built now: the update is announced by the pet's
+  bubble and by **Settings › About**, which is also where it is installed from.
+  The menu changes that remain happen on the main thread, and the release
+  profile no longer aborts the process over a panic.
 - **The charts' tooltips land on what you are pointing at.** Hovering the daily
   trend, or the activity-by-hour chart that arrived in 0.3.0, highlighted a
   column about two columns to the left of the cursor: the width of the y-axis
