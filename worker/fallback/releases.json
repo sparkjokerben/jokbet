@@ -1,7 +1,66 @@
 {
  "schema": 1,
- "generatedAt": "2026-09-24T22:16:20.161Z",
+ "generatedAt": "2026-09-25T13:56:31.602Z",
  "releases": [
+  {
+   "version": "0.3.0",
+   "tag": "v0.3.0",
+   "name": "Jokbet v0.3.0",
+   "pubDate": "2026-09-25T13:55:29Z",
+   "prerelease": false,
+   "notes": "这一版让统计窗口说得出一天中什么时候最忙，也让它能翻出更久以前的事。\n\n- **按小时看一天。** 统计窗口多了一张每小时活跃分布图，跟着你选的 7/30/90/365 天来画，图下写明最忙的时段，逐个小时的数据也列在下面的表里。计数从现在起按发生的钟点归类；更早的日子在这里没有东西可显示，图会直说，而不是画一张空的出来。\n- **看得比所选区间更远。** 原来四张卡片下面又多了四张：你最忙的那一天和它的日期、当前连续活跃了多少天、最长的一次连续、最近 7 天和再往前 7 天的对比。它们都跟着你选的指标走，也能够到屏幕上的区间之外。\n- **多导出一个 CSV。** 导出会多写一个 `jokbet-hourly.csv`，一天一行、一小时一行。\n- **更新说明不再是一串 Markdown 记号。** 「关于」里原来照着 GitHub 的原样印发布说明——两种语言、双语页脚、满屏的 `**` 和 `[链接](url)`。现在只留你语言的那一半、去掉页脚，段落、列表、粗体和代码都由页面自己渲染成文本，永远不会变成 HTML。链接只保留文字，因为点过去会把设置窗口带走。\n\n---\n\nThis release lets the stats window say when in the day you are busiest, and reach back further than the range on screen.\n\n- **A day, by the hour.** The stats window gains an activity-by-hour chart, drawn over the 7/30/90/365 days you pick, with the busiest hour named below it and every hour listed in its table. Counts are filed under the hour they happen in from now on, so days counted earlier have nothing to show here; the chart says so rather than drawing an empty day.\n- **Further back than the range.** Four more tiles under the four already there: your busiest day ever and when it was, how many days in a row you are currently active, your longest run, and the last seven days beside the seven before. All of them follow the metric you pick, and reach outside the range on screen.\n- **A third CSV.** Exporting writes `jokbet-hourly.csv` too, a row for each day and hour.\n- **Update notes are no longer Markdown.** The About section used to print the release notes as they are written for GitHub: both languages, the footer, and every `**` and `[link](url)` in sight. It now keeps only the half in your language, drops the footer, and has the page render paragraphs, lists, bold and code as text, never as HTML. A link keeps its words only, since following it would take the Settings window away.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+   "url": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.0",
+   "files": [
+    {
+     "platform": "macos-aarch64-zip",
+     "name": "Jokbet_0.3.0_aarch64.app.zip",
+     "size": 3242328,
+     "sha256": "6119e100e3bf3859cf6e5b045942af12e3142ebcfab8f59904f21d76d3cd257e"
+    },
+    {
+     "platform": "macos-aarch64",
+     "name": "Jokbet_0.3.0_aarch64.dmg",
+     "size": 3284131,
+     "sha256": "cef215182c1b11cf4fd8f7f368dfe209c4699c625c1d8564fd5d63d91edd6a01"
+    },
+    {
+     "platform": "macos-x64-zip",
+     "name": "Jokbet_0.3.0_x64.app.zip",
+     "size": 3558600,
+     "sha256": "eb2ebfb98e66b76fe512c804ec8f225f6204dfc5fa47634e1946cc559afddedd"
+    },
+    {
+     "platform": "macos-x64",
+     "name": "Jokbet_0.3.0_x64.dmg",
+     "size": 3594888,
+     "sha256": "a5429402674e9be987655c979cb10713d9036a520310fef52e74ef7bebee51bf"
+    },
+    {
+     "platform": "windows-x64",
+     "name": "Jokbet_0.3.0_x64-setup.exe",
+     "size": 2674804,
+     "sha256": "235fbeb57bead3f799e958c0c1c36e4b817c61150fa6601d233bc88234c3a49c"
+    },
+    {
+     "platform": "windows-x64-msi",
+     "name": "Jokbet_0.3.0_x64_en-US.msi",
+     "size": 3559424,
+     "sha256": "5d3ebb2518594d65cbc56c1e6cd085ba4e5f6f75bc2bbeee9d47993ac7916907"
+    },
+    {
+     "platform": "linux-appimage",
+     "name": "Jokbet_0.3.0_amd64.AppImage",
+     "size": 82360824,
+     "sha256": "40ca3ed9d3df74aeef1746cf852acae32852aa09d036ee952b8a6e6f42c480e1"
+    },
+    {
+     "platform": "linux-deb",
+     "name": "Jokbet_0.3.0_amd64.deb",
+     "size": 3976154,
+     "sha256": "19df9e1f63be5be344e4bc2b6d4e988522a0ba58750cf86fa1aa4c9a32454dc0"
+    }
+   ]
+  },
   {
    "version": "0.2.0",
    "tag": "v0.2.0",
