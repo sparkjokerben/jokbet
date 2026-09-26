@@ -11,6 +11,35 @@ the fuller entries elsewhere:
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-09-27
+
+### Added
+
+- **The hover card is drawn on the Windows acrylic.** The material behind the
+  card on Windows was the blur that can be put behind a region of the pet's own
+  window, offered in the settings as "Liquid Glass"; it is the acrylic now — the
+  material that shows what is under it through — in a window of its own, cut to
+  the card's rounded shape and kept directly under the pet as it is carried
+  about. Windows 10 1803 and later. The switch in **Settings › Display** is the
+  one macOS already had, named for the material the system actually has: Acrylic
+  on Windows, Liquid Glass on macOS 26 and vibrancy before it.
+
+### Changed
+
+- **The card is drawn from what is behind it.** The acrylic takes its colour
+  from the desktop, so over it the panel no longer goes by the system's light or
+  dark: it reads what is under the card, and draws dark ink over a pale desktop
+  and light ink over a dark one, with every word on the card in that one ink — a
+  grey of its own is a colour the panel can drift away from, and over a desktop
+  that is neither dark nor pale there is nowhere for it to sit. Where the
+  desktop is too mixed to read against, the card carries a little of its own
+  colour instead. A reading drifts into the next rather than stepping, and the
+  ink changes hands once, fading, so a pet dragged across a busy desktop follows
+  without flickering; and a card that is taken away now comes back in the colour
+  it went down in, where it used to read the desktop afresh and correct itself
+  in front of you. macOS keeps the material, and the card, it has always had.
+- **The panel tint starts at 0** — the bare material — on every platform.
+
 ## [0.3.1] — 2026-09-25
 
 ### Fixed
@@ -134,6 +163,7 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the tray; milestones; a stats window with a trend and a keyboard heatmap; and
   an interface in English and Simplified Chinese.
 
+[0.4.0]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.0
 [0.3.1]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.1
 [0.3.0]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.0
 [0.2.0]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.2.0
