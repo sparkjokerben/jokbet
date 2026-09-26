@@ -1,52 +1,52 @@
 {
  "schema": 1,
- "version": "0.3.1",
- "tag": "v0.3.1",
- "pubDate": "2026-09-25T14:49:31Z",
+ "version": "0.4.0",
+ "tag": "v0.4.0",
+ "pubDate": "2026-09-26T19:58:04Z",
  "draft": false,
- "notes": "这一版修两个问题，其中一个是崩溃。\n\n- **开着菜单时不再闪退。** 更新下载好之后，程序会把「重启以更新」加到它和宠物右键菜单共用的那个菜单最上面——而且是在更新线程上做的，做的当下 macOS 可能正显示着那个菜单。macOS 对「显示中的菜单被改动」是直接中止进程的，发行版又是 panic 即中止，于是整个应用就没了。0.2.0 在 0.3.0 发布后一启动就撞上这个，因为它正要给自己更新。菜单建好之后现在不再增删任何项，AppKit 正在显示的结构不会再被改动；更新提示仍在——宠物气泡和「设置 › 关于」都会说，后者也是安装更新的地方。剩下的菜单改动（暂停勾选、隐藏/显示文字、语言）统一走主线程，发行版也不再 panic 即中止进程。\n- **图表提示跟着你的光标了。** 鼠标划过每日趋势图，或者 0.3.0 新增的每小时活跃分布图时，高亮和提示框会落在光标左边大约两列的位置——y 轴的宽度被减了两次，一次是命中区域本身已经让开的，一次是那段计算又减的。这个偏差从统计窗口存在起就在了。\n\n---\n\nThis release fixes two things, one of them a crash.\n\n- **No more crash when the menu is open.** Once an update had downloaded, the app added \"Restart to Update\" to the top of the menu it shares with the pet's right-click menu — from the updater's own thread, and while macOS might be displaying that menu. macOS aborts over a menu changed while it is on screen, and the release build aborts on any panic, so the whole app went with it: a 0.2.0 install hit this the moment 0.3.0 was published, launched to update itself. Nothing is added to or removed from the menu after it is built now, so the structure AppKit is showing cannot change under it. The update is still announced, by the pet's bubble and by **Settings › About**, which is where it is installed from too. The menu changes that remain — the pause tick, the hide/show title, the language — run on the main thread, and the release build no longer aborts the process over a panic.\n- **The charts' tooltips land on what you are pointing at.** Hovering the daily trend, or the activity-by-hour chart that arrived in 0.3.0, highlighted a column about two columns to the left of the cursor: the width of the y-axis was taken off the pointer's position twice, once by the hit area and once again by the arithmetic. It had been that way since the stats window existed.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
- "releaseUrl": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.1",
- "downloadBase": "https://github.com/sparkjokerben/jokbet/releases/download/v0.3.1",
+ "notes": "这一版把 Windows 上的悬浮卡片换成了亚克力材质，卡片本身也改成照着它背后的桌面来画。\n\n- **卡片改用 Windows 亚克力。** Windows 之前给卡片的是「在桌宠自己的窗口上圈一块矩形做模糊」：它裁在桌宠的窗口里，跟着桌宠走得很糟，也说不出自己盖住的到底是什么。现在是亚克力材质——一个只属于卡片的窗口，正好裁成卡片的圆角形状，一直待在桌宠下面；它会把底下的东西透出来，卡片于是可以照着底下的东西来画。需要 Windows 10 1803 及以上。设置里的开关按系统实际的材质命名：Windows 上是「亚克力」，macOS 26 是「液态玻璃」，再往前是 vibrancy。\n\n- **卡片照着自己背后画。** 亚克力从桌面取色，所以在这层材质上，面板不再跟着系统的深浅色走：它读卡片底下的东西，桌面浅就画深字、桌面深就画浅字，而且整张卡片上的字都用这一种颜色——固定的一档灰是面板可能漂离的那种颜色，桌面既不深也不浅时它更是没有地方好待。桌面杂到读不清时，卡片就多带一点自己的颜色。每次读数都是漂过去的而不是跳过去的，换字色也只换一次、并且是淡过去的，所以拖着桌宠走过花哨的桌面也不会闪；收起再出现时，卡片用的是它收起时的那个颜色，而不是重新读一次、当着你的面再纠正自己。macOS 的材质和卡片维持原样。\n\n- **气泡底色默认改为 0**，也就是材质本身，全平台一致。\n\n---\n\nThis release puts the hover card on the Windows acrylic, and draws the card from what is behind it.\n\n- **The card is drawn on the Windows acrylic.** Windows' material for the card used to be a blurred rectangle cut out of the pet's own window, which followed the pet badly and had nothing to say about what it was covering. It is the acrylic now: a window of its own, cut to the card's rounded shape and kept under the pet, which shows what is beneath it through — so the card can be drawn from that. Windows 10 1803 and later. The switch in the settings is named for the material the system actually has: Acrylic on Windows, Liquid Glass on macOS 26 and vibrancy before it.\n\n- **The card is drawn from what is behind it.** The acrylic takes its colour from the desktop, so over it the panel no longer goes by the system's light or dark: it reads what is under the card, and draws dark ink over a pale desktop and light ink over a dark one, with every word on the card in that one ink — a fixed grey is a colour the panel can drift away from, and over a desktop that is neither dark nor pale there is nowhere for it to sit. Where the desktop is too mixed to read against, the card carries a little of its own colour instead. Readings drift into one another rather than stepping, and the ink changes hands once, fading, so a pet dragged across a busy desktop does not flicker. A card that is taken away comes back in the colour it went down in, where it used to read the desktop afresh and correct itself in front of you. macOS keeps the material, and the card, it has always had.\n\n- **The panel tint now starts at 0** — the bare material — on every platform.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+ "releaseUrl": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.0",
+ "downloadBase": "https://github.com/sparkjokerben/jokbet/releases/download/v0.4.0",
  "files": {
   "macos-aarch64-zip": {
-   "name": "Jokbet_0.3.1_aarch64.app.zip",
-   "size": 3887823,
-   "sha256": "3edda977990cf4f4a05ed27a382044d37f52139efd06637b2dfaf316a0a9d523"
+   "name": "Jokbet_0.4.0_aarch64.app.zip",
+   "size": 3889984,
+   "sha256": "268f58dea208a25580743ee258cdfaf17523a3c916f5f72471f47a02d37e3d17"
   },
   "macos-aarch64": {
-   "name": "Jokbet_0.3.1_aarch64.dmg",
-   "size": 3931630,
-   "sha256": "55cc978fc3224d3f67bae8ae4926ee81a600118a0172c759a0d1a744ebb4a30a"
+   "name": "Jokbet_0.4.0_aarch64.dmg",
+   "size": 3922971,
+   "sha256": "d58187633e84c712b04ea77622b5f2f2b62df1696cd77b0449be4c0bdef96492"
   },
   "macos-x64-zip": {
-   "name": "Jokbet_0.3.1_x64.app.zip",
-   "size": 4199253,
-   "sha256": "2feeac768c3a0b9c86b4c61aaa8b705e016beb48b2bc3dd555a70aee4a8af509"
+   "name": "Jokbet_0.4.0_x64.app.zip",
+   "size": 4201661,
+   "sha256": "8f23a87aaa0b2d7a397898653c512b4be4cb50fd04a7dfc2bdd6503e92f3e4c3"
   },
   "macos-x64": {
-   "name": "Jokbet_0.3.1_x64.dmg",
-   "size": 4229638,
-   "sha256": "c1283f593098ed4d51315b417a9d2df440a90cbe83e651af6e615db2419da6ae"
+   "name": "Jokbet_0.4.0_x64.dmg",
+   "size": 4233227,
+   "sha256": "192bc56a2f6e70f9eb5618518246fccbc0766cb554a1acedea4f8a4e1fe53f10"
   },
   "windows-x64": {
-   "name": "Jokbet_0.3.1_x64-setup.exe",
-   "size": 3344819,
-   "sha256": "8c15b7a46e8a8967317e14a3049c95095c0a7ddd65713145fa46c60231fa77ed"
+   "name": "Jokbet_0.4.0_x64-setup.exe",
+   "size": 3349053,
+   "sha256": "29927145f0730fa5d9e26aef6e1449f80c07e011920bf6ea860d0e72345df121"
   },
   "windows-x64-msi": {
-   "name": "Jokbet_0.3.1_x64_en-US.msi",
-   "size": 4579328,
-   "sha256": "3ee143eeb9f7acff7359b23251e0e0968fc51d940ca655b76c70844b6ca1a64a"
+   "name": "Jokbet_0.4.0_x64_en-US.msi",
+   "size": 4587520,
+   "sha256": "108a80383bd21de5dbd0eb54288b5e2b35f80a34713883bd1569deda2363cf10"
   },
   "linux-appimage": {
-   "name": "Jokbet_0.3.1_amd64.AppImage",
-   "size": 82967032,
-   "sha256": "1324965e47f055a9aaaf4ed8e12b756f4e8fdba1d1c1d17a5d5336d7acf22c1f"
+   "name": "Jokbet_0.4.0_amd64.AppImage",
+   "size": 82971128,
+   "sha256": "585666404f6e09c1e08512fc40e0cd9c5fe850abb98f22b309e264ff43657dc5"
   },
   "linux-deb": {
-   "name": "Jokbet_0.3.1_amd64.deb",
-   "size": 4662402,
-   "sha256": "c46d77b8bd6c63459646fa7c79dbd68b062fef48c1e5f69314db1798ad268548"
+   "name": "Jokbet_0.4.0_amd64.deb",
+   "size": 4664224,
+   "sha256": "b76e9a6d50e30743b271bb7bbab5af5dc768b81ac1808b6b8123bd21a34e8261"
   }
  }
 }

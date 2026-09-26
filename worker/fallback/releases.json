@@ -1,7 +1,66 @@
 {
  "schema": 1,
- "generatedAt": "2026-09-25T14:50:43.001Z",
+ "generatedAt": "2026-09-26T19:59:39.078Z",
  "releases": [
+  {
+   "version": "0.4.0",
+   "tag": "v0.4.0",
+   "name": "Jokbet v0.4.0",
+   "pubDate": "2026-09-26T19:58:04Z",
+   "prerelease": false,
+   "notes": "这一版把 Windows 上的悬浮卡片换成了亚克力材质，卡片本身也改成照着它背后的桌面来画。\n\n- **卡片改用 Windows 亚克力。** Windows 之前给卡片的是「在桌宠自己的窗口上圈一块矩形做模糊」：它裁在桌宠的窗口里，跟着桌宠走得很糟，也说不出自己盖住的到底是什么。现在是亚克力材质——一个只属于卡片的窗口，正好裁成卡片的圆角形状，一直待在桌宠下面；它会把底下的东西透出来，卡片于是可以照着底下的东西来画。需要 Windows 10 1803 及以上。设置里的开关按系统实际的材质命名：Windows 上是「亚克力」，macOS 26 是「液态玻璃」，再往前是 vibrancy。\n\n- **卡片照着自己背后画。** 亚克力从桌面取色，所以在这层材质上，面板不再跟着系统的深浅色走：它读卡片底下的东西，桌面浅就画深字、桌面深就画浅字，而且整张卡片上的字都用这一种颜色——固定的一档灰是面板可能漂离的那种颜色，桌面既不深也不浅时它更是没有地方好待。桌面杂到读不清时，卡片就多带一点自己的颜色。每次读数都是漂过去的而不是跳过去的，换字色也只换一次、并且是淡过去的，所以拖着桌宠走过花哨的桌面也不会闪；收起再出现时，卡片用的是它收起时的那个颜色，而不是重新读一次、当着你的面再纠正自己。macOS 的材质和卡片维持原样。\n\n- **气泡底色默认改为 0**，也就是材质本身，全平台一致。\n\n---\n\nThis release puts the hover card on the Windows acrylic, and draws the card from what is behind it.\n\n- **The card is drawn on the Windows acrylic.** Windows' material for the card used to be a blurred rectangle cut out of the pet's own window, which followed the pet badly and had nothing to say about what it was covering. It is the acrylic now: a window of its own, cut to the card's rounded shape and kept under the pet, which shows what is beneath it through — so the card can be drawn from that. Windows 10 1803 and later. The switch in the settings is named for the material the system actually has: Acrylic on Windows, Liquid Glass on macOS 26 and vibrancy before it.\n\n- **The card is drawn from what is behind it.** The acrylic takes its colour from the desktop, so over it the panel no longer goes by the system's light or dark: it reads what is under the card, and draws dark ink over a pale desktop and light ink over a dark one, with every word on the card in that one ink — a fixed grey is a colour the panel can drift away from, and over a desktop that is neither dark nor pale there is nowhere for it to sit. Where the desktop is too mixed to read against, the card carries a little of its own colour instead. Readings drift into one another rather than stepping, and the ink changes hands once, fading, so a pet dragged across a busy desktop does not flicker. A card that is taken away comes back in the colour it went down in, where it used to read the desktop afresh and correct itself in front of you. macOS keeps the material, and the card, it has always had.\n\n- **The panel tint now starts at 0** — the bare material — on every platform.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+   "url": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.0",
+   "files": [
+    {
+     "platform": "macos-aarch64-zip",
+     "name": "Jokbet_0.4.0_aarch64.app.zip",
+     "size": 3889984,
+     "sha256": "268f58dea208a25580743ee258cdfaf17523a3c916f5f72471f47a02d37e3d17"
+    },
+    {
+     "platform": "macos-aarch64",
+     "name": "Jokbet_0.4.0_aarch64.dmg",
+     "size": 3922971,
+     "sha256": "d58187633e84c712b04ea77622b5f2f2b62df1696cd77b0449be4c0bdef96492"
+    },
+    {
+     "platform": "macos-x64-zip",
+     "name": "Jokbet_0.4.0_x64.app.zip",
+     "size": 4201661,
+     "sha256": "8f23a87aaa0b2d7a397898653c512b4be4cb50fd04a7dfc2bdd6503e92f3e4c3"
+    },
+    {
+     "platform": "macos-x64",
+     "name": "Jokbet_0.4.0_x64.dmg",
+     "size": 4233227,
+     "sha256": "192bc56a2f6e70f9eb5618518246fccbc0766cb554a1acedea4f8a4e1fe53f10"
+    },
+    {
+     "platform": "windows-x64",
+     "name": "Jokbet_0.4.0_x64-setup.exe",
+     "size": 3349053,
+     "sha256": "29927145f0730fa5d9e26aef6e1449f80c07e011920bf6ea860d0e72345df121"
+    },
+    {
+     "platform": "windows-x64-msi",
+     "name": "Jokbet_0.4.0_x64_en-US.msi",
+     "size": 4587520,
+     "sha256": "108a80383bd21de5dbd0eb54288b5e2b35f80a34713883bd1569deda2363cf10"
+    },
+    {
+     "platform": "linux-appimage",
+     "name": "Jokbet_0.4.0_amd64.AppImage",
+     "size": 82971128,
+     "sha256": "585666404f6e09c1e08512fc40e0cd9c5fe850abb98f22b309e264ff43657dc5"
+    },
+    {
+     "platform": "linux-deb",
+     "name": "Jokbet_0.4.0_amd64.deb",
+     "size": 4664224,
+     "sha256": "b76e9a6d50e30743b271bb7bbab5af5dc768b81ac1808b6b8123bd21a34e8261"
+    }
+   ]
+  },
   {
    "version": "0.3.1",
    "tag": "v0.3.1",
