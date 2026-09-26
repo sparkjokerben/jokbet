@@ -177,7 +177,8 @@ pub struct Settings {
     /// Draw the hover bubble with the system's glass material, where there is one.
     pub liquid_glass: bool,
     /// How much the page tints that material, in percent: 0 is the bare
-    /// material, and the maximum is enough to read as a solid card.
+    /// material, which is what the material is for, and the maximum is enough
+    /// to read as a solid card.
     pub glass_tint: u32,
     /// Live typing speed: shown in the bubble and drives the typing animation.
     pub typing_speed: bool,
@@ -207,7 +208,7 @@ impl Default for Settings {
             double_click_anim: ActionAnim::Hearts,
             bubble: true,
             liquid_glass: false,
-            glass_tint: 18,
+            glass_tint: 0,
             typing_speed: true,
             milestones: true,
             custom_milestones: Vec::new(),

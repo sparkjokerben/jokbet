@@ -2,6 +2,7 @@
   import { clicks, formatCount, formatDistance, formatRate } from "../lib/format";
   import { t } from "../lib/i18n";
   import type { Tick } from "../lib/types";
+  import { cardBody } from "./ink";
 
   let {
     tick,
@@ -10,7 +11,10 @@
     storage = true,
     updateReady = null,
     glass = false,
-    tint = 0.18,
+    acrylic = false,
+    onDark = false,
+    tone = 0,
+    tint = 0,
   }: {
     tick: Tick;
     showSpeed: boolean;
@@ -20,13 +24,35 @@
     /** The version of a downloaded update, said beside the title. */
     updateReady?: string | null;
     glass?: boolean;
+    /** Whether the material behind the card is the Windows acrylic — the one
+        material that shows whatever is under the card through it, and so the
+        one card drawn from a reading of that (the tone). Every other card, on a
+        material that is the system's own or on none at all, goes by the
+        system's own light or dark, as it always has. */
+    acrylic?: boolean;
+    /** The side the ink is drawn on: a card over a dark desktop. */
+    onDark?: boolean;
+    /** Which way the panel leans, 0 for a pale one and 1 for a dark one, read
+        from behind the card — the material shows the desktop through, so this
+        is what is actually under the panel. */
+    tone?: number;
     tint?: number;
   } = $props();
 
   const d = $derived(tick.today);
+  /** How much of its own colour the card carries, from the tone. */
+  const body = $derived(acrylic ? cardBody(tone) : 0);
 </script>
 
-<div class="bubble" class:glass style:--tint={String(tint)}>
+<div
+  class="bubble"
+  class:glass
+  class:acrylic
+  class:onDark
+  style:--tone={String(tone)}
+  style:--body={String(body)}
+  style:--tint={String(tint)}
+>
   <!-- Notices share the title's line: the window above the pet has room for
        the card as it is, not for more lines. -->
   <div class="title">
@@ -150,5 +176,60 @@
     display: block;
     font-size: 10px;
     color: var(--muted);
+  }
+
+  /* Everything above draws the card as it always has, from the system's own
+     light or dark — which is the whole of the card where the material is the
+     system's own, as on macOS, and where there is no material at all.
+     Below is the acrylic: the one material that shows what is under the card
+     through it, and so the one card drawn from a reading of that instead. It is
+     also the only one whose words may not hold a colour of their own — the panel
+     under them can be any colour at all, and a fixed grey is one it can drift
+     away from. Nothing below applies to any other card. */
+  .bubble.acrylic.glass,
+  .bubble.acrylic.glass.onDark {
+    /* As much of the panel's own colour as the desktop behind leaves room for:
+       none at all where it is plainly dark or plainly pale, and a third of the
+       way to its own colour where it is too mixed to read against. */
+    background: color-mix(
+      in oklab,
+      rgb(250 247 242 / calc(var(--tint) + var(--body))),
+      rgb(20 20 19 / calc(var(--tint) + var(--body))) calc(var(--tone) * 100%)
+    );
+  }
+  .bubble.acrylic {
+    --bg: #f5f0e8;
+    --fg: #1f1e1d;
+    /* Every word wears the same ink — the one read off the desktop behind the
+       card — so the quieter words are the smaller ones rather than greyer ones. */
+    --muted: var(--fg);
+    --line: color-mix(
+      in oklab,
+      rgba(31, 30, 29, 0.14),
+      rgba(245, 240, 232, 0.16) calc(var(--tone, 0) * 100%)
+    );
+  }
+  /* For a card the material shows a dark desktop through. */
+  .bubble.acrylic.onDark {
+    --bg: #262624;
+    --fg: #f5f0e8;
+  }
+  /* The ink changes hands in the middle of the band, where the two read much the
+     same, and every word fades across rather than stepping: a step between them
+     would be the panel flinching. */
+  .bubble.acrylic,
+  .bubble.acrylic .title,
+  .bubble.acrylic dd,
+  .bubble.acrylic dt,
+  .bubble.acrylic .sub,
+  .bubble.acrylic .note,
+  .bubble.acrylic .warn {
+    transition: color 0.2s ease;
+  }
+  .bubble.acrylic .warn {
+    color: #c7362f;
+  }
+  .bubble.acrylic.onDark .warn {
+    color: #e66767;
   }
 </style>

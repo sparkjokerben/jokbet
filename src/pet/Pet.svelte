@@ -2,7 +2,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import { celebrationText, headValue } from "../lib/format";
   import { t } from "../lib/i18n";
   import { blockedBy } from "./machine";
@@ -22,6 +22,7 @@
   import { PetController } from "./controller";
   import Counter from "./Counter.svelte";
   import { attachGestures } from "./gestures";
+  import { inkSide } from "./ink";
   import Sprite from "./Sprite.svelte";
 
   const IDLE: Record<IdleAnim, AnimName> = { breathe: "idle", soccer: "soccer", lookAround: "lookAround" };
@@ -32,6 +33,10 @@
   const UPDATE_BANNER_MS = 6000;
   /** Gap between the top of the pet's box and whatever sits above it. */
   const ABOVE_LIFT = 8;
+  /** More of it when the card is the only thing up there: the counter under it
+      holds it clear of the pet's head, and without one it reads as sitting on
+      the head instead of above it. */
+  const ABOVE_LIFT_ALONE = 24;
 
   let rows = $state<string[]>([]);
   let settings = $state<Settings | null>(null);
@@ -52,6 +57,20 @@
   let glassSupport = $state("none");
   /** Bumped on window resize so the glass follows the bubble. */
   let resized = $state(0);
+  /** Whether the system is asking for dark, which the card starts from, and
+      which stands in for the desktop where nothing can read it. */
+  let themeDark = $state(false);
+  /** Which way the panel leans, 0 for a pale one and 1 for a dark one. Rust
+      reads it off the desktop behind the card, because the material shows that
+      through; on a system whose material is its own business it stays the
+      system's. */
+  let tone = $state(0);
+  /** Whether Rust has said which way the panel leans yet. Until it has, the
+      system's own light or dark stands in for a reading. */
+  let toneRead = false;
+  /** The side the card's ink is drawn on, which follows the tone — dark ink over
+      a pale panel, light ink over a dark one. */
+  let dark = $state(false);
   let banner = $state("");
   let bannerTimer: ReturnType<typeof setTimeout> | undefined;
   let spriteEl: HTMLDivElement;
@@ -61,12 +80,23 @@
   const petOffset = $derived((PET_X + PET_W / 2 - GRID_W / 2) * scale);
   const head = $derived(settings?.headCounter);
   const showCounter = $derived(!!head?.enabled && (head.keyboard || head.mouse));
+  /** Whether the counter or a banner shares the column under the card. */
+  const underCard = $derived(!!banner || showCounter);
   const glassBubble = $derived(glassSupport !== "none" && !!settings?.bubble && !!settings?.liquidGlass);
+  /** Whether the card is drawn over the acrylic: the one material whose colour
+      is a reading of the desktop behind the card, and so the one card whose ink,
+      and how much of its own colour it carries, come from that reading. On a
+      material that is the system's own — macOS — and with no material at all,
+      the card goes by the system's own light or dark, as it always has. */
+  const acrylic = $derived(glassBubble && glassSupport === "acrylic");
 
-  /** Tells Rust where the bubble is; the material is native, behind the page. */
+  /** Tells Rust where the bubble is; the material is native, behind the page.
+      It is told the system's own light or dark, which is what the panel starts
+      from and what stands in for the desktop where nothing can read it — and
+      the answer, the tone the panel leans by, comes back on `pet://tone`. */
   function reportGlassRect() {
     if (!glassBubble || !hovering || !bubbleEl) {
-      void invoke("set_glass_bubble", { rect: null, radius: 0 });
+      void invoke("set_glass_bubble", { rect: null, radius: 0, system: themeDark });
       return;
     }
     // The card, not the plain wrapper around it: the radius lives on the card.
@@ -78,6 +108,7 @@
     void invoke("set_glass_bubble", {
       rect: [box.left, box.top, box.width, box.height],
       radius,
+      system: themeDark,
     });
   }
 
@@ -86,11 +117,24 @@
     void glassBubble;
     void hovering;
     void resized;
+    void themeDark;
+    // The counter and a banner sit under the card in the same column, so the
+    // card is pushed up or let down without its own size changing — nothing for
+    // the observer below to notice, and the material would be left behind.
+    void showCounter;
+    void banner;
     reportGlassRect();
     if (!glassBubble || !hovering || !bubbleEl) return;
     const observer = new ResizeObserver(reportGlassRect);
     observer.observe(bubbleEl);
     return () => observer.disconnect();
+  });
+
+  // The ink follows the tone, keeping the side it is on between the two marks:
+  // the inks read much the same across that middle, and a tone drifting there
+  // would otherwise flicker them.
+  $effect(() => {
+    dark = inkSide(tone, untrack(() => dark));
   });
 
   const pet = new PetController((r) => (rows = r));
@@ -181,7 +225,12 @@
         await invoke("pet_drag_start");
         await win.startDragging();
       },
-      context: () => invoke("show_context_menu"),
+      context: async () => {
+        await invoke("show_context_menu");
+        // The menu holds the main thread while it is up, so anything asked for
+        // in that time lands once it is gone: say where the bubble is now.
+        reportGlassRect();
+      },
     });
 
     const unlisteners = [
@@ -190,11 +239,33 @@
       listen<Tick>("pet://tick", (e) => applyTick(e.payload)),
       listen<Status>("app://status", (e) => applyStatus(e.payload)),
       listen<Settings>("settings://changed", (e) => applySettings(e.payload)),
+      // Which way the panel leans, read off the desktop behind the card.
+      listen<number>("pet://tone", (e) => {
+        toneRead = true;
+        tone = e.payload;
+      }),
       listen<{ hits: MilestoneHit[] }>("pet://celebrate", (e) => celebrate(e.payload.hits)),
       listen("pet://drag-end", () => pet.setDragging(false)),
       listen<UpdateStatus>("app://update", (e) => applyUpdate(e.payload, true)),
     ];
     invoke<UpdateStatus>("update_status").then((s) => applyUpdate(s, false), () => {});
+
+    // The system's light or dark, which the panel leans by until Rust has read
+    // what is actually behind the card — and always, where the material takes
+    // its colour from the system on its own.
+    const scheme = window.matchMedia("(prefers-color-scheme: dark)");
+    const onScheme = () => {
+      themeDark = scheme.matches;
+      // Over the acrylic the tone is a reading of the desktop, and the system's
+      // own light or dark is not to talk over it: a panel that is away keeps the
+      // tone it went away with, so that it comes back up in that colour rather
+      // than in a guess made while it was gone. Everywhere else the system's
+      // answer *is* the card's, and it stands as it always has.
+      if (!(untrack(() => acrylic) && toneRead)) tone = scheme.matches ? 1 : 0;
+    };
+    onScheme();
+    dark = scheme.matches;
+    scheme.addEventListener("change", onScheme);
 
     invoke<string>("glass_support").then((name) => (glassSupport = name));
     invoke<Settings>("get_settings").then(async (s) => {
@@ -205,6 +276,7 @@
 
     return () => {
       window.removeEventListener("resize", onResize);
+      scheme.removeEventListener("change", onScheme);
       detach();
       pet.destroy();
       clearTimeout(bannerTimer);
@@ -216,7 +288,7 @@
 <div class="stage">
   <div
     class="above"
-    style:bottom="{(GRID_H - PET_Y) * scale + ABOVE_LIFT}px"
+    style:bottom="{(GRID_H - PET_Y) * scale + (underCard ? ABOVE_LIFT : ABOVE_LIFT_ALONE)}px"
     style:translate="{petOffset}px 0"
   >
     {#if hovering && settings?.bubble}
@@ -228,7 +300,10 @@
           {storage}
           {updateReady}
           glass={glassBubble}
-          tint={(settings.glassTint ?? 18) / 100}
+          {acrylic}
+          onDark={dark}
+          {tone}
+          tint={(settings.glassTint ?? 0) / 100}
         />
       </div>
     {/if}

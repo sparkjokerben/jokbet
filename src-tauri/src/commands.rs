@@ -64,12 +64,20 @@ pub fn apply_patch<R: Runtime>(
     Ok(next)
 }
 
-/// Takes the bubble's material away.
-fn clear_glass<R: Runtime>(app: &AppHandle<R>) {
+/// Takes the bubble's material away, here and now: only for callers already on
+/// the main thread.
+fn clear_glass_now<R: Runtime>(window: &WebviewWindow<R>) {
+    crate::platform::set_glass(window, None, 0.0, false);
+}
+
+/// Takes the bubble's material away from wherever it is asked. Also used when
+/// the pet itself goes: the material is a window of its own and does not go
+/// with it.
+pub(crate) fn clear_glass<R: Runtime>(app: &AppHandle<R>) {
     let handle = app.clone();
     let _ = app.run_on_main_thread(move || {
         if let Some(window) = handle.get_webview_window(pet_window::PET_LABEL) {
-            crate::platform::set_glass(&window, None, 0.0);
+            clear_glass_now(&window);
         }
     });
 }
@@ -97,11 +105,24 @@ pub fn glass_support() -> &'static str {
 
 /// Where the hover bubble is, in logical pixels from the window's top left;
 /// `None` takes the material away again. The material is a native view behind
-/// the page, so the page has to say where to put it.
+/// the page, so the page has to say where to put it — and `system`, the system's
+/// own light or dark, is what stands in for the desktop where it cannot be read.
+///
+/// The material shows what is behind the window through, though, so the way the
+/// panel leans is a reading of *that*, and comes back on `pet://tone`: one
+/// number, 0 for dark ink over a pale panel and 1 for light ink over a dark one.
+/// The page draws its ink, and how much of the card's own colour it carries,
+/// from it — so there is no side for the two to disagree about, and no state to
+/// be left stuck in.
+///
+/// Said only while there is a panel. Taking one away leaves the tone where it
+/// was — on both sides — so that a panel brought back up comes back in the
+/// colour it went down in, rather than in whatever the page would make of the
+/// system's own light or dark in the meantime.
 #[tauri::command]
-pub fn set_glass_bubble(app: AppHandle, rect: Option<[f64; 4]>, radius: f64) {
-    let wanted = app.state::<SettingsStore>().get().liquid_glass;
-    let rect = if wanted {
+pub fn set_glass_bubble(app: AppHandle, rect: Option<[f64; 4]>, radius: f64, system: bool) {
+    let settings = app.state::<SettingsStore>().get();
+    let rect = if settings.liquid_glass {
         rect.map(|[x, y, w, h]| (x, y, w, h))
     } else {
         None
@@ -109,7 +130,10 @@ pub fn set_glass_bubble(app: AppHandle, rect: Option<[f64; 4]>, radius: f64) {
     let handle = app.clone();
     let _ = app.run_on_main_thread(move || {
         if let Some(window) = handle.get_webview_window(pet_window::PET_LABEL) {
-            crate::platform::set_glass(&window, rect, radius);
+            let tone = crate::platform::set_glass(&window, rect, radius, system);
+            if rect.is_some() {
+                let _ = handle.emit_to(pet_window::PET_LABEL, "pet://tone", tone);
+            }
         }
     });
 }
@@ -127,6 +151,10 @@ pub fn show_context_menu(
     window: WebviewWindow,
     menu: State<'_, AppMenu<Wry>>,
 ) -> Result<(), String> {
+    // The menu holds this thread until it closes. The material is left up: the
+    // cursor is on the pet, and the bubble is on screen, so it belongs there —
+    // and the hover thread keeps it in step from behind the menu, which is what
+    // takes it away if the cursor leaves the pet while the menu is up.
     window.popup_menu(&menu.menu).map_err(|e| e.to_string())
 }
 

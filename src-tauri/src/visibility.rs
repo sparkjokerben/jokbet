@@ -39,6 +39,9 @@ fn apply<R: Runtime>(app: &AppHandle<R>) {
     let covered = state.covered.load(Ordering::Acquire);
     if let Some(window) = app.get_webview_window(PET_LABEL) {
         let _ = if user_hidden || covered {
+            // The material behind the bubble is a window of its own, so it
+            // would otherwise be left hanging where the pet was.
+            crate::commands::clear_glass(app);
             window.hide()
         } else {
             window.show()

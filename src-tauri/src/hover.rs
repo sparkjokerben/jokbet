@@ -90,6 +90,9 @@ fn run<R: Runtime>(app: AppHandle<R>) {
         };
         let rect = *app.state::<HoverState>().hit_rect.lock().unwrap();
         let (Some(rect), Ok(true)) = (rect, window.is_visible()) else {
+            // Away, or nothing to sample against: forget the last sample, so
+            // that whatever is there when it comes back is reported again.
+            last = None;
             std::thread::sleep(IDLE_POLL);
             continue;
         };
@@ -127,10 +130,24 @@ fn run<R: Runtime>(app: AppHandle<R>) {
             ignoring = Some(!s.inside);
         }
         if last.map(|l| l.inside) != Some(s.inside) {
+            // The material behind the bubble is native, and a menu can hold the
+            // main thread: told here, it can follow the cursor even then.
+            crate::platform::pet_hovered(s.inside);
             let _ = app.emit_to(PET_LABEL, "pet://hover", s.inside);
         }
         if last.map(|l| l.gaze) != Some(s.gaze) {
             let _ = app.emit_to(PET_LABEL, "pet://gaze", [s.gaze.0, s.gaze.1]);
+        }
+        // The material shows what is behind the pet through, and that changes as
+        // the pet is carried about — a drag most of all, which is a move loop the
+        // page never sees, so the card it draws is drawn for wherever the pet was
+        // when the cursor arrived. Read here, where something is still running
+        // through the drag; the reading is eased on the way (see `read_tone`), so
+        // what the page gets is a drift it can draw as one.
+        if s.inside {
+            if let Some(tone) = crate::platform::read_tone() {
+                let _ = app.emit_to(PET_LABEL, "pet://tone", tone);
+            }
         }
         last = Some(s);
         std::thread::sleep(POLL);

@@ -3,7 +3,7 @@
   import { listen } from "@tauri-apps/api/event";
   import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
   import { onMount } from "svelte";
-  import { t } from "../../lib/i18n";
+  import { t, type MessageKey } from "../../lib/i18n";
   import {
     GLASS_TINT_MAX,
     PET_SCALE_MAX,
@@ -25,8 +25,15 @@
   let s = $state<Settings | null>(null);
   let error = $state("");
   let autostart = $state<boolean | null>(null);
-  /** Which system glass is available: "none" hides the switch. */
+  /** Which system material is available: "none" hides the switch. */
   let glass = $state("none");
+  /** What to call it, and what to say about it: each material its own. */
+  const GLASS_MATERIALS: Record<string, { label: MessageKey; body: MessageKey }> = {
+    liquidGlass: { label: "liquidGlass", body: "liquidGlassBody" },
+    vibrancy: { label: "liquidGlass", body: "liquidGlassBody" },
+    acrylic: { label: "glassAcrylic", body: "glassAcrylicBody" },
+  };
+  const material = $derived(GLASS_MATERIALS[glass]);
   const isMac = platform === "mac";
 
   const IDLE_OPTIONS: { value: IdleAnim; label: string }[] = [
@@ -209,10 +216,10 @@
         onchange={(v) => update({ hideInFullscreen: v })}
       />
       <Toggle label={t("bubbleEnabled")} checked={s.bubble} onchange={(v) => update({ bubble: v })} />
-      {#if glass !== "none"}
+      {#if material}
         <!-- Only where the system has a material to put behind the bubble. -->
         <Toggle
-          label={t("liquidGlass")}
+          label={t(material.label)}
           checked={s.liquidGlass}
           disabled={!s.bubble}
           onchange={(v) => update({ liquidGlass: v })}
@@ -234,7 +241,7 @@
             </span>
           </label>
         {/if}
-        <p class="muted small">{t("liquidGlassBody")}</p>
+        <p class="muted small">{t(material.body)}</p>
       {/if}
       <Toggle label={t("typingSpeedEnabled")} checked={s.typingSpeed} onchange={(v) => update({ typingSpeed: v })} />
     </section>

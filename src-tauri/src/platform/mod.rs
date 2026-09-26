@@ -56,27 +56,57 @@ pub enum Glass {
     Liquid,
     /// Earlier macOS: a vibrancy material.
     Vibrancy,
-    /// Windows: a blurred region behind the bubble.
-    Blur,
+    /// Windows 10 1803 and later: the acrylic accent.
+    Acrylic,
 }
 
 impl Glass {
-    /// The name the settings window shows; `"none"` means no support.
+    /// The name the settings window shows; `"none"` means no support. The
+    /// settings have a heading and a note for each.
     pub fn name(self) -> &'static str {
         match self {
             Glass::Liquid => "liquidGlass",
             Glass::Vibrancy => "vibrancy",
-            Glass::Blur => "blur",
+            Glass::Acrylic => "acrylic",
         }
     }
+}
+
+/// Tells the platform the cursor has come onto the pet or gone off it.
+///
+/// The page says the same thing by showing and hiding its bubble, and on macOS
+/// that is enough: the material is a view *in* the window, so it goes with the
+/// page. On Windows it is a window of its own, and the context menu holds the
+/// main thread for as long as it is up — so the page's word can be a long time
+/// coming, and this is the way round it. Called from the hover thread.
+pub fn pet_hovered(on: bool) {
+    #[cfg(windows)]
+    windows::pet_hovered(on);
+    #[cfg(not(windows))]
+    let _ = on;
+}
+
+/// Reads behind the card again, and gives the tone it makes once that has moved
+/// — `None` while it has not, or where nothing reads the desktop at all, as on
+/// macOS, whose material takes its colour from the system on its own.
+///
+/// Called from the hover thread, which is the thread that keeps running while
+/// the pet is being dragged.
+pub fn read_tone() -> Option<f64> {
+    #[cfg(windows)]
+    return windows::read_tone();
+    #[cfg(not(windows))]
+    None
 }
 
 /// What this system offers, if anything.
 pub fn glass() -> Option<Glass> {
     #[cfg(target_os = "macos")]
     return macos::glass();
+    // The accent may simply not be there, and that is answerable without a
+    // window, so the settings can be told before any bubble has been shown.
     #[cfg(windows)]
-    return Some(Glass::Blur);
+    return windows::acrylic().then_some(Glass::Acrylic);
     #[cfg(target_os = "linux")]
     return None;
     #[allow(unreachable_code)]
@@ -85,15 +115,32 @@ pub fn glass() -> Option<Glass> {
 
 /// Puts the glass behind the bubble: `rect` is `(x, y, w, h)` in logical
 /// pixels with the origin at the window's top-left, `None` removes it.
+/// `theme_dark` is whether the *system* is light or dark, which is the card's
+/// own starting point and what stands in for the desktop where it cannot be
+/// read.
+///
+/// Returns the tone the panel is to lean by: 0 for a card drawn with dark ink
+/// over a pale panel, 1 for light ink over a dark one — the desktop behind the
+/// material, where anything can read it. The page draws its ink, and how much of
+/// its own colour the card carries, from that one number.
 /// Must run on the main thread.
 #[cfg(target_os = "macos")]
 pub fn set_glass<R: tauri::Runtime>(
     window: &tauri::WebviewWindow<R>,
     rect: Option<(f64, f64, f64, f64)>,
     radius: f64,
-) {
+    theme_dark: bool,
+) -> f64 {
+    // A vibrancy view takes its colour from the system's appearance on its
+    // own, and is drawn behind the page rather than through it, so the panel
+    // stays the system's business and nothing has to be sampled.
     if let Ok(ns_window) = window.ns_window() {
         macos::set_glass(ns_window, rect, radius);
+    }
+    if theme_dark {
+        1.0
+    } else {
+        0.0
     }
 }
 
@@ -102,9 +149,14 @@ pub fn set_glass<R: tauri::Runtime>(
     window: &tauri::WebviewWindow<R>,
     rect: Option<(f64, f64, f64, f64)>,
     radius: f64,
-) {
-    let _ = radius; // Windows has no corner radius for a blurred region.
-    let Ok(hwnd) = window.hwnd() else { return };
+    theme_dark: bool,
+) -> f64 {
+    // Windows rounds the material with the system's own corner preference,
+    // so the card's radius is only macOS's business.
+    let _ = radius;
+    let Ok(pet) = window.hwnd() else {
+        return if theme_dark { 1.0 } else { 0.0 };
+    };
     let scale = window.scale_factor().unwrap_or(1.0);
     let rect = rect.map(|(x, y, w, h)| {
         (
@@ -114,7 +166,7 @@ pub fn set_glass<R: tauri::Runtime>(
             (h * scale).round() as i32,
         )
     });
-    windows::set_glass(hwnd, rect);
+    windows::set_glass(pet, rect, theme_dark)
 }
 
 #[cfg(target_os = "linux")]
@@ -122,7 +174,13 @@ pub fn set_glass<R: tauri::Runtime>(
     _window: &tauri::WebviewWindow<R>,
     _rect: Option<(f64, f64, f64, f64)>,
     _radius: f64,
-) {
+    theme_dark: bool,
+) -> f64 {
+    if theme_dark {
+        1.0
+    } else {
+        0.0
+    }
 }
 
 /// Keeps the pet on every Space, out of Mission Control and the Cmd-` cycle.
