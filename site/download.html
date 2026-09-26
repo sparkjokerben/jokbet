@@ -26,12 +26,12 @@
     <script type="module" src="/app.js"></script>
     <!-- /partial:head -->
     <title>下载 — Jokbet · Download</title>
-    <meta name="description" content="安装 Jokbet 最新版：macOS、Linux、Windows 各一行命令（bash/zsh、PowerShell、cmd），或直接下载安装包，附 SHA-256 校验值。" />
+    <meta name="description" content="下载 Jokbet 最新版：macOS、Linux、Windows 的安装包与校验值，另外每个平台都有一行命令安装（bash/zsh、PowerShell、cmd）。" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
     <link rel="canonical" href="https://jokbet.jokerben.top/download" />
     <meta property="og:url" content="https://jokbet.jokerben.top/download" />
     <meta property="og:title" content="下载 Jokbet" />
-    <meta property="og:description" content="一行命令安装 macOS、Linux、Windows 版；也可以直接下载安装包，附校验值。" />
+    <meta property="og:description" content="macOS、Linux、Windows 安装包，附校验值；也可以每个平台一行命令安装。" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -92,9 +92,49 @@
             <span data-lang="en" lang="en">Download</span>
           </h1>
           <p class="lede">
-            <span data-lang="zh">推荐一行命令装好（它会核对校验值），也可以直接下载安装包。</span>
-            <span data-lang="en" lang="en">One line is the recommended way in — it checks the checksum — or take an installer directly.</span>
+            <span data-lang="zh">当前版本的全部安装包；也可以用一行命令安装，脚本会核对校验值。</span>
+            <span data-lang="en" lang="en">Every installer of the current release — or one line in a shell, which checks the checksum for you.</span>
           </p>
+        </section>
+
+        <section class="block" id="installers">
+          <h2><span data-lang="zh">安装包</span><span data-lang="en" lang="en">Installers</span></h2>
+          <div class="release-head" id="release-head" hidden>
+            <span class="version" id="release-version"></span>
+            <span id="release-when"></span>
+            <span id="release-source"></span>
+            <a class="all" href="/changelog"
+              ><span data-lang="zh">所有版本</span><span data-lang="en" lang="en">All versions</span></a
+            >
+          </div>
+          <p class="empty" id="release-empty" aria-live="polite">
+            <span data-lang="zh">正在读取版本信息…</span>
+            <span data-lang="en" lang="en">Reading the current release…</span>
+          </p>
+          <ul class="files" id="files" hidden></ul>
+          <p class="note">
+            <span data-lang="zh"
+              >这些安装包没有 Apple 或微软的签名，直接双击运行的话第一次打开会被系统拦一次——下面的「安装」里有放行的步骤，用其中任意一行命令安装则不会被拦。下载走本站的镜像，镜像不可用时自动改用
+              GitHub。</span
+            >
+            <span data-lang="en" lang="en"
+              >These builds are not signed by Apple or Microsoft, so opening one by hand is stopped once — the steps for that are under
+              Install below, and a one-line install is not stopped at all. Downloads come from this site's mirror, and fall back to GitHub
+              when it is unavailable.</span
+            >
+          </p>
+          <details id="notes-details" hidden>
+            <summary>
+              <span data-lang="zh">这次更新了什么</span><span data-lang="en" lang="en">What changed in this release</span>
+            </summary>
+            <div class="notes" id="notes"></div>
+          </details>
+          <noscript>
+            <p class="note">
+              下载列表需要 JavaScript。安装包都在
+              <a href="https://github.com/sparkjokerben/jokbet/releases">GitHub Releases</a>。
+            </p>
+          </noscript>
         </section>
 
         <section class="block" id="install">
@@ -144,12 +184,12 @@
             </div>
             <p class="note">
               <span data-lang="zh"
-                >它下载最新版的安装程序，核对 SHA-256，静默装好并打开。PowerShell 下载的文件不带「来自互联网」标记，通常不会被 SmartScreen
-                拦；脚本可以<a href="/install.ps1">先读一遍</a>。</span
+                >它下载上面列出的那个安装程序，核对 SHA-256，静默装好并打开。PowerShell 下载的文件不带「来自互联网」标记，通常不会被
+                SmartScreen 拦；脚本可以<a href="/install.ps1">先读一遍</a>。</span
               >
               <span data-lang="en" lang="en"
-                >It downloads the newest installer, checks its SHA-256, installs it quietly and opens it. A PowerShell download carries
-                no mark of the web, so SmartScreen usually does not stop it. You can
+                >It downloads the installer listed above, checks its SHA-256, installs it quietly and opens it. A PowerShell download
+                carries no mark of the web, so SmartScreen usually does not stop it. You can
                 <a href="/install.ps1">read the script</a> first.</span
               >
             </p>
@@ -237,46 +277,6 @@
             <span data-lang="zh">更新后如果不计数了，在「输入监控」里删掉旧条目再重新添加。</span>
             <span data-lang="en" lang="en">If counting stops after an update, remove the old entry from Input Monitoring and add the app again.</span>
           </p>
-        </section>
-
-        <section class="block" id="installers">
-          <h2><span data-lang="zh">安装包</span><span data-lang="en" lang="en">Installers</span></h2>
-          <div class="release-head" id="release-head" hidden>
-            <span class="version" id="release-version"></span>
-            <span id="release-when"></span>
-            <span id="release-source"></span>
-            <a class="all" href="/changelog"
-              ><span data-lang="zh">所有版本</span><span data-lang="en" lang="en">All versions</span></a
-            >
-          </div>
-          <p class="empty" id="release-empty" aria-live="polite">
-            <span data-lang="zh">正在读取版本信息…</span>
-            <span data-lang="en" lang="en">Reading the current release…</span>
-          </p>
-          <ul class="files" id="files" hidden></ul>
-          <details id="notes-details" hidden>
-            <summary>
-              <span data-lang="zh">这次更新了什么</span><span data-lang="en" lang="en">What changed in this release</span>
-            </summary>
-            <div class="notes" id="notes"></div>
-          </details>
-          <p class="note">
-            <span data-lang="zh"
-              >这些安装包没有 Apple 或微软的签名，直接运行的话第一次打开会被系统拦一下，按上面的手动步骤放行即可——用上面的一行命令装则不会。下载走本站的镜像，镜像不可用时自动改用
-              GitHub。</span
-            >
-            <span data-lang="en" lang="en"
-              >These builds are not signed by Apple or Microsoft, so opening one by hand is stopped once — follow the steps above for that.
-              The one-line installs are not stopped. Downloads come from this site's mirror, and fall back to GitHub when it is
-              unavailable.</span
-            >
-          </p>
-          <noscript>
-            <p class="note">
-              下载列表需要 JavaScript。安装包都在
-              <a href="https://github.com/sparkjokerben/jokbet/releases">GitHub Releases</a>。
-            </p>
-          </noscript>
         </section>
       </main>
 
