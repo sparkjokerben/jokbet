@@ -28,16 +28,31 @@ export function pathOf(file: string): string | null {
 }
 
 /** The page with every marked region refilled from its partial, indented to
- * the marker, and the page's own link in the nav marked as the current one. */
+ * the marker, and the page's own link in the nav marked as the current one.
+ *
+ * Only the marked regions are touched, down to their line endings: a checkout
+ * on Windows hands the pages CRLF while the partials are read as they are
+ * written (LF), and a region that does not match is a region left as it was —
+ * which is how a page can sit in the tree stale while `check` calls it a
+ * match. So the region's own ending is what the refilled one is written with,
+ * and everything outside it is left alone. */
 export function fill(page: string, partials: Record<string, string>, path: string | null): string {
   return page.replace(
-    /^([ \t]*)<!-- partial:([a-z]+) -->\n[\s\S]*?^\1<!-- \/partial:\2 -->$/gm,
-    (_, indent: string, name: string) => {
+    /^([ \t]*)<!-- partial:([a-z]+) -->\r?\n[\s\S]*?^\1<!-- \/partial:\2 -->/gm,
+    (_, indent: string, name: string, _offset: number, whole: string) => {
       let body = partials[name];
       if (body === undefined) throw new Error(`there is no partial named ${name}`);
       if (path) body = body.replace(/<nav[\s\S]*?<\/nav>/, (nav) => nav.replace(`<a href="${path}">`, `<a href="${path}" aria-current="page">`));
-      const lines = body.trimEnd().split("\n").map((line) => (line ? indent + line : line));
-      return `${indent}<!-- partial:${name} -->\n${lines.join("\n")}\n${indent}<!-- /partial:${name} -->`;
+      const eol = whole.includes("\r\n") ? "\r\n" : "\n";
+      // The partial is read in whatever endings the tree has, and what is
+      // written has to be only the region's own: a body split on "\n" alone
+      // would carry a stray CR into every line of it.
+      const lines = body
+        .replace(/\r\n/g, "\n")
+        .trimEnd()
+        .split("\n")
+        .map((line) => (line ? indent + line : line));
+      return `${indent}<!-- partial:${name} -->${eol}${lines.join(eol)}${eol}${indent}<!-- /partial:${name} -->`;
     },
   );
 }
