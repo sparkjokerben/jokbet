@@ -94,12 +94,11 @@
         </section>
 
         <section class="block" id="install">
-          <h2><span data-lang="zh">安装</span><span data-lang="en" lang="en">Install</span></h2>
+          <h2><span data-lang="zh">命令安装</span><span data-lang="en" lang="en">Command-line install</span></h2>
           <p class="lede">
             <span data-lang="zh">脚本会读最新版本、核对校验码、完成安装并启动。若已安装，则更新到最新版。</span>
             <span data-lang="en" lang="en"
-              >Any line below does the same, and this is how the project wants it installed: it reads the newest release, checks its
-              SHA-256, installs it and opens it. Run the same line again any time to update.</span
+              >It reads the newest release, checks its checksum, installs it and opens it. Run it again to update.</span
             >
           </p>
 
@@ -119,9 +118,7 @@
                 >macOS 上安装到「应用程序」，Linux 上安装为 <code>~/.local/bin/jokbet</code>。</span
               >
               <span data-lang="en" lang="en"
-                >On a Mac it goes into Applications; on Linux it becomes <code>~/.local/bin/jokbet</code> (the AppImage, which updates
-                itself). A terminal download carries no quarantine flag, so macOS does not stop it. You can
-                <a href="/install.sh">read the script</a> first.</span
+                >On a Mac it goes into Applications; on Linux it becomes <code>~/.local/bin/jokbet</code>.</span
               >
             </p>
           </div>
@@ -141,11 +138,7 @@
               <span data-lang="zh"
                 >默认安装到用户级应用目录。</span
               >
-              <span data-lang="en" lang="en"
-                >It downloads the newest installer, checks its SHA-256, installs it quietly and opens it. A PowerShell download carries
-                no mark of the web, so SmartScreen usually does not stop it. You can
-                <a href="/install.ps1">read the script</a> first.</span
-              >
+              <span data-lang="en" lang="en">It installs into your per-user app folder by default.</span>
             </p>
           </div>
 
@@ -162,7 +155,7 @@
             </div>
             <p class="note">
               <span data-lang="zh">同上。</span>
-              <span data-lang="en" lang="en">The same PowerShell command, for a Command Prompt window; it does exactly what the one above does.</span>
+              <span data-lang="en" lang="en">The same, in a Command Prompt window.</span>
             </p>
           </div>
         </section>
@@ -188,9 +181,9 @@
               GitHub。</span
             >
             <span data-lang="en" lang="en"
-              >These builds are not signed by Apple or Microsoft, so opening one by hand is stopped once — the steps just below say how
-              to get past that, and a one-line install above is not stopped at all. Downloads come from this site's mirror, and fall back
-              to GitHub when it is unavailable.</span
+              >This app is unsigned, so the first launch may be stopped as a false positive: the steps below say how to let it
+              through, or install with a command instead. Downloads come from this site's mirror, and fall back to GitHub when it is
+              unavailable.</span
             >
           </p>
           <h3 class="manual">
@@ -256,11 +249,10 @@
           </div>
           <p class="note">
             <span data-lang="zh"
-              >macOS：手动装的 app 第一次打开会被拦一次；也可以先在终端里去掉隔离标记，之后就不再被拦（路径换成你安装的位置）：</span
+              >macOS：也可跳过手动调设置的流程，使用此命令一键解锁应用：</span
             >
             <span data-lang="en" lang="en"
-              >macOS: an app installed by hand is stopped once on its first launch; this line clears the quarantine flag first, and
-              then it is not (use the path you installed to):</span
+              >macOS: skip the trip through System Settings; this one command unlocks the app:</span
             >
           </p>
           <div class="command">
