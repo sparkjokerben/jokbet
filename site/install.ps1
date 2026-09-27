@@ -84,9 +84,9 @@ function Install-Jokbet {
         (Join-Path $env:ProgramFiles 'Jokbet\Jokbet.exe')
       ) | Where-Object { Test-Path $_ } | Select-Object -First 1
       if ($app) {
+        # Nothing to grant on the way in: Windows asks for no permission to
+        # watch the keyboard, so there is no note to leave here.
         Start-Process $app
-        Say '第一次打开时，按提示授予「输入监控」权限，它才能计数。' `
-          'The first time, allow Input Monitoring when asked, so it can count.'
       } else {
         Say '安装完成，但没有找到 Jokbet.exe，请从开始菜单打开它。' `
           'Installed, but Jokbet.exe was not where it was expected; open it from the Start menu.'
