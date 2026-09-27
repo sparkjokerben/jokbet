@@ -67,6 +67,10 @@ right-click → Open no longer works). Allow **Input Monitoring** when asked
 (**System Settings → Privacy & Security → Input Monitoring**): without it the
 pet shows a confused face and counts nothing.
 
+Or clear the quarantine flag from a terminal first, and the Open Anyway step is
+not needed at all: `xattr -dr com.apple.quarantine /Applications/Jokbet.app`
+(with the path you installed to).
+
 A `.dmg` downloaded in a browser is stopped twice, once when the disk image is
 opened and once for the app inside it, which is why the `.zip` is the shorter
 path. If counting ever

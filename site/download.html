@@ -91,16 +91,12 @@
             <span data-lang="zh">下载</span>
             <span data-lang="en" lang="en">Download</span>
           </h1>
-          <p class="lede">
-            <span data-lang="zh">推荐用一行命令安装，脚本会核对校验值；也可以直接下载安装包。</span>
-            <span data-lang="en" lang="en">One line in a shell is the recommended way in — it checks the checksum for you — or take an installer directly.</span>
-          </p>
         </section>
 
         <section class="block" id="install">
           <h2><span data-lang="zh">安装</span><span data-lang="en" lang="en">Install</span></h2>
           <p class="lede">
-            <span data-lang="zh">下面任意一行都可以，这就是推荐的安装方式：脚本会读最新版本、核对 SHA-256，装好并打开。再运行一次同一行，就是更新到最新版。</span>
+            <span data-lang="zh">脚本会读最新版本、核对校验码、完成安装并启动。若已安装，则更新到最新版。</span>
             <span data-lang="en" lang="en"
               >Any line below does the same, and this is how the project wants it installed: it reads the newest release, checks its
               SHA-256, installs it and opens it. Run the same line again any time to update.</span
@@ -120,8 +116,7 @@
             </div>
             <p class="note">
               <span data-lang="zh"
-                >Mac 上装进「应用程序」，Linux 上装成 <code>~/.local/bin/jokbet</code>（AppImage，会自己更新）。从终端安装不带隔离标记，macOS
-                不会拦；脚本可以<a href="/install.sh">先读一遍</a>。</span
+                >macOS 上安装到「应用程序」，Linux 上安装为 <code>~/.local/bin/jokbet</code>。</span
               >
               <span data-lang="en" lang="en"
                 >On a Mac it goes into Applications; on Linux it becomes <code>~/.local/bin/jokbet</code> (the AppImage, which updates
@@ -144,8 +139,7 @@
             </div>
             <p class="note">
               <span data-lang="zh"
-                >它下载最新版的安装程序，核对 SHA-256，静默装好并打开。PowerShell 下载的文件不带「来自互联网」标记，通常不会被
-                SmartScreen 拦；脚本可以<a href="/install.ps1">先读一遍</a>。</span
+                >默认安装到用户级应用目录。</span
               >
               <span data-lang="en" lang="en"
                 >It downloads the newest installer, checks its SHA-256, installs it quietly and opens it. A PowerShell download carries
@@ -167,7 +161,7 @@
               </button>
             </div>
             <p class="note">
-              <span data-lang="zh">命令提示符里跑的就是同一条 PowerShell 命令，做的事情和上面完全一样。</span>
+              <span data-lang="zh">同上。</span>
               <span data-lang="en" lang="en">The same PowerShell command, for a Command Prompt window; it does exactly what the one above does.</span>
             </p>
           </div>
@@ -190,7 +184,7 @@
           <ul class="files" id="files" hidden></ul>
           <p class="note">
             <span data-lang="zh"
-              >这些安装包没有 Apple 或微软的签名，直接双击运行的话第一次打开会被系统拦一次——放行的方法就在下面的安装步骤里；用上面任意一行命令安装则不会被拦。下载走本站的镜像，镜像不可用时自动改用
+              >本应用无签名，首次运行可能会被系统误检测，可尝试根据安装说明放行，亦可改用命令安装。下载使用本站镜像，镜像不可用时自动切换
               GitHub。</span
             >
             <span data-lang="en" lang="en"
@@ -261,8 +255,23 @@
             </div>
           </div>
           <p class="note">
-            <span data-lang="zh">更新后如果不计数了，在「输入监控」里删掉旧条目再重新添加。</span>
-            <span data-lang="en" lang="en">If counting stops after an update, remove the old entry from Input Monitoring and add the app again.</span>
+            <span data-lang="zh"
+              >macOS：手动装的 app 第一次打开会被拦一次；也可以先在终端里去掉隔离标记，之后就不再被拦（路径换成你安装的位置）：</span
+            >
+            <span data-lang="en" lang="en"
+              >macOS: an app installed by hand is stopped once on its first launch; this line clears the quarantine flag first, and
+              then it is not (use the path you installed to):</span
+            >
+          </p>
+          <div class="command">
+            <pre><code id="mac-quarantine">xattr -dr com.apple.quarantine /Applications/Jokbet.app</code></pre>
+            <button class="btn" type="button" data-copy="mac-quarantine">
+              <span data-lang="zh">复制</span><span data-lang="en" lang="en">Copy</span>
+            </button>
+          </div>
+          <p class="note">
+            <span data-lang="zh">macOS：更新后如果不计数了，在「输入监控」里删掉旧条目再重新添加。</span>
+            <span data-lang="en" lang="en">macOS: if counting stops after an update, remove the old entry from Input Monitoring and add the app again.</span>
           </p>
           <details id="notes-details" hidden>
             <summary>

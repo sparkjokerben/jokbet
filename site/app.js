@@ -1,6 +1,6 @@
 // Every page's behaviour, keyed on <body data-page>: the pet (which runs the
 // app's own code, see src/pet/web.ts) and the language switch everywhere; the
-// download buttons on the home page, the installer list on /download and the
+// one-line install on the home page, the installer list on /download and the
 // release list on /changelog, built from the Worker's /api/ manifests.
 // Everything else is in the HTML.
 
@@ -45,14 +45,9 @@ const T = {
     },
     platforms: "macOS 11+ · Windows · Linux（X11）",
     unreleased: "还没有正式发布的版本",
-    primary: { "macos-aarch64": "下载 macOS 版", "windows-x64": "下载 Windows 版", "linux-appimage": "下载 Linux 版" },
-    altMac: "Intel 版",
     copied: "已复制",
     copy: "复制",
-    installLine: "推荐：一行命令安装",
-    or: "或者",
-    blocked1: "只拦 1 次",
-    blocked2: "拦 2 次",
+    installLine: "推荐：命令安装",
     releases: "去 GitHub 下载",
     everyPlatform: "选择平台下载",
     released: "发布于",
@@ -84,14 +79,9 @@ const T = {
     },
     platforms: "macOS 11+ · Windows · Linux (X11)",
     unreleased: "no release yet",
-    primary: { "macos-aarch64": "Download for macOS", "windows-x64": "Download for Windows", "linux-appimage": "Download for Linux" },
-    altMac: "Intel build",
     copied: "Copied",
     copy: "Copy",
     installLine: "Recommended: one line",
-    or: "or",
-    blocked1: "1 block",
-    blocked2: "2 blocks",
     releases: "Downloads on GitHub",
     everyPlatform: "Pick your platform",
     released: "Released",
@@ -245,12 +235,6 @@ function latestHref(file) {
   return manifest?.source === "r2" ? mirrorHref(tag, file.name) : githubHref(tag, file.name);
 }
 
-/** What macOS does to a download: a disk image is stopped when it is opened
- * and the app inside it once more, a zip only for the app. Worth saying in the
- * list, since that is where the choice between the two is made.
- * @param {Lang} l @param {string} id */
-const macBlocks = (l, id) => (!id.startsWith("macos-") ? "" : id.endsWith("-zip") ? T[l].blocked1 : T[l].blocked2);
-
 /** One row of an installer list.
  * @param {string} platform @param {{ name: string, size: number | null, sha256?: string | null }} file
  * @param {string} href @param {string} github
@@ -267,7 +251,7 @@ function fileRow(platform, file, href, github) {
   label.className = "file-label";
   const meta = el(
     "span",
-    [file.name.slice(file.name.lastIndexOf(".") + 1), bytes(file.size), macBlocks(lang(), platform)].filter(Boolean).join(" · "),
+    [file.name.slice(file.name.lastIndexOf(".") + 1), bytes(file.size)].filter(Boolean).join(" · "),
   );
   meta.className = "file-meta";
   link.append(label, meta);
@@ -355,20 +339,20 @@ function renderFiles() {
  * the download page leads with. The project would rather people install this
  * way — a terminal download is not quarantined and not marked, so neither
  * Gatekeeper nor SmartScreen stops the first launch — so the home page offers
- * the line for the visitor's own system first, and the file under it. */
+ * the line for the visitor's own system, and the download page for the rest. */
 const UNIX_INSTALL = "curl -fsSL https://jokbet.jokerben.top/install.sh | sh";
 const WINDOWS_INSTALL = "irm https://jokbet.jokerben.top/install.ps1 | iex";
 
-/** The home page's call to action: the one-line install, and the installers. */
+/** The home page's call to action: the one-line install for the visitor's own
+ * system, or, when their system cannot be guessed or has no build yet, a way
+ * to the page that lists them all. */
 function renderCta() {
   const cta = $("cta");
   if (!cta || !manifest) return;
   const t = T[lang()];
-  const more = $("cta-more");
   const hasFiles = !!manifest.version && Object.keys(manifest.files ?? {}).length > 0;
   const pick = guess();
   cta.replaceChildren();
-  if (more) more.hidden = true;
   const file = pick ? manifest.files?.[offered(pick)] : undefined;
   if (!pick || !file) {
     // Nothing to guess from: the download page lists every platform, or, with
@@ -393,28 +377,8 @@ function renderCta() {
   copy.type = "button";
   copy.setAttribute("data-copy", "cta-command");
   command.append(pre, copy);
-  // The line and the files under it are two ways to the same thing, so the
-  // page says so: a rule and a word, rather than one stacked on the other.
-  const or = el("p", t.or);
-  or.className = "or";
-  cta.append(hint, command, or);
-
-  const ids = pick === "macos-aarch64" && manifest.files?.["macos-x64"] ? ["macos-aarch64", "macos-x64"] : [pick];
-  ids.forEach((id, index) => {
-    const f = manifest?.files?.[offered(id)];
-    if (!f) return;
-    const link = el("a", index === 0 ? /** @type {Record<string, string>} */ (t.primary)[id] ?? id : t.altMac);
-    link.className = "btn";
-    link.href = latestHref(f);
-    link.setAttribute("download", "");
-    link.dataset.platform = offered(id);
-    const size = el("span", bytes(f.size));
-    size.className = "sub";
-    if (f.size) link.append(size);
-    cta.append(link);
-  });
-  if (more) more.hidden = false;
-  // The buttons were just built: the copy button among them needs its wiring.
+  cta.append(hint, command);
+  // The line was just built: its copy button needs its wiring.
   wireCopy();
 }
 

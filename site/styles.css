@@ -343,31 +343,11 @@ html[data-lang="en"] [data-lang="zh"] {
   gap: 10px;
 }
 
-/* The install line and its lead-in take the whole row, so the buttons for the
-   files themselves sit under them. */
+/* The install line and its lead-in take the whole row, one under the other. */
 .cta .note,
 .cta .command {
   flex: 1 1 100%;
   margin: 0;
-}
-
-/* The line above and the files below are two ways to the same thing: this is
-   the word between them, with a hairline either side of it. */
-.cta .or {
-  flex: 1 1 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  color: var(--ink-mute);
-  font: 400 12px/1 var(--display);
-}
-
-.cta .or::before,
-.cta .or::after {
-  content: "";
-  flex: 1;
-  border-top: 1px solid var(--line);
 }
 
 .try {
@@ -456,12 +436,6 @@ html[data-lang="en"] [data-lang="zh"] {
   background: var(--pet-deep);
   border-color: var(--pet-deep);
   color: #fff;
-}
-
-.btn .sub {
-  font-family: var(--mono);
-  font-size: 12px;
-  opacity: 0.72;
 }
 
 /* A button that reads as a link: the one place inside prose that warms up,
