@@ -28,10 +28,11 @@ extern "C" {
     fn CGGetActiveDisplayList(max: u32, displays: *mut u32, count: *mut u32) -> i32;
     fn CGDisplayBounds(display: u32) -> CGRect;
     fn CGDisplayScreenSize(display: u32) -> CGSize;
+    fn CGDisplayCreateUUIDFromDisplayID(display: u32) -> *mut std::ffi::c_void;
 }
 
-/// Active displays in global points (the space CGEvent locations use).
-pub fn displays() -> Vec<Display> {
+/// Active display ids with their bounds in global points.
+fn display_bounds() -> Vec<(u32, CGRect)> {
     let mut ids = [0u32; 16];
     let mut count = 0u32;
     if unsafe { CGGetActiveDisplayList(ids.len() as u32, ids.as_mut_ptr(), &mut count) } != 0 {
@@ -39,8 +40,15 @@ pub fn displays() -> Vec<Display> {
     }
     ids[..count as usize]
         .iter()
-        .map(|&id| {
-            let b = unsafe { CGDisplayBounds(id) };
+        .map(|&id| (id, unsafe { CGDisplayBounds(id) }))
+        .collect()
+}
+
+/// Active displays in global points (the space CGEvent locations use).
+pub fn displays() -> Vec<Display> {
+    display_bounds()
+        .into_iter()
+        .map(|(id, b)| {
             let mm = unsafe { CGDisplayScreenSize(id) };
             Display::new(
                 b.origin.x,
@@ -84,15 +92,142 @@ extern "C" {
 #[link(name = "CoreFoundation", kind = "framework")]
 extern "C" {
     fn CFRelease(cf: *const std::ffi::c_void);
+    fn CFUUIDCreateString(
+        allocator: *const std::ffi::c_void,
+        uuid: *const std::ffi::c_void,
+    ) -> *mut std::ffi::c_void;
 }
+
+extern "C" {
+    fn dlsym(
+        handle: *mut std::ffi::c_void,
+        symbol: *const std::ffi::c_char,
+    ) -> *mut std::ffi::c_void;
+}
+
+/// `dlsym`'s handle for "wherever the symbol is loaded".
+const RTLD_DEFAULT: *mut std::ffi::c_void = -2isize as *mut std::ffi::c_void;
 
 const LIST_ON_SCREEN_ONLY: u32 = 1 << 0;
 const LIST_EXCLUDE_DESKTOP: u32 = 1 << 4;
 /// Ordinary app windows; menus, panels and the pet itself sit above it.
 const NORMAL_LAYER: i64 = 0;
 
-/// Whether the frontmost ordinary window on the display holding the point
-/// (global points) belongs to another app and covers the whole display.
+/// The type the window server gives a full-screen Space (an ordinary desktop
+/// is 0).
+const FULL_SCREEN_SPACE: i64 = 4;
+
+/// The window server's calls for Spaces. They are private, so they are looked
+/// up rather than linked: the app still starts if a macOS ever drops them.
+struct SpaceCalls {
+    main_connection: unsafe extern "C" fn() -> i32,
+    copy_display_spaces: unsafe extern "C" fn(i32) -> *mut std::ffi::c_void,
+}
+
+fn space_calls() -> Option<&'static SpaceCalls> {
+    static CALLS: std::sync::OnceLock<Option<SpaceCalls>> = std::sync::OnceLock::new();
+    CALLS
+        .get_or_init(|| {
+            // SAFETY: the symbols are looked up by name and, when present, have
+            // these signatures.
+            unsafe {
+                let main = dlsym(RTLD_DEFAULT, c"CGSMainConnectionID".as_ptr());
+                let copy = dlsym(RTLD_DEFAULT, c"CGSCopyManagedDisplaySpaces".as_ptr());
+                (!main.is_null() && !copy.is_null()).then(|| SpaceCalls {
+                    main_connection: std::mem::transmute::<
+                        *mut std::ffi::c_void,
+                        unsafe extern "C" fn() -> i32,
+                    >(main),
+                    copy_display_spaces: std::mem::transmute::<
+                        *mut std::ffi::c_void,
+                        unsafe extern "C" fn(i32) -> *mut std::ffi::c_void,
+                    >(copy),
+                })
+            }
+        })
+        .as_ref()
+}
+
+/// Whether the display is showing a full-screen Space; `None` where the window
+/// server does not say.
+///
+/// This, not the shape of the frontmost window, is what full screen is: an app
+/// with a toolbar (Mail, Edge) keeps it in a window of its own in front of the
+/// full-screen one, and every app gets such a window while the title bar is
+/// pulled down.
+fn full_screen_space(display: u32) -> Option<bool> {
+    use objc2::msg_send;
+    use objc2::runtime::{AnyClass, AnyObject, Bool};
+    use objc2_foundation::NSString;
+
+    let calls = space_calls()?;
+    let string_class = AnyClass::get(c"NSString")?;
+    // SAFETY: the UUID, its string and the list are Core Foundation objects,
+    // toll-free bridged to NSString, NSArray and NSDictionary, and released
+    // once read.
+    unsafe {
+        let uuid = CGDisplayCreateUUIDFromDisplayID(display);
+        if uuid.is_null() {
+            return None;
+        }
+        let name = CFUUIDCreateString(std::ptr::null(), uuid);
+        CFRelease(uuid);
+        if name.is_null() {
+            return None;
+        }
+        let this = (*(name as *const NSString)).to_string();
+        CFRelease(name);
+
+        let list = (calls.copy_display_spaces)((calls.main_connection)());
+        if list.is_null() {
+            return None;
+        }
+        let (id_key, current_key, type_key) = (
+            NSString::from_str("Display Identifier"),
+            NSString::from_str("Current Space"),
+            NSString::from_str("type"),
+        );
+        let entries = list as *mut AnyObject;
+        let count: usize = msg_send![entries, count];
+        let mut spaces = Vec::with_capacity(count);
+        for i in 0..count {
+            let entry: *mut AnyObject = msg_send![entries, objectAtIndex: i];
+            let id: *mut AnyObject = msg_send![entry, objectForKey: &*id_key];
+            let current: *mut AnyObject = msg_send![entry, objectForKey: &*current_key];
+            if id.is_null() || current.is_null() {
+                continue;
+            }
+            let is_string: Bool = msg_send![id, isKindOfClass: string_class];
+            let kind: *mut AnyObject = msg_send![current, objectForKey: &*type_key];
+            if !is_string.as_bool() || kind.is_null() {
+                continue;
+            }
+            let kind: i64 = msg_send![kind, longLongValue];
+            spaces.push(((*(id as *const NSString)).to_string(), kind));
+        }
+        CFRelease(list);
+        current_space_is_full_screen(&spaces, &this)
+    }
+}
+
+/// Picks the display's entry out of the window server's list of displays and
+/// their current Spaces. When displays share their Spaces there is one entry,
+/// named "Main", and it speaks for all of them.
+fn current_space_is_full_screen(spaces: &[(String, i64)], display: &str) -> Option<bool> {
+    let (_, kind) = spaces
+        .iter()
+        .find(|(id, _)| id.eq_ignore_ascii_case(display))
+        .or(match spaces {
+            [only] => Some(only),
+            _ => None,
+        })?;
+    Some(*kind == FULL_SCREEN_SPACE)
+}
+
+/// Whether the display holding the point (global points) shows another app
+/// full screen: a full-screen Space, or else a frontmost ordinary window of
+/// another app that covers the whole display (a borderless game or a
+/// presentation, which need no Space of their own).
 ///
 /// Only a window's layer, bounds, owner and alpha are read, which needs no
 /// Screen Recording permission (window titles would).
@@ -101,13 +236,16 @@ pub fn fullscreen_covers(x: f64, y: f64) -> bool {
     use objc2::runtime::AnyObject;
     use objc2_foundation::NSString;
 
-    let Some(display) = displays()
+    let Some((id, display)) = display_bounds()
         .into_iter()
-        .map(|d| (d.x, d.y, d.w, d.h))
-        .find(|&d| super::contains(d, x, y))
+        .map(|(id, b)| (id, (b.origin.x, b.origin.y, b.size.width, b.size.height)))
+        .find(|&(_, d)| super::contains(d, x, y))
     else {
         return false;
     };
+    if full_screen_space(id) == Some(true) {
+        return true;
+    }
     // SAFETY: the list is a CFArray of CFDictionary, toll-free bridged to
     // NSArray and NSDictionary; it is released once read.
     unsafe {
@@ -364,5 +502,27 @@ mod tests {
         // A flipped view measures from the top, like the page.
         let frame = frame_in_view((10.0, 20.0, 100.0, 40.0), 300.0, true.into());
         assert_eq!(frame.origin.y, 20.0);
+    }
+
+    fn spaces(entries: &[(&str, i64)]) -> Vec<(String, i64)> {
+        entries
+            .iter()
+            .map(|&(id, kind)| (id.to_owned(), kind))
+            .collect()
+    }
+
+    #[test]
+    fn each_display_answers_for_its_own_space() {
+        let list = spaces(&[("AAAA-1", 0), ("BBBB-2", FULL_SCREEN_SPACE)]);
+        assert_eq!(current_space_is_full_screen(&list, "aaaa-1"), Some(false));
+        assert_eq!(current_space_is_full_screen(&list, "BBBB-2"), Some(true));
+        assert_eq!(current_space_is_full_screen(&list, "CCCC-3"), None);
+    }
+
+    #[test]
+    fn shared_spaces_answer_for_every_display() {
+        let list = spaces(&[("Main", FULL_SCREEN_SPACE)]);
+        assert_eq!(current_space_is_full_screen(&list, "AAAA-1"), Some(true));
+        assert_eq!(current_space_is_full_screen(&[], "AAAA-1"), None);
     }
 }
