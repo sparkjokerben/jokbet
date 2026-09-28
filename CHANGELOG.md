@@ -11,6 +11,28 @@ the fuller entries elsewhere:
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] — 2026-09-28
+
+### Fixed
+
+- **The pet stays out of the way of every full-screen app on macOS.** With
+  "Hide in full screen" on, the pet went away for some apps (VS Code) but only
+  flickered and came back for others (Edge, Mail), and it reappeared for all of
+  them whenever the title bar was pulled down. It was judging full screen by
+  whether the frontmost window covered the display, and a full-screen app's
+  toolbar and title bar sit in a window of their own in front of it. It now asks
+  the system whether the display is showing a full-screen Space, which needs no
+  permission; a window covering the display still counts, for games and
+  presentations that go full screen without one.
+- **The hover card stays up while the pet is dragged.** On macOS the window
+  trails the cursor a little while it is carried, and a quick drag put the
+  cursor off the pet long enough to take the card down and bring it back, over
+  and over. The pet counts as under the cursor for the whole of a drag now.
+- **The words on the Liquid Glass card stay readable over a dark desktop.** The
+  labels were a fixed grey, which sank into a grey desktop showing through the
+  glass. On macOS the quieter words on the glass are now only a little lighter
+  than the rest.
+
 ## [0.3.2] — 2026-09-27
 
 ### Fixed
@@ -168,6 +190,7 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the tray; milestones; a stats window with a trend and a keyboard heatmap; and
   an interface in English and Simplified Chinese.
 
+[0.3.3]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.3
 [0.3.2]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.2
 [0.3.1]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.1
 [0.3.0]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.0
