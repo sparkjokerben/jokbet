@@ -119,12 +119,19 @@ fn run<R: Runtime>(app: AppHandle<R>) {
             }
         }
 
-        let s = sample(
+        let mut s = sample(
             (cursor.x, cursor.y),
             (pos.x as f64, pos.y as f64),
             scale,
             rect,
         );
+        // The pet is in hand for the whole of a drag. The window trails the
+        // cursor while it is carried, so a fast drag puts the cursor off the
+        // sprite for a sample or two, which would take the bubble down and put
+        // it back up again all the way.
+        if state.dragging.load(Ordering::Acquire) {
+            s.inside = true;
+        }
 
         if ignoring != Some(!s.inside) && window.set_ignore_cursor_events(!s.inside).is_ok() {
             ignoring = Some(!s.inside);
