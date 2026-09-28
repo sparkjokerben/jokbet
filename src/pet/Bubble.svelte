@@ -111,6 +111,14 @@
     font-variant-numeric: tabular-nums;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
   }
+  /* A material that is the system's own, as on macOS, shows the desktop through
+     with nothing here to read what that is — and a grey word is the one that
+     sinks into a grey desktop. So the quieter words are only a little lighter
+     than the rest. The acrylic is drawn from a reading of the desktop instead;
+     see below. */
+  .bubble.glass:not(.acrylic) {
+    --muted: color-mix(in oklab, var(--fg) 80%, transparent);
+  }
   /* The material has no tail to match, so the card goes without one. */
   .bubble.glass::after {
     display: none;
