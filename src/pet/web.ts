@@ -31,8 +31,12 @@ const STILL_HOLD_MS = 1600;
 const BLOCK_HOLD_MS = 4200;
 /** Keep-proud gap around the edge of where it may be dragged. */
 const EDGE = 8;
-/** The look in the direction of travel before a stroll, as in the app. */
+/** The look in the direction of travel before a stroll, and the pause before
+ * it turns back part way, as in the app. */
 const GLANCE_MS = 500;
+const TURN_PAUSE_MS = 800;
+/** The shortest leg of a stroll worth walking, in CSS pixels, as in the app. */
+const SHORTEST_LEG = 60;
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -91,13 +95,21 @@ export function stillFrame(anim: AnimName): string[] {
   return [...frameRows(frames[Math.floor((frames.length - 1) / 2)])];
 }
 
-/** A stroll's step of `dx` from `x` in `dir`, turning round at either end of
- * `min`..`max` (the app's window turns the same way). */
-export function advanceWalk(x: number, dir: -1 | 1, dx: number, min: number, max: number): { x: number; dir: -1 | 1 } {
-  const next = x + dir * dx;
-  if (next > max) return { x: Math.max(min, max - (next - max)), dir: -1 };
-  if (next < min) return { x: Math.min(max, min + (min - next)), dir: 1 };
-  return { x: next, dir };
+/** Which way a stroll's leg from `x` goes, and how far: the way asked if there
+ * is room for at least `shortest` that way, else the other way, never past
+ * `min` or `max`; null with no room either way (the app's plan_leg). */
+export function planLeg(
+  x: number,
+  dir: -1 | 1,
+  distance: number,
+  min: number,
+  max: number,
+  shortest = SHORTEST_LEG,
+): { dir: -1 | 1; distance: number } | null {
+  const room = (d: -1 | 1) => (d > 0 ? max - x : x - min);
+  const back: -1 | 1 = dir > 0 ? -1 : 1;
+  const way = room(dir) >= shortest ? dir : room(back) >= shortest ? back : null;
+  return way === null ? null : { dir: way, distance: Math.min(distance, room(way)) };
 }
 
 /** Where a box may sit: inside `bounds`, and on the screen. The bottom edge is
@@ -328,49 +340,51 @@ export function createPet(host: HTMLElement, options: WebPetOptions = {}): WebPe
   }
   const walker: WalkDriver = {
     start(plan) {
-      if (still || drag || walking || document.hidden) return false;
+      if (still || drag || walking || document.hidden || !plan.legs.length) return false;
       const rect = stage.getBoundingClientRect();
       const range = clampBox(bounds() ?? rect, rect.width, rect.height);
       // The range is for where the box sits with no offset; the walk moves the offset.
       const base = rect.left - offset.x;
       const min = range.minX - base;
       const max = range.maxX - base;
-      if (max - min < 1) return false;
+      if (!planLeg(offset.x, plan.legs[0].dir, plan.legs[0].distance, min, max)) return false;
       const id = ++walkIds;
-      let dir: -1 | 1 = plan.dir;
-      if (dir > 0 && offset.x >= max) dir = -1;
-      else if (dir < 0 && offset.x <= min) dir = 1;
       const frameMs = walkFrameMs(plan.speed, scale);
+      let dir: -1 | 1 = 1;
       const report = (phase: "glance" | "walk" | "stop") => controller.walkPhase(id, phase, dir, frameMs);
-      let walked = 0;
-      let last = 0;
-      const step = (now: number) => {
+      const finish = () => {
+        endWalk();
+        report("stop");
+      };
+      const leg = (i: number) => {
+        const want = plan.legs[i];
+        const planned = want && planLeg(offset.x, want.dir, want.distance, min, max);
+        if (!planned || !walking) return finish();
+        const turning = i > 0 && planned.dir !== dir;
+        dir = planned.dir;
+        // A look where it is going first; part way, a pause before it turns.
+        const setOff = () => {
+          if (walking?.id !== id) return;
+          report("glance");
+          walking.glance = setTimeout(() => {
+            if (walking?.id !== id) return;
+            report("walk");
+            walking.frame = requestAnimationFrame((now) => step(now, now, 0, planned.distance, i));
+          }, i === 0 ? GLANCE_MS : TURN_PAUSE_MS / 2);
+        };
+        if (turning) walking.glance = setTimeout(setOff, TURN_PAUSE_MS / 2);
+        else setOff();
+      };
+      const step = (now: number, last: number, walked: number, distance: number, i: number) => {
         if (walking?.id !== id) return;
-        const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
-        last = now;
-        const dx = Math.min(plan.speed * dt, plan.distance - walked);
-        walked += dx;
-        const turned = advanceWalk(offset.x, dir, dx, min, max);
-        offset = { x: turned.x, y: offset.y };
+        const dx = Math.min(plan.speed * Math.min(0.1, (now - last) / 1000), distance - walked);
+        offset = { x: Math.min(max, Math.max(min, offset.x + dir * dx)), y: offset.y };
         stage.style.translate = `${offset.x}px ${offset.y}px`;
-        if (turned.dir !== dir) {
-          dir = turned.dir;
-          report("walk");
-        }
-        if (walked >= plan.distance) {
-          endWalk();
-          report("stop");
-          return;
-        }
-        walking.frame = requestAnimationFrame(step);
+        if (walked + dx >= distance) return leg(i + 1);
+        walking.frame = requestAnimationFrame((next) => step(next, now, walked + dx, distance, i));
       };
       walking = { id };
-      report("glance");
-      walking.glance = setTimeout(() => {
-        if (walking?.id !== id) return;
-        report("walk");
-        walking.frame = requestAnimationFrame(step);
-      }, GLANCE_MS);
+      leg(0);
       return true;
     },
     // The controller stopped it, and knows: only the moving stops here.

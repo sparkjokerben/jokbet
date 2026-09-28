@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { compileGrid } from "../sprites/compile.ts";
 import { GRID_H, GRID_W } from "../sprites/jokbet.ts";
-import { advanceWalk, clampBox, gazeFor, stillFrame } from "./web.ts";
+import { clampBox, gazeFor, planLeg, stillFrame } from "./web.ts";
 
 const pet = { x: 100, y: 100, w: 120, h: 80 };
 
@@ -46,17 +46,16 @@ describe("the reduced-motion pose", () => {
 });
 
 describe("a stroll along the page", () => {
-  it("steps along and turns round at the ends", () => {
-    expect(advanceWalk(50, 1, 10, 0, 100)).toEqual({ x: 60, dir: 1 });
-    expect(advanceWalk(50, -1, 10, 0, 100)).toEqual({ x: 40, dir: -1 });
-    expect(advanceWalk(95, 1, 10, 0, 100)).toEqual({ x: 95, dir: -1 });
-    expect(advanceWalk(3, -1, 10, 0, 100)).toEqual({ x: 7, dir: 1 });
+  it("goes the way asked when there is room, stopping short of the edge", () => {
+    expect(planLeg(500, 1, 300, 0, 1000)).toEqual({ dir: 1, distance: 300 });
+    expect(planLeg(500, -1, 300, 0, 1000)).toEqual({ dir: -1, distance: 300 });
+    expect(planLeg(900, 1, 300, 0, 1000)).toEqual({ dir: 1, distance: 100 });
   });
 
-  it("stays inside a range too short for the step", () => {
-    const { x } = advanceWalk(10, 1, 500, 0, 20);
-    expect(x).toBeGreaterThanOrEqual(0);
-    expect(x).toBeLessThanOrEqual(20);
+  it("goes the other way when there is no room, and not at all with none either way", () => {
+    expect(planLeg(984, 1, 300, 0, 1000)).toEqual({ dir: -1, distance: 300 });
+    expect(planLeg(20, -1, 300, 0, 1000)).toEqual({ dir: 1, distance: 300 });
+    expect(planLeg(50, 1, 300, 0, 100)).toBeNull();
   });
 });
 

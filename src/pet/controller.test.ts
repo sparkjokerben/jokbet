@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
-import { ANIMS, compose } from "../sprites/jokbet";
+import { ANIMS, compose, facing } from "../sprites/jokbet";
 import { PetController } from "./controller";
 import { REACT_MS, TYPING_HOLD_MAX_MS, animDuration, introDuration, type WalkPlan } from "./machine";
 
@@ -151,7 +151,7 @@ describe("PetController", () => {
       // A new choice is shown, not wandered off with: the first walk waits.
       expect(driver.start).not.toHaveBeenCalled();
       advance(IDLE_GAP);
-      expect(driver.start).toHaveBeenCalledWith({ speed: 40, distance: 300, dir: 1 });
+      expect(driver.start).toHaveBeenCalledWith({ speed: 40, legs: [{ dir: 1, distance: 300 }] });
       pet.walkPhase(1, "glance", 1, 88);
       expect(last()).toEqual(compose({ turn: 1, gaze: [1, 0] }));
       pet.walkPhase(1, "walk", 1, 88);
@@ -164,8 +164,9 @@ describe("PetController", () => {
       pet.setIdleChoices(["walk"]);
       advance(IDLE_GAP);
       pet.walkPhase(1, "walk", -1, 88);
-      const legDx = stride.legDx!.map((d) => -d) as [number, number, number, number];
-      expect(last()).toEqual(compose({ ...stride, legDx, gaze: [-1, 0] }));
+      // Mirrored whole: turned the other way, the legs and arms swapped round.
+      expect(last()).toEqual(compose({ ...facing(stride, -1), gaze: [-1, 0] }));
+      expect(facing(stride, -1).turn).toBe(-1);
     });
 
     it("stops the moment there is input, and ignores what comes after", () => {

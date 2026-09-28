@@ -1,7 +1,7 @@
 // Drives the pet's animation: tracks signals, applies blink/gaze/pause
 // overlays and schedules the next frame with plain timers (no rAF loop).
 
-import { ANIMS, compose, frameRows, type AnimName, type Effect, type Frame, type Pose } from "../sprites/jokbet";
+import { ANIMS, compose, facing, frameRows, type AnimName, type Effect, type Frame, type Pose } from "../sprites/jokbet";
 import {
   animDuration,
   frameAt,
@@ -332,11 +332,7 @@ export class PetController {
       // round for the way it is walking, with its eyes ahead.
       pose = walk.glance
         ? { turn: walk.dir, gaze: [walk.dir, 0] }
-        : {
-            ...pose,
-            legDx: pose.legDx?.map((d) => d * walk.dir) as Pose["legDx"],
-            gaze: [walk.dir, 0],
-          };
+        : { ...facing(pose, walk.dir), gaze: [walk.dir, 0] };
     }
 
     let wakeAt = Math.min(t + nextIn, nextDeadline(this.signals, t));

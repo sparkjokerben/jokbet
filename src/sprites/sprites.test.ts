@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ANIMS, GRID_H, GRID_W, PET_Y, compose, frameRows } from "./jokbet";
+import { ANIMS, GRID_H, GRID_W, PET_Y, compose, facing, frameRows } from "./jokbet";
 import { SOCCER_IDLE_BEFORE } from "./frames/soccer";
 import { TYPING_INTRO } from "./frames/typing";
 import { compileGrid } from "./compile";
@@ -79,10 +79,8 @@ describe("jokbet sprite", () => {
 
   it("walks with at least two feet on the ground and none tangled", () => {
     for (const frame of ANIMS.walk.frames) {
-      for (const dir of [1, -1]) {
-        const pose = frame.pose ?? {};
-        const legDx = pose.legDx?.map((d) => d * dir) as [number, number, number, number] | undefined;
-        const rows = compose({ ...pose, legDx });
+      for (const dir of [1, -1] as const) {
+        const rows = compose(facing(frame.pose ?? {}, dir));
         expect(rows[GRID_H - 1].match(/OO/g)?.length).toBeGreaterThanOrEqual(2);
         // Every leg is its own column pair, apart from its neighbours.
         const hip = rows[GRID_H - 3];
@@ -98,6 +96,16 @@ describe("jokbet sprite", () => {
     const hip = GRID_H - 2;
     expect(base[hip].slice(10, 13)).toBe("OO.");
     expect(moved[hip].slice(10, 13)).toBe(".OO");
+  });
+
+  it("mirrors a pose to face left, and back again", () => {
+    const pose = ANIMS.walk.frames[1].pose!;
+    const left = compose(facing(pose, -1));
+    const right = compose(pose);
+    // Mirrored about the pet's own middle (canvas columns 6..29).
+    const flip = (row: string) => row.slice(0, 6) + [...row.slice(6, 30)].reverse().join("") + row.slice(30);
+    expect(left.map(flip)).toEqual(right);
+    expect(facing(facing(pose, -1), -1)).toMatchObject(pose);
   });
 
   it("keeps the typing intro inside the canvas too", () => {

@@ -54,7 +54,8 @@ export interface Pose {
   stretch?: 0 | 1 | 2;
   armL?: ArmPose;
   armR?: ArmPose;
-  /** Length (0..4) of each of the four legs, left to right. */
+  /** Length (0..5) of each of the four legs, left to right: 5 reaches the
+   * ground from a body raised a row. */
   legs?: readonly [number, number, number, number];
   /** Sideways shift of each leg in cells, left to right, as in a stride. */
   legDx?: readonly [number, number, number, number];
@@ -163,8 +164,10 @@ export function compose(pose: Pose = {}): string[] {
         put(g, bx(x + s * ox), by(oy), "O");
       }
     } else {
-      // Far legs sit a row higher when the pet is turned; the rest hang from the hip.
-      rect(g, bx(x), by(12 + (turn && i === 0 && turn === 1 ? 1 : 0)), LEG_W, len, "O");
+      // Far legs sit a row higher when the pet is turned; the rest hang from the
+      // hip. A pose that sets the legs itself (a stride) places them all.
+      const far = turn === 1 && i === 0 && !pose.legs ? 1 : 0;
+      rect(g, bx(x), by(12 + far), LEG_W, len, "O");
     }
   });
 
@@ -232,6 +235,24 @@ export type AnimName =
 
 const UP = { armL: "up", armR: "up" } as const;
 
+/** A pose drawn facing right, turned to face `dir`: mirrored, legs, arms and
+ * all, when that is left. */
+export function facing(pose: Pose, dir: Side): Pose {
+  if (dir === 1) return pose;
+  type Four = readonly [number, number, number, number];
+  const mirror = (four: Four | undefined, sign = 1) =>
+    four ? ([...four].reverse().map((v) => v * sign) as unknown as Four) : undefined;
+  return {
+    ...pose,
+    turn: pose.turn === undefined ? undefined : (-pose.turn as Side),
+    legs: mirror(pose.legs),
+    legDx: mirror(pose.legDx, -1),
+    armL: pose.armR,
+    armR: pose.armL,
+    gaze: pose.gaze && [-pose.gaze[0], pose.gaze[1]],
+  };
+}
+
 /** The rows a frame draws: raw rows from the reference, or a composed pose. */
 export function frameRows(frame: Frame): readonly string[] {
   return frame.rows ?? compose(frame.pose);
@@ -241,10 +262,10 @@ const BREATHE: readonly Frame[] = [{ ms: 1400, pose: {} }, { ms: 500, pose: { sq
 
 /** A stride of the walk (see ANIMS.walk). */
 const WALK: readonly Frame[] = [
-  { ms: 100, pose: { legs: [4, 3, 4, 3], legDx: [0, 1, 0, 1] } },
-  { ms: 100, pose: { legs: [4, 4, 4, 4], squash: 1 } },
-  { ms: 100, pose: { legs: [3, 4, 3, 4], legDx: [1, 0, 1, 0] } },
-  { ms: 100, pose: { legs: [4, 4, 4, 4], squash: 1 } },
+  { ms: 100, pose: { turn: 1, legs: [4, 4, 4, 4], legDx: [1, 0, 1, 0] } },
+  { ms: 100, pose: { turn: 1, dy: -1, legs: [5, 3, 5, 3], legDx: [0, 1, 0, 1], armL: "up" } },
+  { ms: 100, pose: { turn: 1, legs: [4, 4, 4, 4], legDx: [0, 1, 0, 1] } },
+  { ms: 100, pose: { turn: 1, dy: -1, legs: [3, 5, 3, 5], legDx: [1, 0, 1, 0], armR: "up" } },
 ];
 
 export const ANIMS: Record<AnimName, Anim> = {
@@ -357,11 +378,12 @@ export const ANIMS: Record<AnimName, Anim> = {
       { ms: 250, pose: { squash: 1, eyes: "happy" } },
     ],
   },
-  // A sideways scuttle, facing you, drawn for walking right. The legs go in two
-  // pairs, the first and third and the second and fourth: one pair stays down
-  // while the other is lifted and reaches a cell ahead, and the body dips as
-  // they change over. Walking left, the reach is turned round; the pace
-  // follows the walking speed.
+  // A stroll, drawn for walking right: turned towards where it is going, the
+  // legs in two pairs (the first and third, the second and fourth). Each
+  // step, one pair pushes off and the body rises a row as the other pair
+  // swings forward, with the arm on that side coming up; then both are down
+  // again, the other pair ahead. Walking left, it is all turned round (see
+  // facing in src/pet/controller.ts); the pace follows the walking speed.
   walk: {
     loop: true,
     frames: WALK,
