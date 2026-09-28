@@ -8,14 +8,26 @@ import {
   introDuration,
   nextDeadline,
   pickAnim,
+  pickIdle,
   typingFrameMs,
   typingReactMs,
+  walkPlan,
   REACT_MS,
-  type Activity,
   type Blocked,
+  type IdleChoice,
+  type Input,
   type OneShot,
   type Signals,
+  type WalkPlan,
 } from "./machine";
+
+/** What moves the pet about for a stroll: the app's window, or the page's box.
+ * It reports how the walk goes back through `PetController.walkPhase`. */
+export interface WalkDriver {
+  /** Sets off; false when the pet cannot walk where it is. */
+  start(plan: WalkPlan): Promise<boolean> | boolean;
+  stop(): void;
+}
 
 const BLINK_MS = 140;
 const blinkGap = () => 3000 + Math.random() * 3000;
@@ -40,10 +52,17 @@ const LAPTOP_OUT_MS = (() => {
 export class PetController {
   private signals: Signals;
   private anim: AnimName = "idle";
-  /** What the idle state plays now and then between breaths: soccer or looking around. */
-  private idleAnim: AnimName = "idle";
+  /** What the idle state may do now and then between breaths; none is just breathing. */
+  private idleChoices: IdleChoice[] = [];
+  /** The one playing, while idleShowUntil lasts. */
+  private idleShown: AnimName = "idle";
+  /** The next pick is not to be a walk: a new choice is shown, not wandered off with. */
+  private idleNoWalk = false;
   private idleShowAt = Infinity;
   private idleShowUntil = 0;
+  private walkDriver: WalkDriver | null = null;
+  /** The last walk this side stopped: whatever still arrives about it is stale. */
+  private walkStopped = 0;
   private animStart = 0;
   private gaze: readonly [number, number] = [0, 0];
   private blinkAt: number;
@@ -69,18 +88,26 @@ export class PetController {
       celebrateUntil: 0,
       oneShot: null,
       lastInputAt: t,
+      lastScrollAt: t,
       lastActivity: null,
       reactMs: REACT_MS.typing,
       sleepAfterMs: 5 * 60_000,
+      walk: null,
     };
     this.animStart = t;
     this.blinkAt = t + blinkGap();
     this.update();
   }
 
-  input(activity: Activity) {
+  input(activity: Input) {
     const t = this.now();
     if (this.anim === "sleep") this.oneShot("wake");
+    if (activity === "scroll") {
+      // Someone is there, and that is all: no reaction to it.
+      this.signals.lastScrollAt = t;
+      this.update();
+      return;
+    }
     if (activity === "typing" && this.anim === "typingEnd") {
       // Back to it while the laptop is still out: sit straight back down.
       // Once it is away, get it out again from the start. (The finished
@@ -166,13 +193,75 @@ export class PetController {
     );
   }
 
-  /** Picks the idle animation, and shows it once right away if idling. */
-  setIdleAnim(anim: AnimName) {
-    if (anim === this.idleAnim) return;
-    this.idleAnim = anim;
+  /** Picks what the pet may do while idle, and shows one right away if idling. */
+  setIdleChoices(choices: readonly IdleChoice[]) {
+    const same =
+      choices.length === this.idleChoices.length && choices.every((c, i) => c === this.idleChoices[i]);
+    if (same) return;
+    this.idleChoices = [...choices];
     this.idleShowUntil = 0;
     this.idleShowAt = this.now();
+    this.idleNoWalk = true;
     this.update();
+  }
+
+  /** Lets the pet go for strolls; without a driver, "walk" is never picked. */
+  setWalkDriver(driver: WalkDriver | null) {
+    this.walkDriver = driver;
+  }
+
+  /** How a stroll is going, as the driver reports it. */
+  walkPhase(id: number, phase: "glance" | "walk" | "stop", dir: -1 | 1, frameMs: number) {
+    const t = this.now();
+    if (phase === "stop") {
+      if (this.signals.walk?.id === id) {
+        this.signals.walk = null;
+        this.idleShowAt = t + idleShowGap();
+      }
+      this.walkStopped = Math.max(this.walkStopped, id);
+    } else {
+      if (id <= this.walkStopped) return;
+      if (phase === "walk" && this.signals.walk?.glance) this.animStart = t;
+      this.signals.walk = { id, dir, glance: phase === "glance", frameMs };
+    }
+    this.update();
+  }
+
+  /** The chosen idle animations the pet can do here. */
+  private idlePool(): IdleChoice[] {
+    return this.idleChoices.filter((c) => c !== "walk" || (this.walkDriver && !this.idleNoWalk));
+  }
+
+  private beginWalk() {
+    const driver = this.walkDriver;
+    if (!driver) return;
+    // Nothing more is picked until the walk ends, or turns out not to start.
+    this.idleShowAt = Infinity;
+    Promise.resolve(driver.start(walkPlan())).then(
+      (started) => {
+        if (!started) this.walkDeclined();
+      },
+      () => this.walkDeclined(),
+    );
+  }
+
+  /** It could not walk from where it is: something else chosen instead, if
+   * there is something, else a breath until next time. */
+  private walkDeclined() {
+    if (this.signals.walk) return;
+    const others = this.idleChoices.some((c) => c !== "walk");
+    this.idleNoWalk = others;
+    this.idleShowAt = others ? this.now() : this.now() + idleShowGap();
+    this.update();
+  }
+
+  private stopWalk(t: number) {
+    const walk = this.signals.walk;
+    if (!walk) return;
+    this.signals.walk = null;
+    this.walkStopped = Math.max(this.walkStopped, walk.id);
+    this.idleShowAt = t + idleShowGap();
+    this.walkDriver?.stop();
   }
 
   setSleepAfter(ms: number) {
@@ -188,6 +277,11 @@ export class PetController {
     clearTimeout(this.timer);
     const t = this.now();
     let next = pickAnim(this.signals, t);
+    if (this.signals.walk && next !== "walk") {
+      // Anything that comes before a stroll ends it, there and then.
+      this.stopWalk(t);
+      next = pickAnim(this.signals, t);
+    }
     if (this.anim === "typing" && next === "idle") {
       // Put the laptop away before idling.
       this.signals.oneShot = { anim: "typingEnd", until: t + animDuration(ANIMS.typingEnd) };
@@ -201,32 +295,56 @@ export class PetController {
     }
     this.resumeTyping = false;
 
-    // Idling is breathing, with the idle animation once in a long while.
+    // Idling is breathing, with one of the idle animations once in a long while.
     let name = this.anim;
-    const showing = this.anim === "idle" && this.idleAnim !== "idle";
-    if (showing && t >= this.idleShowAt) {
-      this.idleShowUntil = t + animDuration(ANIMS[this.idleAnim]);
-      this.idleShowAt = this.idleShowUntil + idleShowGap();
-      this.animStart = t;
+    const idling = this.anim === "idle";
+    const pool = idling ? this.idlePool() : [];
+    if (pool.length && t >= this.idleShowAt) {
+      const pick = pickIdle(pool)!;
+      this.idleNoWalk = false;
+      if (pick === "walk") {
+        this.beginWalk();
+      } else {
+        this.idleShown = pick;
+        this.idleShowUntil = t + animDuration(ANIMS[pick]);
+        this.idleShowAt = this.idleShowUntil + idleShowGap();
+        this.animStart = t;
+      }
+    } else if (idling && t >= this.idleShowAt) {
+      // Nothing it can do from here: try again after a while.
+      this.idleNoWalk = false;
+      this.idleShowAt = this.idleChoices.length ? t + idleShowGap() : Infinity;
     }
-    if (showing && t < this.idleShowUntil) name = this.idleAnim;
+    if (idling && t < this.idleShowUntil) name = this.idleShown;
+    const walk = this.anim === "walk" ? this.signals.walk : null;
     const anim = ANIMS[name];
     const { index, nextIn } = frameAt(
       anim,
       t - this.animStart,
-      this.anim === "typing" ? typingFrameMs(this.keysPerSecond) : undefined,
+      this.anim === "typing" ? typingFrameMs(this.keysPerSecond) : walk ? walk.frameMs : undefined,
     );
     const frame: Frame = anim.frames[index];
     // Frames recovered from the reference videos are pixels; the rest are poses
     // the overlays below can still bend.
-    const pose: Pose | null = frame.rows ? null : { ...frame.pose };
+    let pose: Pose | null = frame.rows ? null : { ...frame.pose };
+    if (pose && walk) {
+      // Looking where it is going before it sets off; then the stride, turned
+      // round for the way it is walking, with its eyes ahead.
+      pose = walk.glance
+        ? { turn: walk.dir, gaze: [walk.dir, 0] }
+        : {
+            ...pose,
+            legDx: pose.legDx?.map((d) => d * walk.dir) as Pose["legDx"],
+            gaze: [walk.dir, 0],
+          };
+    }
 
     let wakeAt = Math.min(t + nextIn, nextDeadline(this.signals, t));
-    if (showing) wakeAt = Math.min(wakeAt, t < this.idleShowUntil ? this.idleShowUntil : this.idleShowAt);
-    if (pose && (this.anim === "idle" || this.anim === "click")) {
+    if (idling) wakeAt = Math.min(wakeAt, t < this.idleShowUntil ? this.idleShowUntil : this.idleShowAt);
+    if (pose && (this.anim === "idle" || this.anim === "click" || this.anim === "walk")) {
       // Whatever the idle animation does, and on clicks too, the eyes stay on
-      // the cursor.
-      pose.gaze = this.gaze;
+      // the cursor; on a walk they look ahead, and blink all the same.
+      if (this.anim !== "walk") pose.gaze = this.gaze;
       if (t >= this.blinkAt + BLINK_MS) this.blinkAt = t + blinkGap();
       if (t >= this.blinkAt) pose.eyes = "closed";
       wakeAt = Math.min(wakeAt, t >= this.blinkAt ? this.blinkAt + BLINK_MS : this.blinkAt);

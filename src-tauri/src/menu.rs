@@ -144,6 +144,7 @@ pub fn handle_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
     match event.id().as_ref() {
         ID_TOGGLE => crate::visibility::toggle(app),
         ID_RESET_POSITION => {
+            crate::walker::stop(app, crate::walker::Stop::Moved);
             if let Some(window) = app.get_webview_window(PET_LABEL) {
                 if let Err(e) = crate::pet_window::reset_position(&window) {
                     log::error!("moving the pet back failed: {e}");

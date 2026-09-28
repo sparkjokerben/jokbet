@@ -26,8 +26,10 @@ export const PET_Y = OY;
 export const PET_W = 24;
 export const PET_H = 16;
 
-export type ArmPose = "rest" | "up" | "high" | "down";
+export type ArmPose = "rest" | "up" | "high" | "down" | "reach";
 export type EyeState = "open" | "closed" | "wide" | "happy" | "x";
+/** The mouth the pet only has while yawning: a small o, open, wide open. */
+export type Mouth = "o" | "open" | "yawn";
 export type Side = -1 | 1;
 export type Effect =
   | "zzz1"
@@ -47,10 +49,15 @@ export interface Pose {
   dy?: number;
   /** 1 lowers the torso's top edge by one row (breathing, squish, sitting). */
   squash?: 0 | 1;
+  /** Raises the torso's top edge by that many rows, as in a stretch; the face
+   * and arms go up with it, the feet stay put. */
+  stretch?: 0 | 1 | 2;
   armL?: ArmPose;
   armR?: ArmPose;
   /** Length (0..4) of each of the four legs, left to right. */
   legs?: readonly [number, number, number, number];
+  /** Sideways shift of each leg in cells, left to right, as in a stride. */
+  legDx?: readonly [number, number, number, number];
   /** Turns three-quarters toward a side: the far edge is shaded, the eyes follow. */
   turn?: Side;
   /** The outermost leg on that side stretches out to kick. */
@@ -58,6 +65,9 @@ export interface Pose {
   eyes?: EyeState;
   /** Eye offset, each component in -1..1. */
   gaze?: readonly [number, number];
+  mouth?: Mouth;
+  /** A tear at the corner of the left eye, as after a big yawn. */
+  tear?: boolean;
   fx?: readonly Effect[];
 }
 
@@ -98,8 +108,15 @@ function stamp(g: Grid, x: number, y: number, rows: readonly string[]) {
   });
 }
 
-/** Where each arm pose sits, in pet-local rows. */
-const ARM_Y: Record<ArmPose, number> = { high: 0, up: 2, rest: 4, down: 6 };
+/** Where each arm pose sits, in rows from the top of the torso; "reach" is
+ * above the head. */
+const ARM_Y: Record<ArmPose, number> = { reach: -3, high: 0, up: 2, rest: 4, down: 6 };
+/** Each mouth, from the top of the torso, centred between the eyes. */
+const MOUTHS: Record<Mouth, { x: number; y: number; w: number; h: number }> = {
+  o: { x: 11, y: 6, w: 2, h: 1 },
+  open: { x: 11, y: 5, w: 2, h: 2 },
+  yawn: { x: 10, y: 5, w: 4, h: 3 },
+};
 const ARM_W = 4;
 const ARM_H = 4;
 const LEG_X = [4, 8, 14, 18] as const;
@@ -129,14 +146,16 @@ const GLYPHS: Record<Effect, { x: number; y: number; rows: readonly string[] }> 
 /** Renders a pose into GRID_H strings of GRID_W palette characters. */
 export function compose(pose: Pose = {}): string[] {
   const g = blank();
-  const sq = pose.squash ?? 0;
+  // The top of the torso, in rows below the unsquashed top: everything above
+  // the hips hangs from it.
+  const sq = (pose.squash ?? 0) - (pose.stretch ?? 0);
   const bx = (x: number) => OX + (pose.dx ?? 0) + x;
   const by = (y: number) => OY + (pose.dy ?? 0) + y;
 
   const legs = pose.legs ?? [4, 4, 4, 4];
   const turn = pose.turn ?? 0;
   legs.forEach((len, i) => {
-    const x = LEG_X[i];
+    const x = LEG_X[i] + (pose.legDx?.[i] ?? 0);
     if ((pose.kick === 1 && i === 3) || (pose.kick === -1 && i === 0)) {
       // The outermost leg stretches out toward the ball.
       const s = pose.kick;
@@ -180,6 +199,12 @@ export function compose(pose: Pose = {}): string[] {
     }
   }
 
+  if (pose.mouth) {
+    const m = MOUTHS[pose.mouth];
+    rect(g, bx(m.x), by(m.y + sq), m.w, m.h, "E");
+  }
+  if (pose.tear) rect(g, bx(EYE_X[0] - 1), by(4 + sq), 1, 2, "S");
+
   for (const fx of pose.fx ?? []) {
     const glyph = GLYPHS[fx];
     stamp(g, glyph.x, glyph.y, glyph.rows);
@@ -201,7 +226,9 @@ export type AnimName =
   | "wave"
   | "dragged"
   | "noperm"
-  | "lookAround";
+  | "lookAround"
+  | "stretch"
+  | "walk";
 
 const UP = { armL: "up", armR: "up" } as const;
 
@@ -211,6 +238,14 @@ export function frameRows(frame: Frame): readonly string[] {
 }
 
 const BREATHE: readonly Frame[] = [{ ms: 1400, pose: {} }, { ms: 500, pose: { squash: 1 } }];
+
+/** A stride of the walk (see ANIMS.walk). */
+const WALK: readonly Frame[] = [
+  { ms: 100, pose: { legs: [4, 3, 4, 3], legDx: [0, 1, 0, 1] } },
+  { ms: 100, pose: { legs: [4, 4, 4, 4], squash: 1 } },
+  { ms: 100, pose: { legs: [3, 4, 3, 4], legDx: [1, 0, 1, 0] } },
+  { ms: 100, pose: { legs: [4, 4, 4, 4], squash: 1 } },
+];
 
 export const ANIMS: Record<AnimName, Anim> = {
   idle: { loop: true, frames: BREATHE },
@@ -306,6 +341,30 @@ export const ANIMS: Record<AnimName, Anim> = {
       { ms: 1200, pose: { eyes: "x", fx: ["question"] } },
       { ms: 600, pose: { eyes: "x", squash: 1 } },
     ],
+  },
+  // The break reminder: settle, then a yawn that grows into a stretch with the
+  // arms up over the head, a tear from the yawn, and a contented look after.
+  stretch: {
+    loop: false,
+    frames: [
+      { ms: 300, pose: { squash: 1, eyes: "closed" } },
+      { ms: 250, pose: { eyes: "closed", mouth: "o" } },
+      { ms: 300, pose: { stretch: 1, ...UP, eyes: "closed", mouth: "open" } },
+      { ms: 700, pose: { stretch: 2, armL: "reach", armR: "reach", eyes: "closed", mouth: "yawn" } },
+      { ms: 450, pose: { stretch: 2, armL: "reach", armR: "reach", eyes: "closed", mouth: "yawn", tear: true } },
+      { ms: 350, pose: { stretch: 1, ...UP, eyes: "closed", mouth: "open", tear: true } },
+      { ms: 550, pose: { eyes: "happy", tear: true } },
+      { ms: 250, pose: { squash: 1, eyes: "happy" } },
+    ],
+  },
+  // A sideways scuttle, facing you, drawn for walking right. The legs go in two
+  // pairs, the first and third and the second and fourth: one pair stays down
+  // while the other is lifted and reaches a cell ahead, and the body dips as
+  // they change over. Walking left, the reach is turned round; the pace
+  // follows the walking speed.
+  walk: {
+    loop: true,
+    frames: WALK,
   },
 };
 

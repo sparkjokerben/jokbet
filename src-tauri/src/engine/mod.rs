@@ -4,5 +4,6 @@ pub mod aggregator;
 pub mod distance;
 pub mod milestones;
 pub mod rate;
+pub mod rest;
 pub mod runtime;
 pub mod scroll;

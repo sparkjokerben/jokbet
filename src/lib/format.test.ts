@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { celebrationText, formatCount, formatDistance, formatRate, headValue } from "./format";
+import {
+  backupFileName,
+  celebrationText,
+  formatCount,
+  formatDistance,
+  formatRate,
+  formatWhen,
+  headValue,
+} from "./format";
 import { detectLang, messages, resolveLang, t } from "./i18n";
 import type { HeadCounter, MilestoneHit, Tick } from "./types";
 
@@ -51,6 +59,21 @@ describe("formatDistance", () => {
     expect(formatDistance(123_400, "en")).toBe("123 m");
     expect(formatDistance(1_234_000, "en")).toBe("1.23 km");
     expect(formatDistance(1_234_000, "zh")).toBe("1.23 公里");
+  });
+});
+
+describe("formatWhen", () => {
+  it("shows a date and a time, and leaves what it cannot read alone", () => {
+    const when = formatWhen("2026-09-28T15:30:00+08:00", "en");
+    expect(when).toMatch(/2026/);
+    expect(when).toMatch(/\d{1,2}:\d{2}/);
+    expect(formatWhen("yesterday", "en")).toBe("yesterday");
+  });
+});
+
+describe("backupFileName", () => {
+  it("names a manual backup after the minute it is made", () => {
+    expect(backupFileName(new Date(2026, 8, 3, 7, 5))).toBe("jokbet-backup-20260903-0705.zip");
   });
 });
 

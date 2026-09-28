@@ -8,8 +8,11 @@ import {
   introDuration,
   nextDeadline,
   pickAnim,
+  pickIdle,
   typingFrameMs,
   typingReactMs,
+  walkFrameMs,
+  walkPlan,
   type Signals,
 } from "./machine";
 
@@ -19,9 +22,11 @@ const base = (over: Partial<Signals> = {}): Signals => ({
   celebrateUntil: 0,
   oneShot: null,
   lastInputAt: 0,
+  lastScrollAt: 0,
   lastActivity: null,
   reactMs: REACT_MS.typing,
   sleepAfterMs: 60_000,
+  walk: null,
   ...over,
 });
 
@@ -50,6 +55,42 @@ describe("pickAnim priorities", () => {
     const s = base({ lastInputAt: 1000, lastActivity: "typing" });
     expect(pickAnim(s, 1999)).toBe("typing");
     expect(pickAnim(s, 2000)).toBe("idle");
+  });
+  it("stays awake while scrolling, without reacting to it", () => {
+    const s = base({ lastInputAt: 1000, lastActivity: "typing", lastScrollAt: 50_000 });
+    expect(pickAnim(s, 60_000)).toBe("idle");
+    expect(pickAnim(s, 110_000)).toBe("sleep");
+    expect(nextDeadline(s, 60_000)).toBe(110_000);
+  });
+});
+
+describe("walking", () => {
+  const walk = { id: 1, dir: 1 as const, glance: false, frameMs: 90 };
+  it("comes after everything but breathing", () => {
+    expect(pickAnim(base({ walk }), 100)).toBe("walk");
+    expect(pickAnim(base({ walk, lastInputAt: 100, lastActivity: "typing" }), 200)).toBe("typing");
+    expect(pickAnim(base({ walk, oneShot: { anim: "wave", until: 1000 } }), 100)).toBe("wave");
+    expect(pickAnim(base({ walk }), 60_000)).toBe("sleep");
+    expect(pickAnim(base({ walk, dragging: true }), 100)).toBe("dragged");
+  });
+  it("steps a cell of ground a frame", () => {
+    expect(walkFrameMs(40, 3.5)).toBe(88);
+    expect(walkFrameMs(30, 7)).toBe(233);
+    expect(walkFrameMs(50, 1)).toBe(60);
+    expect(walkFrameMs(1, 7)).toBe(250);
+  });
+  it("plans a stroll within the ranges", () => {
+    expect(walkPlan(() => 0)).toEqual({ speed: 30, distance: 100, dir: -1 });
+    expect(walkPlan(() => 0.999)).toMatchObject({ dir: 1 });
+    const far = walkPlan(() => 0.999);
+    expect(far.speed).toBeLessThanOrEqual(50);
+    expect(far.distance).toBeLessThanOrEqual(500);
+  });
+  it("picks among the chosen idle animations", () => {
+    expect(pickIdle([], () => 0.5)).toBeNull();
+    expect(pickIdle(["soccer", "lookAround", "walk"], () => 0)).toBe("soccer");
+    expect(pickIdle(["soccer", "lookAround", "walk"], () => 0.5)).toBe("lookAround");
+    expect(pickIdle(["soccer", "lookAround", "walk"], () => 0.99)).toBe("walk");
   });
 });
 

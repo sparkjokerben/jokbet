@@ -1,3 +1,4 @@
+mod backup;
 mod commands;
 mod db;
 mod engine;
@@ -13,6 +14,7 @@ mod settings;
 mod shortcuts;
 mod updater;
 mod visibility;
+mod walker;
 
 use engine::runtime::RuntimeHandle;
 use hover::HoverState;
@@ -43,11 +45,18 @@ pub fn run() {
             commands::glass_support,
             commands::set_glass_bubble,
             commands::pet_drag_start,
+            commands::walk_start,
+            commands::walk_stop,
+            commands::rest_ack,
             commands::show_context_menu,
             commands::pet_ready,
             commands::get_stats,
             commands::export_csv,
             commands::clear_data,
+            commands::backup_create,
+            commands::list_backups,
+            commands::inspect_backup,
+            commands::restore_backup,
             commands::open_panel,
             commands::get_status,
             commands::open_input_monitoring_settings,
@@ -91,6 +100,8 @@ pub fn run() {
             app.manage(settings);
             app.manage(HoverState::default());
             app.manage(visibility::PetVisibility::default());
+            app.manage(backup::BackupState::default());
+            app.manage(walker::WalkState::default());
 
             let db_path = data_dir.join("stats.sqlite");
             let db = db::Db::open(&db_path)

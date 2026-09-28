@@ -100,15 +100,41 @@ pub enum HeatmapPalette {
     Brand,
 }
 
-/// What the pet does while nothing else is going on.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+/// What the pet may do now and then while nothing else is going on; in
+/// between, and when none is chosen, it breathes.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum IdleAnim {
-    Breathe,
-    #[default]
     Soccer,
     LookAround,
+    /// A stroll along the bottom of the screen.
+    Walk,
 }
+
+/// A nudge to take a break after a long stretch at the keyboard.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(default, rename_all = "camelCase")]
+pub struct RestReminder {
+    pub enabled: bool,
+    /// Minutes without a key, click or scroll that count as having rested.
+    pub gap_min: u32,
+    /// Minutes of unbroken activity before the pet says something.
+    pub after_min: u32,
+}
+
+impl Default for RestReminder {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            gap_min: 5,
+            after_min: 50,
+        }
+    }
+}
+
+/// The ranges the settings window offers for `RestReminder`.
+pub const REST_GAP_MIN: std::ops::RangeInclusive<u32> = 1..=15;
+pub const REST_AFTER_MIN: std::ops::RangeInclusive<u32> = 15..=120;
 
 /// A one-off reaction the user can assign to a click or a double click.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -119,6 +145,30 @@ pub enum ActionAnim {
     Soccer,
     Wave,
 }
+
+/// The backup the app makes by itself once a day.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(default, rename_all = "camelCase")]
+pub struct AutoBackup {
+    pub enabled: bool,
+    /// Where the backups go; `None` is the `backups` folder in the app's data.
+    pub dir: Option<String>,
+    /// How many of this computer's daily backups to keep.
+    pub keep: u32,
+}
+
+impl Default for AutoBackup {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            dir: None,
+            keep: 7,
+        }
+    }
+}
+
+/// The range of `AutoBackup::keep` the settings window offers.
+pub const BACKUP_KEEP_MAX: u32 = 60;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -169,7 +219,8 @@ pub struct Settings {
     /// Top-left of the pet window in physical pixels; `None` means default placement.
     pub pet_position: Option<[i32; 2]>,
     pub head_counter: HeadCounter,
-    pub idle_anim: IdleAnim,
+    /// What the pet may pick from while idle; empty is just breathing.
+    pub idle_anims: Vec<IdleAnim>,
     pub click_anim: ActionAnim,
     pub double_click_anim: ActionAnim,
     /// Show today's stats in a bubble while hovering the pet.
@@ -195,6 +246,8 @@ pub struct Settings {
     pub hide_in_fullscreen: bool,
     pub shortcuts: Shortcuts,
     pub heatmap_palette: HeatmapPalette,
+    pub auto_backup: AutoBackup,
+    pub rest_reminder: RestReminder,
 }
 
 impl Default for Settings {
@@ -203,7 +256,7 @@ impl Default for Settings {
             pet_scale: PET_SCALE_DEFAULT,
             pet_position: None,
             head_counter: HeadCounter::default(),
-            idle_anim: IdleAnim::Soccer,
+            idle_anims: vec![IdleAnim::Soccer, IdleAnim::LookAround, IdleAnim::Walk],
             click_anim: ActionAnim::Wave,
             double_click_anim: ActionAnim::Hearts,
             bubble: true,
@@ -219,6 +272,8 @@ impl Default for Settings {
             hide_in_fullscreen: true,
             shortcuts: Shortcuts::default(),
             heatmap_palette: HeatmapPalette::Brand,
+            auto_backup: AutoBackup::default(),
+            rest_reminder: RestReminder::default(),
         }
     }
 }
@@ -228,6 +283,27 @@ impl Settings {
     pub fn validate(&self) -> Result<(), String> {
         if !(1..=120).contains(&self.sleep_after_min) {
             return Err("sleepAfterMin must be between 1 and 120".into());
+        }
+        for (i, anim) in self.idle_anims.iter().enumerate() {
+            if self.idle_anims[..i].contains(anim) {
+                return Err("idleAnims lists an animation twice".into());
+            }
+        }
+        if !REST_GAP_MIN.contains(&self.rest_reminder.gap_min) {
+            return Err("restReminder.gapMin must be between 1 and 15".into());
+        }
+        if !REST_AFTER_MIN.contains(&self.rest_reminder.after_min) {
+            return Err("restReminder.afterMin must be between 15 and 120".into());
+        }
+        if !(1..=BACKUP_KEEP_MAX).contains(&self.auto_backup.keep) {
+            return Err(format!(
+                "autoBackup.keep must be between 1 and {BACKUP_KEEP_MAX}"
+            ));
+        }
+        if let Some(dir) = &self.auto_backup.dir {
+            if !Path::new(dir).is_absolute() {
+                return Err("autoBackup.dir must be an absolute path".into());
+            }
         }
         if self.glass_tint > GLASS_TINT_MAX {
             return Err(format!("glassTint must be at most {GLASS_TINT_MAX}"));
@@ -279,6 +355,20 @@ fn migrate(value: &mut serde_json::Value) {
                 _ => 6.0,
             };
             obj.insert("petScale".into(), serde_json::json!(scale));
+        }
+    }
+    // Until 0.4.0 there was one idle animation, and "breathe" meant none.
+    if let Some(old) = obj.remove("idleAnim") {
+        if !obj.contains_key("idleAnims") {
+            let anims = match old.as_str() {
+                Some("breathe") => Some(serde_json::json!([])),
+                Some("soccer") => Some(serde_json::json!(["soccer"])),
+                Some("lookAround") => Some(serde_json::json!(["lookAround"])),
+                _ => None,
+            };
+            if let Some(anims) = anims {
+                obj.insert("idleAnims".into(), anims);
+            }
         }
     }
 }
@@ -364,6 +454,13 @@ fn patched(current: &Settings, patch: &serde_json::Value) -> Result<Settings, St
     let next: Settings = serde_json::from_value(value).map_err(|e| e.to_string())?;
     next.validate()?;
     Ok(next)
+}
+
+/// Reads a `settings.json` from a backup the way the app's own file is read:
+/// carried over from older versions, and whatever this version rejects left at
+/// its default. Nothing is written.
+pub fn parse_backup(bytes: &[u8]) -> Settings {
+    parse(bytes).0
 }
 
 /// What the file says, and the top-level fields that had to be dropped
@@ -485,14 +582,76 @@ mod tests {
     fn animation_choices_round_trip() {
         let store = SettingsStore::load(temp_path("anims"));
         let next = store
-            .patch(&serde_json::json!({"idleAnim": "soccer", "clickAnim": "wave", "doubleClickAnim": "soccer"}))
+            .patch(&serde_json::json!({"idleAnims": ["walk", "soccer"], "clickAnim": "wave", "doubleClickAnim": "soccer"}))
             .unwrap();
-        assert_eq!(next.idle_anim, IdleAnim::Soccer);
+        assert_eq!(next.idle_anims, [IdleAnim::Walk, IdleAnim::Soccer]);
         assert_eq!(next.click_anim, ActionAnim::Wave);
         assert_eq!(next.double_click_anim, ActionAnim::Soccer);
+        // A list is replaced whole, which is what ticking boxes needs.
+        let next = store.patch(&serde_json::json!({"idleAnims": []})).unwrap();
+        assert!(next.idle_anims.is_empty());
         assert!(store
             .patch(&serde_json::json!({"clickAnim": "moonwalk"}))
             .is_err());
+        assert!(store
+            .patch(&serde_json::json!({"idleAnims": ["soccer", "soccer"]}))
+            .is_err());
+        assert!(store
+            .patch(&serde_json::json!({"idleAnims": ["breathe"]}))
+            .is_err());
+    }
+
+    #[test]
+    fn the_one_idle_animation_becomes_a_choice_of_several() {
+        for (old, new) in [
+            ("breathe", vec![]),
+            ("soccer", vec![IdleAnim::Soccer]),
+            ("lookAround", vec![IdleAnim::LookAround]),
+        ] {
+            let (store, path) = load_file(
+                &format!("idle-{old}"),
+                format!(r#"{{"idleAnim":"{old}","bubble":false}}"#).as_bytes(),
+            );
+            assert_eq!(store.get().idle_anims, new, "{old}");
+            assert!(!store.get().bubble);
+            assert_eq!(backups(&path), 0, "{old} is carried over, not dropped");
+        }
+        // Something unknown there leaves the new default.
+        let (store, _) = load_file("idle-odd", br#"{"idleAnim":"moonwalk"}"#);
+        assert_eq!(store.get().idle_anims, Settings::default().idle_anims);
+        // A file that already has the list keeps it.
+        let (store, _) = load_file(
+            "idle-both",
+            br#"{"idleAnim":"breathe","idleAnims":["walk"]}"#,
+        );
+        assert_eq!(store.get().idle_anims, [IdleAnim::Walk]);
+    }
+
+    #[test]
+    fn the_rest_reminder_starts_on_and_stays_in_range() {
+        assert_eq!(
+            Settings::default().rest_reminder,
+            RestReminder {
+                enabled: true,
+                gap_min: 5,
+                after_min: 50
+            }
+        );
+        let store = SettingsStore::load(temp_path("rest"));
+        let next = store
+            .patch(&serde_json::json!({"restReminder": {"afterMin": 90}}))
+            .unwrap();
+        assert!(next.rest_reminder.enabled);
+        assert_eq!(next.rest_reminder.gap_min, 5);
+        assert_eq!(next.rest_reminder.after_min, 90);
+        for bad in [
+            serde_json::json!({"restReminder": {"gapMin": 0}}),
+            serde_json::json!({"restReminder": {"gapMin": 16}}),
+            serde_json::json!({"restReminder": {"afterMin": 14}}),
+            serde_json::json!({"restReminder": {"afterMin": 121}}),
+        ] {
+            assert!(store.patch(&bad).is_err(), "{bad}");
+        }
     }
 
     #[test]
@@ -532,7 +691,10 @@ mod tests {
         assert_eq!(s.pet_scale, 3.5);
         assert!(s.head_counter.keyboard && s.head_counter.mouse);
         assert_eq!(s.head_counter.kind, CounterKind::Today);
-        assert_eq!(s.idle_anim, IdleAnim::Soccer);
+        assert_eq!(
+            s.idle_anims,
+            [IdleAnim::Soccer, IdleAnim::LookAround, IdleAnim::Walk]
+        );
         assert_eq!(s.click_anim, ActionAnim::Wave);
         assert_eq!(s.double_click_anim, ActionAnim::Hearts);
         assert_eq!(s.sleep_after_min, 1);
@@ -540,6 +702,51 @@ mod tests {
         assert_eq!(s.language, Language::System);
         assert!(s.hide_in_fullscreen);
         assert_eq!(s.heatmap_palette, HeatmapPalette::Brand);
+        assert_eq!(
+            s.auto_backup,
+            AutoBackup {
+                enabled: true,
+                dir: None,
+                keep: 7
+            }
+        );
+    }
+
+    #[test]
+    fn auto_backup_is_patched_field_by_field_and_validated() {
+        let store = SettingsStore::load(temp_path("autobackup"));
+        let next = store
+            .patch(&serde_json::json!({"autoBackup": {"keep": 3}}))
+            .unwrap();
+        assert!(next.auto_backup.enabled);
+        assert_eq!(next.auto_backup.keep, 3);
+        assert!(store
+            .patch(&serde_json::json!({"autoBackup": {"keep": 0}}))
+            .is_err());
+        assert!(store
+            .patch(&serde_json::json!({"autoBackup": {"keep": BACKUP_KEEP_MAX + 1}}))
+            .is_err());
+        assert!(store
+            .patch(&serde_json::json!({"autoBackup": {"dir": "relative/backups"}}))
+            .is_err());
+        let dir = std::env::temp_dir().to_string_lossy().into_owned();
+        let next = store
+            .patch(&serde_json::json!({"autoBackup": {"dir": dir}}))
+            .unwrap();
+        assert_eq!(next.auto_backup.dir.as_deref(), Some(dir.as_str()));
+        let next = store
+            .patch(&serde_json::json!({"autoBackup": {"dir": null}}))
+            .unwrap();
+        assert_eq!(next.auto_backup.dir, None);
+    }
+
+    #[test]
+    fn a_backup_is_read_like_the_settings_file() {
+        let s = parse_backup(br#"{"petSize":"small","clickAnim":"moonwalk","bubble":false}"#);
+        assert_eq!(s.pet_scale, 4.0);
+        assert_eq!(s.click_anim, Settings::default().click_anim);
+        assert!(!s.bubble);
+        assert_eq!(parse_backup(b"not json"), Settings::default());
     }
 
     #[test]

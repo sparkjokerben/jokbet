@@ -3,21 +3,50 @@
 import type { Anim, AnimName } from "../sprites/jokbet";
 
 export type Blocked = "noperm";
+/** Input the pet acts out. */
 export type Activity = "typing" | "click";
+/** Any input: a scroll keeps the pet awake without it doing anything. */
+export type Input = Activity | "scroll";
 /** Animations the controller can play once and end. The ones a user may pick for
  * a click or double-click are a narrower set (ActionAnim, src/lib/types.ts). */
-export type OneShot = "poke" | "hearts" | "soccer" | "wave" | "wake" | "typingEnd" | "lookAround";
+export type OneShot =
+  | "poke"
+  | "hearts"
+  | "soccer"
+  | "wave"
+  | "wake"
+  | "typingEnd"
+  | "lookAround"
+  | "stretch";
+
+/** What the pet may do now and then while idle, between breaths. */
+export type IdleChoice = "soccer" | "lookAround" | "walk";
+
+/** A stroll under way: which one (the app numbers them), which way, and
+ * whether it is still looking where it is going before it sets off. */
+export interface Walking {
+  id: number;
+  dir: -1 | 1;
+  glance: boolean;
+  /** How long a frame of the walk lasts at this speed; see walkFrameMs. */
+  frameMs: number;
+}
 
 export interface Signals {
   blocked: Blocked | null;
   dragging: boolean;
   celebrateUntil: number;
   oneShot: { anim: OneShot; until: number } | null;
+  /** The last key or click: what the pet reacts to. */
   lastInputAt: number;
+  /** The last scroll, which only keeps it awake. */
+  lastScrollAt: number;
   lastActivity: Activity | null;
   /** How long the last activity keeps the pet reacting; see typingReactMs. */
   reactMs: number;
   sleepAfterMs: number;
+  /** Out for a stroll, which anything else comes before. */
+  walk: Walking | null;
 }
 
 /**
@@ -51,20 +80,55 @@ export function typingReactMs(sessionMs: number): number {
   return Math.min(TYPING_HOLD_MAX_MS, REACT_MS.typing + TYPING_HOLD_GROWTH * Math.sqrt(seconds));
 }
 
-/** Highest priority first: blocked > dragged > celebrate > one-shot > sleep > react > idle. */
+/** When the pet last saw anyone: a key, a click or a scroll. */
+const lastSeen = (s: Signals) => Math.max(s.lastInputAt, s.lastScrollAt);
+
+/** Highest priority first: blocked > dragged > celebrate > one-shot > sleep >
+ * react > walk > idle. */
 export function pickAnim(s: Signals, now: number): AnimName {
   if (s.blocked) return s.blocked;
   if (s.dragging) return "dragged";
   if (now < s.celebrateUntil) return "celebrate";
   if (s.oneShot && now < s.oneShot.until) return s.oneShot.anim;
-  if (now - s.lastInputAt >= s.sleepAfterMs) return "sleep";
+  if (now - lastSeen(s) >= s.sleepAfterMs) return "sleep";
   if (s.lastActivity && now - s.lastInputAt < s.reactMs) return s.lastActivity;
+  if (s.walk) return "walk";
   return "idle";
+}
+
+/** A walk frame's length: one sprite cell of ground a frame, whatever the
+ * speed (logical pixels a second) and the size, within what still reads as
+ * walking. */
+export function walkFrameMs(speed: number, scale: number): number {
+  return Math.min(250, Math.max(60, Math.round((1000 * scale) / Math.max(speed, 1))));
+}
+
+/** How fast and how far a stroll goes, and which way it sets off. */
+export interface WalkPlan {
+  /** Logical pixels a second. */
+  speed: number;
+  /** Logical pixels. */
+  distance: number;
+  dir: -1 | 1;
+}
+
+export function walkPlan(random: () => number = Math.random): WalkPlan {
+  return {
+    speed: 30 + 20 * random(),
+    distance: 100 + 400 * random(),
+    dir: random() < 0.5 ? -1 : 1,
+  };
+}
+
+/** One of the chosen idle animations, at random. */
+export function pickIdle(choices: readonly IdleChoice[], random: () => number = Math.random): IdleChoice | null {
+  if (!choices.length) return null;
+  return choices[Math.min(choices.length - 1, Math.floor(random() * choices.length))];
 }
 
 /** Earliest future time at which pickAnim may change without new signals. */
 export function nextDeadline(s: Signals, now: number): number {
-  const times = [s.celebrateUntil, s.sleepAfterMs + s.lastInputAt];
+  const times = [s.celebrateUntil, s.sleepAfterMs + lastSeen(s)];
   if (s.oneShot) times.push(s.oneShot.until);
   if (s.lastActivity) times.push(s.lastInputAt + s.reactMs);
   return Math.min(Infinity, ...times.filter((t) => t > now));

@@ -5,18 +5,16 @@
   import { onMount, untrack } from "svelte";
   import { celebrationText, headValue } from "../lib/format";
   import { t } from "../lib/i18n";
-  import { blockedBy } from "./machine";
+  import { blockedBy, walkFrameMs } from "./machine";
   import {
     PET_SCALE_DEFAULT,
     type ActionAnim,
-    type IdleAnim,
     type MilestoneHit,
     type Settings,
     type Status,
     type Tick,
     type UpdateStatus,
   } from "../lib/types";
-  import type { AnimName } from "../sprites/jokbet";
   import { GRID_H, GRID_W, PET_H, PET_W, PET_X, PET_Y } from "../sprites/jokbet";
   import Bubble from "./Bubble.svelte";
   import { PetController } from "./controller";
@@ -25,12 +23,13 @@
   import { inkSide } from "./ink";
   import Sprite from "./Sprite.svelte";
 
-  const IDLE: Record<IdleAnim, AnimName> = { breathe: "idle", soccer: "soccer", lookAround: "lookAround" };
   /** Typing animation speed (keys per second) when live typing speed is turned off. */
   const FIXED_KPS = 2.5;
   const CELEBRATE_MS = 3500;
   /** How long the pet says a new version is ready. */
   const UPDATE_BANNER_MS = 6000;
+  /** How long the break reminder stays up, unless the pet is clicked. */
+  const REST_BANNER_MS = 8000;
   /** Gap between the top of the pet's box and whatever sits above it. */
   const ABOVE_LIFT = 8;
   /** More of it when the card is the only thing up there: the counter under it
@@ -73,6 +72,8 @@
   let dark = $state(false);
   let banner = $state("");
   let bannerTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Whether the banner up is the break reminder, which a click takes down. */
+  let restBanner = false;
   let spriteEl: HTMLDivElement;
 
   const scale = $derived(settings?.petScale ?? PET_SCALE_DEFAULT);
@@ -138,6 +139,18 @@
   });
 
   const pet = new PetController((r) => (rows = r));
+  /** The speed the page asked the latest stroll to go at, which sets the pace
+      of its steps. */
+  let walkSpeed = 40;
+  // Strolls move the window, which only the app's side can do; it says how
+  // each one goes on pet://walk.
+  pet.setWalkDriver({
+    start: async (plan) => {
+      walkSpeed = plan.speed;
+      return (await invoke<number | null>("walk_start", { ...plan })) !== null;
+    },
+    stop: () => void invoke("walk_stop"),
+  });
 
   function reportHitRect() {
     // Jokbet fills the middle of the canvas: his box is 24x16 cells at (PET_X, PET_Y).
@@ -155,7 +168,7 @@
   function applySettings(s: Settings) {
     settings = s;
     pet.setSleepAfter(s.sleepAfterMin * 60_000);
-    pet.setIdleAnim(IDLE[s.idleAnim]);
+    pet.setIdleChoices(s.idleAnims);
     if (!s.typingSpeed) pet.setKeysPerSecond(FIXED_KPS);
   }
 
@@ -175,8 +188,28 @@
 
   function say(text: string, ms: number) {
     banner = text;
+    restBanner = false;
     clearTimeout(bannerTimer);
     bannerTimer = setTimeout(() => (banner = ""), ms);
+  }
+
+  /** Time for a break: a stretch and a yawn, and a word about it. */
+  function remindRest(minutes: number) {
+    say(t("restBanner", { n: minutes }), REST_BANNER_MS);
+    restBanner = true;
+    pet.oneShot("stretch");
+  }
+
+  /** Any press on the pet says the reminder was seen: it goes, and the next
+      one waits its full interval. */
+  function pressed() {
+    pet.pressed();
+    void invoke("rest_ack");
+    if (restBanner) {
+      restBanner = false;
+      clearTimeout(bannerTimer);
+      banner = "";
+    }
   }
 
   function celebrate(hits: MilestoneHit[]) {
@@ -215,7 +248,7 @@
     window.addEventListener("resize", onResize);
 
     const detach = attachGestures(spriteEl, {
-      press: () => pet.pressed(),
+      press: pressed,
       click: () => react(settings?.clickAnim),
       doubleClick: () => react(settings?.doubleClickAnim),
       dragStart: async () => {
@@ -245,6 +278,10 @@
         tone = e.payload;
       }),
       listen<{ hits: MilestoneHit[] }>("pet://celebrate", (e) => celebrate(e.payload.hits)),
+      listen<{ minutes: number }>("pet://rest", (e) => remindRest(e.payload.minutes)),
+      listen<{ id: number; phase: "glance" | "walk" | "stop"; dir: -1 | 1 }>("pet://walk", (e) =>
+        pet.walkPhase(e.payload.id, e.payload.phase, e.payload.dir, walkFrameMs(walkSpeed, scale)),
+      ),
       listen("pet://drag-end", () => pet.setDragging(false)),
       listen<UpdateStatus>("app://update", (e) => applyUpdate(e.payload, true)),
     ];

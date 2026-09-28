@@ -9,9 +9,11 @@ export const GLASS_TINT_MAX = 60;
 export type CounterKind = "today" | "rate";
 export type Period = "daily" | "lifetime";
 export type Metric = "keys" | "clicks" | "inputs" | "scrolls" | "distance";
-export type Activity = "typing" | "click";
+/** What the engine saw since the last tick; a scroll only keeps the pet awake. */
+export type Activity = "typing" | "click" | "scroll";
 export type Permission = "granted" | "denied" | "notRequired" | "unsupported";
-export type IdleAnim = "breathe" | "soccer" | "lookAround";
+/** What the pet may do now and then while idle; in between it breathes. */
+export type IdleAnim = "soccer" | "lookAround" | "walk";
 export type ActionAnim = "poke" | "hearts" | "soccer" | "wave";
 /** The key heatmap's colours: the usual heat scale, or the pet's orange. */
 export type HeatmapPalette = "heat" | "brand";
@@ -39,11 +41,35 @@ export interface CustomMilestone {
   repeat: boolean;
 }
 
+/** A nudge to take a break after a long stretch at the keyboard. */
+export interface RestReminder {
+  enabled: boolean;
+  /** Minutes without a key, click or scroll that count as a rest. */
+  gapMin: number;
+  /** Minutes of unbroken activity before the reminder. */
+  afterMin: number;
+}
+/** The ranges offered for RestReminder; they match REST_* in Rust. */
+export const REST_GAP_MIN = [1, 15] as const;
+export const REST_AFTER_MIN = [15, 120] as const;
+
+/** The backup the app makes by itself once a day. */
+export interface AutoBackup {
+  enabled: boolean;
+  /** Where they go; null is the backups folder in the app's data. */
+  dir: string | null;
+  /** How many of this computer's daily backups to keep. */
+  keep: number;
+}
+/** The range of AutoBackup.keep; matches BACKUP_KEEP_MAX in Rust. */
+export const BACKUP_KEEP_MAX = 60;
+
 export interface Settings {
   petScale: number;
   petPosition: [number, number] | null;
   headCounter: HeadCounter;
-  idleAnim: IdleAnim;
+  /** Empty is just breathing. */
+  idleAnims: IdleAnim[];
   clickAnim: ActionAnim;
   doubleClickAnim: ActionAnim;
   bubble: boolean;
@@ -62,6 +88,40 @@ export interface Settings {
   hideInFullscreen: boolean;
   shortcuts: Shortcuts;
   heatmapPalette: HeatmapPalette;
+  autoBackup: AutoBackup;
+  restReminder: RestReminder;
+}
+
+export type BackupKind = "manual" | "auto" | "safety";
+
+/** A backup as the restore list shows it (BackupInfo in Rust). */
+export interface BackupInfo {
+  path: string;
+  kind: BackupKind;
+  /** RFC 3339, local time. */
+  createdAt: string;
+  /** How many days have counts. */
+  days: number;
+  /** The app version that made it. */
+  version: string;
+  size: number;
+  /** Made on another computer. */
+  otherDevice: boolean;
+}
+
+export interface BackupList {
+  /** Where the daily backups go. */
+  dir: string;
+  /** The app's own backup folder. */
+  defaultDir: string;
+  items: BackupInfo[];
+  /** Why the last daily backup failed, if it did. */
+  lastError: string | null;
+}
+
+export interface RestoreReport {
+  /** Settings left as they were: "shortcuts", or "*" for all of them. */
+  settingsSkipped: string[];
 }
 
 export interface Totals {
@@ -110,8 +170,6 @@ export interface Stats {
   /** Every key pressed on any day. */
   everPressed: string[];
 }
-
-
 
 export interface MilestoneHit {
   id: string;

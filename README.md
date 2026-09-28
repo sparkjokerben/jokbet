@@ -27,8 +27,12 @@ settings.
 - It types along on a laptop while you work, flinches when you click, follows
   your cursor with its eyes, falls asleep when you are away, and can be dragged
   anywhere on screen
-- Idle behaviour and click reactions are yours to choose: juggle a ball, look
-  around, wave, blush, or simply breathe
+- Idle behaviour and click reactions are yours to choose: it juggles a ball,
+  looks around, or strolls along the bottom of the screen, any of them or none
+  (then it simply breathes), and it waves or blushes when clicked
+- A break reminder: after a long stretch of typing, clicking and scrolling it
+  stretches, yawns and tells you to get up, and again every quarter of an hour
+  until you do
 - It steps aside while another app is full screen or presenting, and comes back
   after (a setting, on by default)
 - Global shortcuts to show or hide it and to pause counting, which you record
@@ -40,6 +44,8 @@ settings.
   export
 - Milestones: it celebrates your thousandth key of the day, your millionth key
   all time, and any threshold you set yourself
+- Backups: one file holds your counts and settings, a new one is made every day,
+  and restoring one is a click
 
 ## Install
 
@@ -117,6 +123,14 @@ Deleting both files resets Jokbet to a first run. An install upgrading from the
 project's former name `jokerben-desktop-pet` brings them across on first launch.
 If `settings.json` is damaged, Jokbet keeps every setting it can still read and
 sets the original aside as `settings.bad-<time>.json`.
+
+**Settings → Data** backs both up into one `.zip` (a copy of the database, your
+settings, and a `manifest.json` saying what it is) and restores from one. Once
+a day Jokbet also makes a backup of its own, in the `backups` folder next to
+`stats.sqlite` or a folder you choose, and keeps the newest seven. A restore
+replaces every count with the backup's, and the settings too if you tick the
+box; the counts it replaces go into a safety backup in the same `backups`
+folder first, so a restore can itself be undone.
 
 Jokbet also writes a log, `Jokbet.log`, rotated at 1 MB. It records errors and
 the version that wrote them, never input. **Settings → About → Open Logs

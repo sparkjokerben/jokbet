@@ -11,6 +11,39 @@ the fuller entries elsewhere:
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-09-28
+
+### Added
+
+- **Backups.** **Settings › Data** saves your counts and your settings to one
+  `.zip`, and restores from one. A restore replaces every count with the
+  backup's, and the settings too if you tick the box — though never where the
+  pet stands. The counts it replaces go into a safety backup first, so a
+  restore can itself be undone.
+- **A backup every day.** Jokbet backs itself up once a day, in a `backups`
+  folder beside its data or in a folder you pick (a synced one keeps it off this
+  disk), and keeps the newest seven; both are settings. Each computer names and
+  tidies its own, so two sharing a folder leave each other's alone.
+- **A break reminder.** After 50 minutes of typing, clicking and scrolling
+  without a five-minute pause, the pet stretches, yawns and tells you to get up,
+  and again every quarter of an hour until you do; a click on the pet says you
+  have seen it. Both lengths are settings, and so is the reminder itself. It
+  waits while the pet is hidden, and nothing adds up while counting is paused.
+- **Strolls.** While idle, the pet now and then takes a walk along the bottom of
+  the screen — on the Dock or the taskbar — at an unhurried pace of its own
+  choosing, turning round at the edges and stopping the moment you type, click
+  or scroll. It stays where it stopped. A pet put down in the middle of the
+  screen stays put. The one on the website strolls too.
+
+### Changed
+
+- **Idle animations are a choice of several.** Tick any of juggling, looking
+  around and strolling, and the pet picks one of them at random now and then;
+  tick none and it just breathes, which is what "Breathe" used to mean. An
+  existing install keeps the one it had, so tick **Stroll** to see it walk.
+- **Scrolling keeps the pet awake.** Reading down a long page no longer puts it
+  to sleep; it still acts nothing out for a scroll.
+
 ## [0.3.3] — 2026-09-28
 
 ### Fixed
@@ -190,6 +223,7 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the tray; milestones; a stats window with a trend and a keyboard heatmap; and
   an interface in English and Simplified Chinese.
 
+[0.4.0]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.0
 [0.3.3]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.3
 [0.3.2]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.2
 [0.3.1]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.1

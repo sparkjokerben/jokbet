@@ -88,7 +88,7 @@ let settings: Settings = {
   petScale: 3.5,
   petPosition: null,
   headCounter: { enabled: true, kind: "today", keyboard: true, mouse: true },
-  idleAnim: "soccer",
+  idleAnims: ["soccer", "lookAround", "walk"],
   clickAnim: "wave",
   doubleClickAnim: "hearts",
   bubble: true,
@@ -104,7 +104,36 @@ let settings: Settings = {
   hideInFullscreen: true,
   shortcuts: { togglePet: "Control+Alt+KeyJ", pause: null },
   heatmapPalette: params.get("palette") === "heat" ? "heat" : "brand",
+  autoBackup: { enabled: true, dir: null, keep: 7 },
+  restReminder: { enabled: true, gapMin: 5, afterMin: 50 },
 };
+
+/** The backup folder as list_backups describes it. With ?nobackups, empty. */
+function fakeBackups() {
+  const dir = "/Users/you/Library/Application Support/io.github.sparkjokerben.jokbet/backups";
+  const item = (daysAgo: number, kind: string, otherDevice = false) => {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    d.setHours(9, 12, 0, 0);
+    return {
+      path: `${dir}/jokbet-${kind}-${daysAgo}.zip`,
+      kind,
+      createdAt: d.toISOString(),
+      days: 180 - daysAgo,
+      version: "0.4.0",
+      size: 1_200_000,
+      otherDevice,
+    };
+  };
+  return {
+    dir,
+    defaultDir: dir,
+    items: params.has("nobackups")
+      ? []
+      : [item(0, "auto"), item(1, "safety"), item(1, "auto"), item(2, "auto", true), item(9, "manual")],
+    lastError: params.has("backupfail") ? "Permission denied (os error 13)" : null,
+  };
+}
 
 const view = params.get("view");
 /** With ?nostorage, the database "could not be opened". */
@@ -168,9 +197,21 @@ mockIPC(
       return update;
     case "check_update":
       return READY;
-    case "update_settings":
-      settings = { ...settings, ...(a.patch as object) } as Settings;
+    case "update_settings": {
+      // A merge patch, like the real one: nested objects merge, null resets.
+      const next: Record<string, unknown> = { ...settings };
+      for (const [k, v] of Object.entries(a.patch as Record<string, unknown>)) {
+        const cur = next[k];
+        const nested = v && typeof v === "object" && !Array.isArray(v) && cur && typeof cur === "object";
+        next[k] = nested ? { ...cur, ...v } : v;
+      }
+      settings = next as unknown as Settings;
       return settings;
+    }
+    case "list_backups":
+      return fakeBackups();
+    case "restore_backup":
+      return { settingsSkipped: [] };
     default:
       return null;
   }
@@ -208,9 +249,12 @@ if (view === "pet") {
     await emit("app://status", { permission: "granted", listening: true, paused: false, storage });
     await emit("pet://tick", { today, kps: 3.1, cps: 0.2, activity: null });
     await emit("pet://hover", true);
-    await emit("pet://celebrate", {
-      hits: [{ id: "a", period: "daily", metric: "keys", level: 10000 }],
-    });
+    // With ?rest, the break reminder instead of a celebration.
+    if (params.has("rest")) await emit("pet://rest", { minutes: 50 });
+    else
+      await emit("pet://celebrate", {
+        hits: [{ id: "a", period: "daily", metric: "keys", level: 10000 }],
+      });
   }, 300);
 } else {
   mount(App, { target: document.getElementById("root")! });

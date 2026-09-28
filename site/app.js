@@ -13,7 +13,7 @@
  *   prerelease: boolean, notes: string | null, url: string | null, files: ReleaseFile[] }} Release */
 /** @typedef {{ schema: number, generatedAt: string | null, releases: Release[], source?: string }} Changelog */
 /** @typedef {"zh" | "en"} Lang */
-/** @typedef {{ input: (a: "typing" | "click") => void, setKeysPerSecond: (n: number) => void,
+/** @typedef {{ input: (a: "typing" | "click" | "scroll") => void, setKeysPerSecond: (n: number) => void,
  *   point: (x: number, y: number) => void, setLang: (l: Lang) => void,
  *   setBlocked: (b: string | null) => void, demo: (d: string) => void }} Pet */
 
@@ -503,7 +503,7 @@ async function wirePet() {
     scale: 6,
     still,
     lang: lang(),
-    idleAnim: "soccer",
+    idleAnims: ["soccer", "lookAround", "walk"],
     clickAnim: "wave",
     doubleClickAnim: "hearts",
     sleepAfterMs: 60_000,
@@ -528,6 +528,8 @@ async function wirePet() {
   document.addEventListener("pointerdown", () => {
     pet?.input("click");
   });
+  // Reading down the page keeps it awake, the way scrolling does in the app.
+  window.addEventListener("wheel", () => pet?.input("scroll"), { passive: true });
 
   // Its eyes follow the pointer, one look per frame at most.
   let where = /** @type {[number, number] | null} */ (null);

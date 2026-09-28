@@ -1,14 +1,15 @@
 //! The runtime thread: the only owner of the counters. It receives hook events,
 //! manages the input hook's lifecycle, and pushes throttled updates to the pet.
 
-use super::aggregator::{Activity, Aggregator, Totals};
+use super::aggregator::{Activity, Aggregator, DayCounters, Totals};
 use super::distance::DisplayMap;
 use super::milestones::{self, Celebrations, Hit, MilestoneDef, Reached};
+use super::rest::RestTracker;
 use crate::db::Db;
 use crate::input::{self, EventSink, InputHandle, Permission};
 use crate::pet_window::PET_LABEL;
 use crate::platform;
-use crate::settings::{Period, Settings};
+use crate::settings::{AutoBackup, Period, Settings};
 use chrono::{Local, NaiveDate, Timelike};
 use crossbeam_channel::{bounded, select, tick, Receiver, Sender};
 use serde::Serialize;
@@ -40,8 +41,20 @@ pub enum Control {
     },
     /// Deletes all counts, including today's.
     Clear(Sender<Result<(), String>>),
+    /// Saves pending counts, then writes a copy of the database to `to`.
+    Snapshot {
+        to: PathBuf,
+        reply: Sender<Result<Snapshot, String>>,
+    },
+    /// Replaces every count with the ones in the database at `from`.
+    Restore {
+        from: PathBuf,
+        reply: Sender<Result<(), String>>,
+    },
     /// Current permission / hook / pause state.
     GetStatus(Sender<Result<Status, String>>),
+    /// The pet was clicked: a break reminder, if one is up, has been seen.
+    RestAck,
     /// Stop the hook and acknowledge once everything is saved.
     Shutdown(Sender<()>),
 }
@@ -73,6 +86,14 @@ impl RuntimeHandle {
 
     pub fn clear(&self) -> Result<(), String> {
         self.ask(Control::Clear)
+    }
+
+    pub fn snapshot(&self, to: PathBuf) -> Result<Snapshot, String> {
+        self.ask(|reply| Control::Snapshot { to, reply })
+    }
+
+    pub fn restore(&self, from: PathBuf) -> Result<(), String> {
+        self.ask(|reply| Control::Restore { from, reply })
     }
 
     pub fn status(&self) -> Result<Status, String> {
@@ -129,6 +150,19 @@ pub struct Celebrate {
     pub hits: Vec<Hit>,
 }
 
+/// Time for a break: how long the stretch at the keyboard has lasted.
+#[derive(Clone, Copy, Debug, Serialize)]
+pub struct Rest {
+    pub minutes: u32,
+}
+
+/// What a snapshot of the database holds, for a backup's manifest.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Snapshot {
+    pub schema: i64,
+    pub days: u64,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Status {
@@ -173,6 +207,24 @@ struct Worker<R: Runtime> {
     status: Option<Status>,
     last_tick: Option<Tick>,
     activity: Option<Activity>,
+    auto_backup: AutoBackup,
+    /// The day a daily backup was last seen to or tried, so a failing one is
+    /// not retried every second.
+    auto_backup_day: Option<NaiveDate>,
+    rest: RestTracker,
+}
+
+/// What the counters start a day from: today's counts, the lifetime totals on
+/// disk, and the milestones already celebrated.
+fn load_state(db: Option<&Db>, date: NaiveDate) -> (DayCounters, Totals, Reached) {
+    let Some(db) = db else {
+        return Default::default();
+    };
+    (
+        db.load_day(date).unwrap_or_default(),
+        db.lifetime_totals().unwrap_or_default(),
+        db.load_reached(date).unwrap_or_default(),
+    )
 }
 
 impl<R: Runtime> Worker<R> {
@@ -183,18 +235,7 @@ impl<R: Runtime> Worker<R> {
         }
         let now = Local::now();
         let date = now.date_naive();
-        let today = db
-            .as_ref()
-            .and_then(|db| db.load_day(date).ok())
-            .unwrap_or_default();
-        let lifetime_saved = db
-            .as_ref()
-            .and_then(|db| db.lifetime_totals().ok())
-            .unwrap_or_default();
-        let reached = db
-            .as_ref()
-            .and_then(|db| db.load_reached(date).ok())
-            .unwrap_or_default();
+        let (today, lifetime_saved, reached) = load_state(db.as_ref(), date);
         let mut agg = Aggregator::with_today(today);
         agg.paused = settings.paused;
         Self {
@@ -218,6 +259,9 @@ impl<R: Runtime> Worker<R> {
             status: None,
             last_tick: None,
             activity: None,
+            auto_backup: settings.auto_backup.clone(),
+            auto_backup_day: None,
+            rest: RestTracker::new(settings.rest_reminder.into()),
         }
     }
 
@@ -225,6 +269,7 @@ impl<R: Runtime> Worker<R> {
         let ticker = tick(TICK);
         let mut ticks: u32 = 0;
         self.housekeeping();
+        self.auto_backup();
         loop {
             // Unbiased on purpose: crossbeam shuffles the ready handles each
             // time round, so a flood of events cannot starve the ticker that
@@ -232,8 +277,16 @@ impl<R: Runtime> Worker<R> {
             select! {
                 recv(self.events) -> e => {
                     if let Ok(e) = e {
+                        let t = e.t_ms;
                         if let Some(a) = self.agg.ingest(e, &self.displays, self.hour) {
-                            self.activity = Some(a);
+                            // A scroll only says someone is there: it does not
+                            // take the place of a key or click the pet has yet
+                            // to react to.
+                            if a != Activity::Scroll || self.activity.is_none() {
+                                self.activity = Some(a);
+                            }
+                            self.rest.activity(t, self.agg.paused);
+                            crate::walker::stop(&self.app, crate::walker::Stop::Now);
                         }
                     }
                 }
@@ -248,6 +301,14 @@ impl<R: Runtime> Worker<R> {
                         self.agg.paused = s.paused;
                         self.milestones_on = s.milestones;
                         self.milestone_defs = milestones::definitions(&s.custom_milestones, &s.head_counter);
+                        self.rest.configure(s.rest_reminder.into());
+                        if s.auto_backup != self.auto_backup {
+                            // Switched on, or pointed at another folder: that
+                            // folder may not have today's yet.
+                            self.auto_backup = s.auto_backup.clone();
+                            self.auto_backup_day = None;
+                            self.auto_backup();
+                        }
                         self.housekeeping();
                     }
                     Ok(Control::Stats { days, reply }) => {
@@ -256,6 +317,7 @@ impl<R: Runtime> Worker<R> {
                     Ok(Control::ExportCsv { dir, reply }) => {
                         let _ = reply.send(self.export_csv(&dir));
                     }
+                    Ok(Control::RestAck) => self.rest.ack(input::now_ms()),
                     Ok(Control::GetStatus(reply)) => {
                         self.housekeeping();
                         let _ = reply.send(self.status.ok_or_else(|| "no status yet".to_string()));
@@ -263,6 +325,14 @@ impl<R: Runtime> Worker<R> {
                     Ok(Control::Clear(reply)) => {
                         let _ = reply.send(self.clear());
                         self.last_tick = None;
+                        let _ = self.app.emit("app://data-changed", ());
+                    }
+                    Ok(Control::Snapshot { to, reply }) => {
+                        let _ = reply.send(self.snapshot(&to));
+                    }
+                    Ok(Control::Restore { from, reply }) => {
+                        let _ = reply.send(self.restore(&from));
+                        let _ = self.app.emit("app://data-changed", ());
                     }
                     Ok(Control::Shutdown(ack)) => {
                         if let Some(h) = self.hook.take() {
@@ -312,6 +382,10 @@ impl<R: Runtime> Worker<R> {
             self.status = Some(status);
             let _ = self.app.emit("app://status", status);
         }
+        let shown = crate::visibility::shown(&self.app);
+        if let Some(minutes) = self.rest.poll(input::now_ms(), self.agg.paused, shown) {
+            let _ = self.app.emit_to(PET_LABEL, "pet://rest", Rest { minutes });
+        }
 
         // One reading of the clock for both, so the day and the hour can never
         // be a boundary apart. Events are filed under the hour cached here,
@@ -327,12 +401,52 @@ impl<R: Runtime> Worker<R> {
             if let Some(db) = self.db.as_mut() {
                 let _ = db.prune_reached(today);
             }
+            self.auto_backup();
         }
         self.hour = now.hour() as u8;
     }
 
-    /// Records newly crossed milestones and celebrates them (at most once a minute).
-    fn check_milestones(&mut self) {
+    /// Makes today's daily backup if it is due: the snapshot here, where the
+    /// database is, and the rest on a thread of its own.
+    fn auto_backup(&mut self) {
+        if !self.auto_backup.enabled || self.auto_backup_day == Some(self.date) {
+            return;
+        }
+        self.auto_backup_day = Some(self.date);
+        // Nothing to keep yet (a fresh install): no backup, so the ones from
+        // before a reinstall are not rotated out by empty ones.
+        if self
+            .db
+            .as_ref()
+            .is_none_or(|db| db.day_count().unwrap_or(0) == 0)
+        {
+            return;
+        }
+        let target = match crate::backup::AutoTarget::for_day(&self.app, self.date) {
+            Ok(target) => target,
+            Err(e) => return crate::backup::auto_failed(&self.app, e),
+        };
+        if target.dest.exists() {
+            return;
+        }
+        let snapshot = match crate::backup::AutoTarget::snapshot_path(&self.app) {
+            Ok(path) => path,
+            Err(e) => return crate::backup::auto_failed(&self.app, e),
+        };
+        match self.snapshot(&snapshot) {
+            Ok(snap) => crate::backup::finish_auto(
+                self.app.clone(),
+                snapshot,
+                snap,
+                target,
+                self.auto_backup.keep,
+            ),
+            Err(e) => crate::backup::auto_failed(&self.app, e),
+        }
+    }
+
+    /// Records newly crossed milestones; returns them.
+    fn record_milestones(&mut self) -> Vec<Hit> {
         let mut lifetime = self.lifetime_saved.clone();
         lifetime.add(&self.agg.pending.totals);
         let date = self.date.format("%Y-%m-%d").to_string();
@@ -353,11 +467,17 @@ impl<R: Runtime> Worker<R> {
                     let _ = db.save_reached(&h.id, period, h.level, now);
                 }
             }
-            // Disabled milestones are still recorded, so turning them on later
-            // does not replay everything already passed.
-            if self.milestones_on {
-                self.celebrations.push(hits);
-            }
+        }
+        hits
+    }
+
+    /// Records newly crossed milestones and celebrates them (at most once a minute).
+    fn check_milestones(&mut self) {
+        let hits = self.record_milestones();
+        // Disabled milestones are still recorded, so turning them on later
+        // does not replay everything already passed.
+        if !hits.is_empty() && self.milestones_on {
+            self.celebrations.push(hits);
         }
         if let Some(hits) = self.celebrations.poll(input::now_ms()) {
             let _ = self
@@ -420,6 +540,37 @@ impl<R: Runtime> Worker<R> {
         self.lifetime_saved = Totals::default();
         self.reached = Reached::default();
         self.celebrations.clear();
+        Ok(())
+    }
+
+    fn snapshot(&mut self, to: &std::path::Path) -> Result<Snapshot, String> {
+        self.flush();
+        let db = self.db()?;
+        let err = |e: rusqlite::Error| e.to_string();
+        db.snapshot_to(to).map_err(err)?;
+        Ok(Snapshot {
+            schema: db.schema_version().map_err(err)?,
+            days: db.day_count().map_err(err)?,
+        })
+    }
+
+    /// Takes every count from the database at `from`, then starts the day
+    /// over from what is now on disk, as a fresh start would.
+    fn restore(&mut self, from: &std::path::Path) -> Result<(), String> {
+        self.flush();
+        self.db()?.replace_from(from).map_err(|e| e.to_string())?;
+        let (today, lifetime, reached) = load_state(self.db.as_ref(), self.date);
+        let paused = self.agg.paused;
+        self.agg = Aggregator::with_today(today);
+        self.agg.paused = paused;
+        self.lifetime_saved = lifetime;
+        self.reached = reached;
+        self.celebrations.clear();
+        self.last_tick = None;
+        // Whatever the restored counts are already past is recorded without a
+        // party: a backup from before a milestone existed would otherwise set
+        // off every one of them at once.
+        self.record_milestones();
         Ok(())
     }
 

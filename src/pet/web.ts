@@ -13,9 +13,9 @@ import { formatCount } from "../lib/format.ts";
 import type { Lang } from "../lib/i18n.ts";
 import { compileGrid } from "../sprites/compile.ts";
 import { ANIMS, GRID_H, GRID_W, PET_H, PET_W, PET_X, PET_Y, frameRows, type AnimName } from "../sprites/jokbet.ts";
-import { PetController } from "./controller.ts";
+import { PetController, type WalkDriver } from "./controller.ts";
 import { attachGestures } from "./gestures.ts";
-import type { Activity, Blocked, OneShot } from "./machine.ts";
+import { walkFrameMs, type Blocked, type IdleChoice, type Input, type OneShot } from "./machine.ts";
 
 /** The app's own lift above the pet's box (src/pet/Pet.svelte). */
 const ABOVE_LIFT = 8;
@@ -31,11 +31,13 @@ const STILL_HOLD_MS = 1600;
 const BLOCK_HOLD_MS = 4200;
 /** Keep-proud gap around the edge of where it may be dragged. */
 const EDGE = 8;
+/** The look in the direction of travel before a stroll, as in the app. */
+const GLANCE_MS = 500;
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 /** The chips beside the hero, and what each one makes the pet do. */
-export type Demo = "wave" | "hearts" | "soccer" | "typing" | "sleep" | "celebrate" | "lookAround";
+export type Demo = "wave" | "hearts" | "soccer" | "typing" | "sleep" | "celebrate" | "lookAround" | "stretch";
 
 export interface WebPetOptions {
   /** Integer, so every sprite pixel is the same number of screen pixels. */
@@ -48,8 +50,9 @@ export interface WebPetOptions {
   bounds?: () => DOMRect | null;
   /** Show the number above its head. */
   counter?: boolean;
-  /** What it does when nothing is happening; the app ships "soccer". */
-  idleAnim?: AnimName;
+  /** What it may do now and then when nothing is happening; the app ships all
+   * three. A stroll goes along the line it stands on, and never when still. */
+  idleAnims?: IdleChoice[];
   clickAnim?: OneShot;
   doubleClickAnim?: OneShot;
   /** The app's default is a minute without input. */
@@ -58,8 +61,8 @@ export interface WebPetOptions {
 }
 
 export interface WebPet {
-  /** The visitor typed, clicked, … on the page. */
-  input(activity: Activity): void;
+  /** The visitor typed, clicked, scrolled … on the page. */
+  input(activity: Input): void;
   setKeysPerSecond(kps: number): void;
   /** Where the pointer is, in client coordinates: its eyes follow. */
   point(x: number, y: number): void;
@@ -88,6 +91,15 @@ export function stillFrame(anim: AnimName): string[] {
   return [...frameRows(frames[Math.floor((frames.length - 1) / 2)])];
 }
 
+/** A stroll's step of `dx` from `x` in `dir`, turning round at either end of
+ * `min`..`max` (the app's window turns the same way). */
+export function advanceWalk(x: number, dir: -1 | 1, dx: number, min: number, max: number): { x: number; dir: -1 | 1 } {
+  const next = x + dir * dx;
+  if (next > max) return { x: Math.max(min, max - (next - max)), dir: -1 };
+  if (next < min) return { x: Math.min(max, min + (min - next)), dir: 1 };
+  return { x: next, dir };
+}
+
 /** Where a box may sit: inside `bounds`, and on the screen. The bottom edge is
  * allowed, since that is where the pet stands; the other three keep a gap. */
 export function clampBox(
@@ -112,7 +124,7 @@ export function createPet(host: HTMLElement, options: WebPetOptions = {}): WebPe
   const scale = options.scale ?? 6;
   const still = options.still ?? false;
   const sleepAfterMs = options.sleepAfterMs ?? 60_000;
-  const idleAnim = options.idleAnim ?? "soccer";
+  const idleAnims = options.idleAnims ?? ["soccer", "lookAround", "walk"];
   const clickAnim = options.clickAnim ?? "wave";
   const doubleClickAnim = options.doubleClickAnim ?? "hearts";
   const showCounter = options.counter ?? true;
@@ -179,7 +191,6 @@ export function createPet(host: HTMLElement, options: WebPetOptions = {}): WebPe
     () => performance.now(),
   );
   controller.setSleepAfter(sleepAfterMs);
-  controller.setIdleAnim(idleAnim);
 
   /** In still mode nothing animates: an action shows its middle frame for a
    * moment, and then the pet is sitting again. */
@@ -303,6 +314,78 @@ export function createPet(host: HTMLElement, options: WebPetOptions = {}): WebPe
     // It stays where it was put, the way the app's pet stays where you put it.
   };
 
+  // --- strolling ------------------------------------------------------------
+
+  // Along the line it stands on, within the page's width: the page's own
+  // version of the app walking the bottom of the screen.
+  let walkIds = 0;
+  let walking: { id: number; glance?: ReturnType<typeof setTimeout>; frame?: number } | null = null;
+  function endWalk() {
+    if (!walking) return;
+    clearTimeout(walking.glance);
+    if (walking.frame !== undefined) cancelAnimationFrame(walking.frame);
+    walking = null;
+  }
+  const walker: WalkDriver = {
+    start(plan) {
+      if (still || drag || walking || document.hidden) return false;
+      const rect = stage.getBoundingClientRect();
+      const range = clampBox(bounds() ?? rect, rect.width, rect.height);
+      // The range is for where the box sits with no offset; the walk moves the offset.
+      const base = rect.left - offset.x;
+      const min = range.minX - base;
+      const max = range.maxX - base;
+      if (max - min < 1) return false;
+      const id = ++walkIds;
+      let dir: -1 | 1 = plan.dir;
+      if (dir > 0 && offset.x >= max) dir = -1;
+      else if (dir < 0 && offset.x <= min) dir = 1;
+      const frameMs = walkFrameMs(plan.speed, scale);
+      const report = (phase: "glance" | "walk" | "stop") => controller.walkPhase(id, phase, dir, frameMs);
+      let walked = 0;
+      let last = 0;
+      const step = (now: number) => {
+        if (walking?.id !== id) return;
+        const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
+        last = now;
+        const dx = Math.min(plan.speed * dt, plan.distance - walked);
+        walked += dx;
+        const turned = advanceWalk(offset.x, dir, dx, min, max);
+        offset = { x: turned.x, y: offset.y };
+        stage.style.translate = `${offset.x}px ${offset.y}px`;
+        if (turned.dir !== dir) {
+          dir = turned.dir;
+          report("walk");
+        }
+        if (walked >= plan.distance) {
+          endWalk();
+          report("stop");
+          return;
+        }
+        walking.frame = requestAnimationFrame(step);
+      };
+      walking = { id };
+      report("glance");
+      walking.glance = setTimeout(() => {
+        if (walking?.id !== id) return;
+        report("walk");
+        walking.frame = requestAnimationFrame(step);
+      }, GLANCE_MS);
+      return true;
+    },
+    // The controller stopped it, and knows: only the moving stops here.
+    stop: endWalk,
+  };
+  controller.setWalkDriver(walker);
+  controller.setIdleChoices(still ? idleAnims.filter((a) => a !== "walk") : idleAnims);
+  const onHidden = () => {
+    if (!document.hidden || !walking) return;
+    const id = walking.id;
+    endWalk();
+    controller.walkPhase(id, "stop", 1, 0);
+  };
+  document.addEventListener("visibilitychange", onHidden);
+
   // The gestures are always attached — with motion off, a click still shows the
   // pose it would have played — but only a drag that is allowed moves it.
   const detach = attachGestures(stage, {
@@ -336,7 +419,7 @@ export function createPet(host: HTMLElement, options: WebPetOptions = {}): WebPe
     input(activity) {
       wake();
       if (still) {
-        showStill(activity === "typing" ? "typing" : "click");
+        if (activity !== "scroll") showStill(activity === "typing" ? "typing" : "click");
         return;
       }
       controller.input(activity);
@@ -365,6 +448,8 @@ export function createPet(host: HTMLElement, options: WebPetOptions = {}): WebPe
       clearTimeout(stillTimer);
       clearTimeout(blockTimer);
       stopTyping();
+      endWalk();
+      document.removeEventListener("visibilitychange", onHidden);
       detach?.();
       controller.destroy();
       stage.remove();

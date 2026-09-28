@@ -55,6 +55,25 @@ CREATE TABLE hourly(
 ) WITHOUT ROWID;
 ";
 
+/// The schema `init` brings a database up to. A backup made by a newer version
+/// may be ahead of it, and is refused rather than read wrong.
+pub const SCHEMA_VERSION: i64 = 2;
+
+/// The tables a restore copies over, with their columns in order. Every count
+/// the app keeps is in one of these; settings live in their own file.
+const TABLES: [(&str, &str); 4] = [
+    (
+        "daily",
+        "date, keys, click_left, click_right, click_middle, scrolls, move_px, move_mm",
+    ),
+    ("daily_keys", "date, key, count"),
+    ("milestone_state", "id, period, last_value, fired_at"),
+    (
+        "hourly",
+        "date, hour, keys, click_left, click_right, click_middle, scrolls, move_px, move_mm",
+    ),
+];
+
 pub struct Db {
     conn: Connection,
 }
@@ -111,6 +130,65 @@ impl Db {
             tx.commit()?;
         }
         Ok(Self { conn })
+    }
+
+    /// The schema version the file is at.
+    pub fn schema_version(&self) -> rusqlite::Result<i64> {
+        self.conn
+            .pragma_query_value(None, "user_version", |r| r.get(0))
+    }
+
+    /// How many days have counts.
+    pub fn day_count(&self) -> rusqlite::Result<u64> {
+        self.conn
+            .query_row("SELECT COUNT(*) FROM daily", [], |r| r.get::<_, i64>(0))
+            .map(|n| n as u64)
+    }
+
+    /// Whether SQLite finds the file sound.
+    pub fn integrity_ok(&self) -> rusqlite::Result<bool> {
+        let result: String = self
+            .conn
+            .query_row("PRAGMA integrity_check", [], |r| r.get(0))?;
+        Ok(result == "ok")
+    }
+
+    /// Writes a compact, self-contained copy of the database to `to`: one file,
+    /// with nothing left in a write-ahead log beside it. Anything already at
+    /// `to` is replaced.
+    pub fn snapshot_to(&self, to: &Path) -> rusqlite::Result<()> {
+        if let Some(dir) = to.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        // VACUUM INTO will not write over a file.
+        let _ = std::fs::remove_file(to);
+        self.conn
+            .execute("VACUUM INTO ?1", [to.to_string_lossy()])?;
+        Ok(())
+    }
+
+    /// Replaces every count with the ones in the database at `src`, which must
+    /// already be at this schema. All in one transaction: a failure part way
+    /// leaves the counts as they were.
+    pub fn replace_from(&mut self, src: &Path) -> rusqlite::Result<()> {
+        self.conn
+            .execute("ATTACH DATABASE ?1 AS src", [src.to_string_lossy()])?;
+        let copied = self.copy_attached();
+        let detached = self.conn.execute("DETACH DATABASE src", []);
+        copied?;
+        detached.map(|_| ())
+    }
+
+    fn copy_attached(&mut self) -> rusqlite::Result<()> {
+        let tx = self.conn.transaction()?;
+        for (table, cols) in TABLES {
+            tx.execute(&format!("DELETE FROM main.{table}"), [])?;
+            tx.execute(
+                &format!("INSERT INTO main.{table}({cols}) SELECT {cols} FROM src.{table}"),
+                [],
+            )?;
+        }
+        tx.commit()
     }
 
     /// Adds a day's delta to what is stored.
@@ -686,6 +764,96 @@ mod tests {
             .pragma_query_value(None, "user_version", |r| r.get(0))
             .unwrap();
         assert_eq!(version, 2);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn temp_dir(name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("jdp-db-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn a_new_database_is_at_the_current_schema() {
+        let db = Db::open_in_memory().unwrap();
+        assert_eq!(db.schema_version().unwrap(), SCHEMA_VERSION);
+        assert!(db.integrity_ok().unwrap());
+    }
+
+    #[test]
+    fn a_snapshot_holds_every_day() {
+        let dir = temp_dir("snapshot");
+        let mut db = Db::open(&dir.join("stats.sqlite")).unwrap();
+        db.add_day(day(2026, 9, 22), &delta(3, &[("KeyA", 3)]))
+            .unwrap();
+        db.add_day(day(2026, 9, 23), &hourly(&[(9, 4)])).unwrap();
+        db.save_reached("life-100k", LIFETIME, 100_000.0, 1)
+            .unwrap();
+        let copy = dir.join("copy.sqlite");
+        std::fs::write(&copy, b"in the way").unwrap();
+        db.snapshot_to(&copy).unwrap();
+
+        let snap = Db::open(&copy).unwrap();
+        assert_eq!(snap.schema_version().unwrap(), SCHEMA_VERSION);
+        assert_eq!(snap.day_count().unwrap(), 2);
+        assert_eq!(snap.load_day(day(2026, 9, 22)).unwrap().per_key["KeyA"], 3);
+        assert_eq!(
+            snap.hours(day(2026, 9, 23), day(2026, 9, 23)).unwrap()[9].keys,
+            4
+        );
+        assert_eq!(snap.load_reached(day(2026, 9, 23)).unwrap().0.len(), 1);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn replacing_takes_every_table_from_the_source() {
+        let dir = temp_dir("replace");
+        let src_path = dir.join("src.sqlite");
+        {
+            let mut src = Db::open(&src_path).unwrap();
+            src.add_day(day(2026, 1, 1), &delta(9, &[("KeyZ", 9)]))
+                .unwrap();
+            src.add_day(day(2026, 1, 1), &hourly(&[(8, 1)])).unwrap();
+            src.save_reached("daily-1k", "2026-01-01", 1000.0, 1)
+                .unwrap();
+        }
+        let mut db = Db::open(&dir.join("stats.sqlite")).unwrap();
+        db.add_day(day(2026, 9, 23), &delta(5, &[("KeyA", 5)]))
+            .unwrap();
+        db.save_reached("life-100k", LIFETIME, 100_000.0, 1)
+            .unwrap();
+
+        db.replace_from(&src_path).unwrap();
+        assert_eq!(db.day_count().unwrap(), 1);
+        assert!(db.load_day(day(2026, 9, 23)).unwrap().is_empty());
+        let restored = db.load_day(day(2026, 1, 1)).unwrap();
+        assert_eq!(restored.totals.keys, 10);
+        assert_eq!(restored.per_key["KeyZ"], 9);
+        assert_eq!(restored.per_hour[8].keys, 1);
+        assert!(db.load_reached(day(2026, 9, 23)).unwrap().0.is_empty());
+        // Still a working database after: the source is let go of.
+        db.add_day(day(2026, 9, 24), &delta(1, &[])).unwrap();
+        assert_eq!(db.day_count().unwrap(), 2);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_failed_replace_leaves_the_counts_alone() {
+        let dir = temp_dir("replace-bad");
+        let src_path = dir.join("src.sqlite");
+        {
+            // Some other database: none of the tables a restore needs.
+            let conn = Connection::open(&src_path).unwrap();
+            conn.execute_batch("CREATE TABLE daily(date TEXT PRIMARY KEY);")
+                .unwrap();
+        }
+        let mut db = Db::open(&dir.join("stats.sqlite")).unwrap();
+        db.add_day(day(2026, 9, 23), &delta(5, &[("KeyA", 5)]))
+            .unwrap();
+        assert!(db.replace_from(&src_path).is_err());
+        assert_eq!(db.load_day(day(2026, 9, 23)).unwrap().totals.keys, 5);
+        assert_eq!(db.day_count().unwrap(), 1);
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

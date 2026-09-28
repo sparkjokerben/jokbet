@@ -55,6 +55,8 @@ pub fn apply_patch<R: Runtime>(
         });
     }
     if next.pet_scale != before.pet_scale {
+        // A walk is sized for the window it set off with.
+        crate::walker::stop(app, crate::walker::Stop::Now);
         if let Some(window) = app.get_webview_window(pet_window::PET_LABEL) {
             pet_window::apply_size(&window, before.pet_scale, next.pet_scale)
                 .map_err(|e| e.to_string())?;
@@ -140,10 +142,29 @@ pub fn set_glass_bubble(app: AppHandle, rect: Option<[f64; 4]>, radius: f64, sys
 
 /// The pet starts a native window drag; the hover thread reports its end.
 #[tauri::command]
-pub fn pet_drag_start(hover: State<'_, HoverState>) {
+pub fn pet_drag_start(app: AppHandle, hover: State<'_, HoverState>) {
     hover
         .dragging
         .store(true, std::sync::atomic::Ordering::Release);
+    crate::walker::stop(&app, crate::walker::Stop::Moved);
+}
+
+/// Sets off on a stroll along the bottom of the screen; `None` when the pet
+/// is not standing there, or is busy.
+#[tauri::command]
+pub fn walk_start(app: AppHandle, speed: f64, distance: f64, dir: i8) -> Option<u32> {
+    crate::walker::start(&app, speed, distance, dir)
+}
+
+#[tauri::command]
+pub fn walk_stop(app: AppHandle) {
+    crate::walker::stop(&app, crate::walker::Stop::Now);
+}
+
+/// The pet was clicked, which is how a break reminder is waved away.
+#[tauri::command]
+pub fn rest_ack(runtime: State<'_, RuntimeHandle>) {
+    runtime.send(Control::RestAck);
 }
 
 #[tauri::command]
@@ -160,7 +181,9 @@ pub fn show_context_menu(
 
 /// The pet has registered its listeners; resend status and counters.
 #[tauri::command]
-pub fn pet_ready(runtime: State<'_, RuntimeHandle>) {
+pub fn pet_ready(app: AppHandle, runtime: State<'_, RuntimeHandle>) {
+    // A page that has just loaded knows of no walk: none is to go on without it.
+    crate::walker::stop(&app, crate::walker::Stop::Now);
     runtime.send(Control::PetReady);
 }
 
@@ -189,6 +212,37 @@ pub async fn export_csv(dir: PathBuf, runtime: State<'_, RuntimeHandle>) -> Resu
 pub async fn clear_data(runtime: State<'_, RuntimeHandle>) -> Result<(), String> {
     let rt = runtime.inner().clone();
     off_main(move || rt.clear()).await
+}
+
+/// A backup of every count and the settings, to `path`.
+#[tauri::command]
+pub async fn backup_create(app: AppHandle, path: PathBuf) -> Result<(), String> {
+    off_main(move || crate::backup::create(&app, &path)).await
+}
+
+/// The backups in the backup folders, newest first, and where those are.
+#[tauri::command]
+pub async fn list_backups(app: AppHandle) -> Result<crate::backup::BackupList, String> {
+    off_main(move || crate::backup::list_all(&app)).await
+}
+
+/// What a backup the user picked is, or why it cannot be restored.
+#[tauri::command]
+pub async fn inspect_backup(
+    app: AppHandle,
+    path: PathBuf,
+) -> Result<crate::backup::BackupInfo, String> {
+    off_main(move || crate::backup::inspect_file(&app, &path)).await
+}
+
+/// Replaces every count with a backup's, and the settings too if asked.
+#[tauri::command]
+pub async fn restore_backup(
+    app: AppHandle,
+    path: PathBuf,
+    with_settings: bool,
+) -> Result<crate::backup::RestoreReport, String> {
+    off_main(move || crate::backup::restore(&app, &path, with_settings)).await
 }
 
 #[tauri::command]
@@ -241,6 +295,11 @@ pub fn open_external(app: AppHandle, target: String) -> Result<(), String> {
         "github" => opener.open_url("https://github.com/sparkjokerben/jokbet", None::<&str>),
         "logs" => {
             let dir = app.path().app_log_dir().map_err(|e| e.to_string())?;
+            std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+            opener.open_path(dir.to_string_lossy(), None::<&str>)
+        }
+        "backups" => {
+            let dir = crate::backup::auto_dir(&app)?;
             std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
             opener.open_path(dir.to_string_lossy(), None::<&str>)
         }

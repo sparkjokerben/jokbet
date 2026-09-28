@@ -23,6 +23,20 @@ export function formatRate(n: number, l: Lang = defaultLang): string {
   return new Intl.NumberFormat(locale(l), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
 }
 
+/** A moment, such as when a backup was made: date and time, in local time. */
+export function formatWhen(iso: string, l: Lang = defaultLang): string {
+  const when = new Date(iso);
+  if (Number.isNaN(when.getTime())) return iso;
+  return new Intl.DateTimeFormat(locale(l), { dateStyle: "medium", timeStyle: "short" }).format(when);
+}
+
+/** What a manual backup is called by default: `jokbet-backup-20260928-1530.zip`. */
+export function backupFileName(now: Date = new Date()): string {
+  const two = (n: number) => String(n).padStart(2, "0");
+  const day = `${now.getFullYear()}${two(now.getMonth() + 1)}${two(now.getDate())}`;
+  return `jokbet-backup-${day}-${two(now.getHours())}${two(now.getMinutes())}.zip`;
+}
+
 export function formatDistance(mm: number, l: Lang = defaultLang): string {
   const m = mm / 1000;
   if (m >= 1000) return t("kilometers", { n: (m / 1000).toFixed(2) }, l);

@@ -5,16 +5,13 @@
   import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
   import { onMount } from "svelte";
   import { t } from "../../lib/i18n";
-  import type { ActionAnim, IdleAnim, Settings, Status } from "../../lib/types";
+  import type { ActionAnim, Settings, Status } from "../../lib/types";
   import { PetController } from "../../pet/controller";
   import { attachGestures } from "../../pet/gestures";
   import Sprite from "../../pet/Sprite.svelte";
-  import type { AnimName } from "../../sprites/jokbet";
 
   type Step = "welcome" | "permission" | "autostart";
 
-  /** The idle animation setting, as the sprite knows it. */
-  const IDLE: Record<IdleAnim, AnimName> = { breathe: "idle", soccer: "soccer", lookAround: "lookAround" };
   /** A granted permission that still yields no events this long needs a restart. */
   const RESTART_HINT_AFTER_MS = 3000;
   /** Opened from the settings to see every step again. */
@@ -61,7 +58,8 @@
 
   function applySettings(s: Settings) {
     settings = s;
-    pet.setIdleAnim(IDLE[s.idleAnim]);
+    // No walk driver here: the pet in this window stays put, and never strolls.
+    pet.setIdleChoices(s.idleAnims);
   }
 
   function react(anim: ActionAnim | undefined) {

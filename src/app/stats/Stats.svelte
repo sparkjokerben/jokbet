@@ -131,10 +131,13 @@
     invoke<Status>("get_status").then((s) => (storage = s.storage), () => {});
     invoke<Settings>("get_settings").then((s) => (palette = s.heatmapPalette), () => {});
     const un = listen<Settings>("settings://changed", (e) => (palette = e.payload.heatmapPalette));
+    // A restore (or a clear from elsewhere) replaces what is on screen.
+    const unData = listen("app://data-changed", load);
     const id = setInterval(load, REFRESH_MS);
     return () => {
       clearInterval(id);
       un.then((f) => f());
+      unData.then((f) => f());
     };
   });
 </script>

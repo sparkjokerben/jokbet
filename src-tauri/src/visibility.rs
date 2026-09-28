@@ -18,6 +18,13 @@ pub struct PetVisibility {
     covered: AtomicBool,
 }
 
+/// Whether the pet is on screen: neither hidden by the user nor out of the
+/// way of a full-screen app.
+pub fn shown<R: Runtime>(app: &AppHandle<R>) -> bool {
+    let state = app.state::<PetVisibility>();
+    !state.user_hidden.load(Ordering::Acquire) && !state.covered.load(Ordering::Acquire)
+}
+
 /// Hides the pet if the user had it shown, and the other way round.
 pub fn toggle<R: Runtime>(app: &AppHandle<R>) {
     let state = app.state::<PetVisibility>();

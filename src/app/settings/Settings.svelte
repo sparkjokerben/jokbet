@@ -2,13 +2,19 @@
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
+  import { message, open, save } from "@tauri-apps/plugin-dialog";
   import { onMount } from "svelte";
+  import { backupFileName, formatWhen } from "../../lib/format";
   import { t, type MessageKey } from "../../lib/i18n";
   import {
+    BACKUP_KEEP_MAX,
     GLASS_TINT_MAX,
     PET_SCALE_MAX,
     PET_SCALE_MIN,
+    REST_AFTER_MIN,
+    REST_GAP_MIN,
     type ActionAnim,
+    type BackupList,
     type IdleAnim,
     type HeatmapPalette,
     type Language,
@@ -21,9 +27,14 @@
   import Toggle from "../ui/Toggle.svelte";
   import About from "./About.svelte";
   import MilestoneEditor from "./MilestoneEditor.svelte";
+  import RestoreDialog from "./RestoreDialog.svelte";
 
   let s = $state<Settings | null>(null);
   let error = $state("");
+  let backups = $state<BackupList | null>(null);
+  let restoring = $state(false);
+  /** This computer's newest daily backup, for the line under the switch. */
+  const lastAuto = $derived(backups?.items.find((b) => b.kind === "auto" && !b.otherDevice) ?? null);
   let autostart = $state<boolean | null>(null);
   /** Which system material is available: "none" hides the switch. */
   let glass = $state("none");
@@ -37,10 +48,24 @@
   const isMac = platform === "mac";
 
   const IDLE_OPTIONS: { value: IdleAnim; label: string }[] = [
-    { value: "breathe", label: t("animBreathe") },
     { value: "soccer", label: t("animSoccer") },
     { value: "lookAround", label: t("animLookAround") },
+    { value: "walk", label: t("animWalk") },
   ];
+
+  /** Ticks or unticks one idle animation, keeping the list in the order shown. */
+  function setIdle(anim: IdleAnim, on: boolean) {
+    const now = new Set(s!.idleAnims);
+    if (on) now.add(anim);
+    else now.delete(anim);
+    update({ idleAnims: IDLE_OPTIONS.map((o) => o.value).filter((v) => now.has(v)) });
+  }
+
+  /** A whole number of minutes within a range, or nothing if that is not what was typed. */
+  const minutes = (value: string, [min, max]: readonly [number, number]) => {
+    const n = Math.round(Number(value));
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : null;
+  };
   // Each language names itself, so it can be found from either.
   const LANGUAGE_OPTIONS: { value: Language; label: string }[] = [
     { value: "system", label: t("languageSystem") },
@@ -89,6 +114,31 @@
     }
   }
 
+  function loadBackups() {
+    invoke<BackupList>("list_backups").then((v) => (backups = v), () => {});
+  }
+
+  async function backupNow() {
+    const dir = backups?.dir;
+    const name = backupFileName();
+    const path = await save({
+      defaultPath: dir ? `${dir}/${name}` : name,
+      filters: [{ name: t("backupFilter"), extensions: ["zip"] }],
+    });
+    if (!path) return;
+    try {
+      await invoke("backup_create", { path });
+      await message(t("backupDone", { path }));
+    } catch (e) {
+      await message(t("backupFailed", { error: String(e) }), { kind: "error" });
+    }
+  }
+
+  async function chooseBackupDir() {
+    const dir = await open({ directory: true, defaultPath: backups?.dir });
+    if (typeof dir === "string") await update({ autoBackup: { dir } });
+  }
+
   onMount(() => {
     invoke<Settings>("get_settings").then(
       (v) => (s = v),
@@ -96,8 +146,16 @@
     );
     invoke<string>("glass_support").then((v) => (glass = v));
     isEnabled().then((v) => (autostart = v), () => {});
-    const un = listen<Settings>("settings://changed", (e) => (s = e.payload));
-    return () => un.then((f) => f());
+    loadBackups();
+    const un = listen<Settings>("settings://changed", (e) => {
+      s = e.payload;
+      loadBackups();
+    });
+    const unBackups = listen("app://backups-changed", loadBackups);
+    return () => {
+      un.then((f) => f());
+      unBackups.then((f) => f());
+    };
   });
 </script>
 
@@ -135,15 +193,59 @@
     </section>
 
     <section class="card">
+      <h2>{t("sectionRest")}</h2>
+      <Toggle
+        label={t("restEnabled")}
+        checked={s.restReminder.enabled}
+        onchange={(v) => update({ restReminder: { enabled: v } })}
+      />
+      <label class="field" class:off={!s.restReminder.enabled}>
+        <span>{t("restAfter")}</span>
+        <input
+          type="number"
+          min={REST_AFTER_MIN[0]}
+          max={REST_AFTER_MIN[1]}
+          value={s.restReminder.afterMin}
+          onchange={(e) => {
+            const n = minutes(e.currentTarget.value, REST_AFTER_MIN);
+            if (n !== null) update({ restReminder: { afterMin: n } });
+          }}
+        />
+      </label>
+      <label class="field" class:off={!s.restReminder.enabled}>
+        <span>{t("restGap")}</span>
+        <input
+          type="number"
+          min={REST_GAP_MIN[0]}
+          max={REST_GAP_MIN[1]}
+          value={s.restReminder.gapMin}
+          onchange={(e) => {
+            const n = minutes(e.currentTarget.value, REST_GAP_MIN);
+            if (n !== null) update({ restReminder: { gapMin: n } });
+          }}
+        />
+      </label>
+      <p class="muted small">{t("restHint")}</p>
+    </section>
+
+    <section class="card">
       <h2>{t("sectionAnims")}</h2>
       <div class="field">
         <span>{t("idleAnim")}</span>
-        <Segmented
-          label={t("idleAnim")}
-          bind:value={() => s!.idleAnim, (v: IdleAnim) => update({ idleAnim: v })}
-          options={IDLE_OPTIONS}
-        />
+        <div class="checks" role="group" aria-label={t("idleAnim")}>
+          {#each IDLE_OPTIONS as option (option.value)}
+            <label>
+              <input
+                type="checkbox"
+                checked={s.idleAnims.includes(option.value)}
+                onchange={(e) => setIdle(option.value, e.currentTarget.checked)}
+              />
+              {option.label}
+            </label>
+          {/each}
+        </div>
       </div>
+      <p class="muted small">{t("idleAnimHint")}</p>
       <div class="field">
         <span>{t("clickAnim")}</span>
         <Segmented
@@ -312,6 +414,58 @@
       </div>
     </section>
 
+    <section class="card">
+      <h2>{t("sectionData")}</h2>
+      <Toggle
+        label={t("autoBackup")}
+        checked={s.autoBackup.enabled}
+        onchange={(v) => update({ autoBackup: { enabled: v } })}
+      />
+      <div class="field" class:off={!s.autoBackup.enabled}>
+        <span>{t("backupDir")}</span>
+        <span class="dir">
+          <span class="path" title={backups?.dir}>{s.autoBackup.dir ?? t("backupDirDefault")}</span>
+          <button class="btn" onclick={chooseBackupDir}>{t("chooseDir")}</button>
+          {#if s.autoBackup.dir}
+            <button class="btn" onclick={() => update({ autoBackup: { dir: null } })}>{t("useDefaultDir")}</button>
+          {/if}
+        </span>
+      </div>
+      <label class="field" class:off={!s.autoBackup.enabled}>
+        <span>{t("backupKeep")}</span>
+        <input
+          type="number"
+          min="1"
+          max={BACKUP_KEEP_MAX}
+          value={s.autoBackup.keep}
+          onchange={(e) => update({ autoBackup: { keep: Math.round(Number(e.currentTarget.value)) } })}
+        />
+      </label>
+      {#if s.autoBackup.enabled && backups}
+        {#if backups.lastError}
+          <p class="error small">{t("backupAutoFailed", { error: backups.lastError })}</p>
+        {:else}
+          <p class="muted small">
+            {lastAuto ? t("backupLast", { when: formatWhen(lastAuto.createdAt) }) : t("backupNever")}
+          </p>
+        {/if}
+      {/if}
+      <div class="actions">
+        <button class="btn" onclick={backupNow}>{t("backupNow")}</button>
+        <button class="btn" onclick={() => (restoring = true)}>{t("restoreOpen")}</button>
+        <button class="btn" onclick={() => invoke("open_external", { target: "backups" })}>{t("openBackupDir")}</button>
+      </div>
+    </section>
+
+    {#if restoring}
+      <RestoreDialog
+        onclose={() => {
+          restoring = false;
+          loadBackups();
+        }}
+      />
+    {/if}
+
     <About />
 
     {#if error}
@@ -387,5 +541,18 @@
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 6px;
+  }
+  .dir {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+  .path {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-secondary);
   }
 </style>

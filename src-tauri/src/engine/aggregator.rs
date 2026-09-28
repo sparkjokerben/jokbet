@@ -89,6 +89,8 @@ impl DayCounters {
 pub enum Activity {
     Typing,
     Click,
+    /// Someone is there, but the pet has nothing to act out for it.
+    Scroll,
 }
 
 #[derive(Default)]
@@ -151,14 +153,16 @@ impl Aggregator {
                 Some(Activity::Click)
             }
             RawEvent::Button { down: false, .. } => None,
+            // The glide after a flick is the system's, not the user's.
             RawEvent::Scroll { momentum: true } => None,
-            // Scrolls are counted but do not change what the pet is doing.
+            // Scrolling keeps the pet awake and counts towards a break, but
+            // does not change what it is doing.
             RawEvent::Scroll { momentum: false } => {
                 if self.scroll.feed(e.t_ms) && !self.paused {
                     self.today.apply(hour, |t| t.scrolls += 1);
                     self.pending.apply(hour, |t| t.scrolls += 1);
                 }
-                None
+                Some(Activity::Scroll)
             }
             RawEvent::Move { x, y } => {
                 let (px, mm) = self.distance.feed(x, y, displays);
@@ -317,8 +321,24 @@ mod tests {
             Some(Activity::Typing)
         );
         feed(&mut a, click(10, MouseButton::Left));
+        assert_eq!(
+            a.ingest(ev(20, RawEvent::Scroll { momentum: false }), &map, 12),
+            Some(Activity::Scroll)
+        );
         assert!(a.today.is_empty());
         assert_eq!(a.keys_per_second(100), 0.0);
+    }
+
+    #[test]
+    fn a_scroll_is_activity_and_its_momentum_is_not() {
+        let mut a = Aggregator::default();
+        let map = DisplayMap::default();
+        let scroll = |t, momentum| ev(t, RawEvent::Scroll { momentum });
+        assert_eq!(a.ingest(scroll(0, false), &map, 9), Some(Activity::Scroll));
+        assert_eq!(a.ingest(scroll(16, false), &map, 9), Some(Activity::Scroll));
+        assert_eq!(a.ingest(scroll(400, true), &map, 9), None);
+        let mv = ev(500, RawEvent::Move { x: 10.0, y: 10.0 });
+        assert_eq!(a.ingest(mv, &map, 9), None, "moving the mouse is not");
     }
 
     #[test]
