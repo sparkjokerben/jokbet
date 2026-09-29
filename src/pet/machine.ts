@@ -105,10 +105,18 @@ export function walkFrameMs(speed: number, scale: number): number {
 
 /** Where a stroll goes, and how long it takes: a point anywhere along the
  * line the pet stands on (0 its left end, 1 its right), and 3 to 15 seconds.
- * The way to go and the speed follow from where the pet is. */
+ * The way to go and the speed follow from where the pet is (see walkPace). */
 export interface WalkPlan {
   target: number;
   seconds: number;
+}
+
+/** Logical pixels a second, to go `distance` in about `seconds`: as asked, if
+ * that is between 30 and 120, else the nearer of those — any slower and the
+ * steps outpace the ground, any faster and it slides (the app's walker::pace). */
+export function walkPace(distance: number, seconds: number): number {
+  const time = Math.min(15, Math.max(3, seconds));
+  return Math.min(120, Math.max(30, distance / time));
 }
 
 export function walkPlan(random: () => number = Math.random): WalkPlan {

@@ -4,7 +4,8 @@
 //! The page decides when to go, and rolls the dice for where to and how long
 //! to take: a point anywhere along the line the pet stands on, and a few
 //! seconds to get there in. This side knows the screen, so it turns those into
-//! a way to go and a speed, and moves the window. It walks only on the bottom
+//! a way to go and a speed (kept to an amble or a brisk walk, so it may take a
+//! little shorter or longer than that), and moves the window. It walks only on the bottom
 //! of the work area — standing on the Dock or the taskbar — so a pet put down
 //! somewhere in the middle of the screen stays where it was put. A stroll stops
 //! the moment anything else needs the pet, and saves where it ended up once,
@@ -26,6 +27,10 @@ const STEP: Duration = Duration::from_millis(33);
 const GLANCE: Duration = Duration::from_millis(500);
 /// How long a stroll may take, in seconds.
 const SECONDS: (f64, f64) = (3.0, 15.0);
+/// How fast it may go, in logical pixels a second, whatever the distance and
+/// the time: any slower and its steps outpace the ground, any faster and
+/// it slides.
+const SPEED: (f64, f64) = (30.0, 120.0);
 /// The shortest stroll worth walking, in logical pixels: a point picked
 /// nearer than this is no stroll at all.
 const SHORTEST: f64 = 60.0;
@@ -93,6 +98,12 @@ pub fn plan(x: f64, target: f64, (min, max): (f64, f64), shortest: f64) -> Optio
     (distance >= shortest).then_some((if to < x { -1 } else { 1 }, distance))
 }
 
+/// Logical pixels a second, to go `distance` logical pixels in about
+/// `seconds`: as asked, if that is neither too slow nor too fast.
+pub fn pace(distance: f64, seconds: f64) -> f64 {
+    (distance / seconds.clamp(SECONDS.0, SECONDS.1)).clamp(SPEED.0, SPEED.1)
+}
+
 /// The work area of the monitor the point is on.
 fn work_area_at<R: Runtime>(window: &WebviewWindow<R>, (x, y): (i32, i32)) -> Option<Rect> {
     window.available_monitors().ok()?.iter().find_map(|m| {
@@ -138,7 +149,6 @@ pub fn start<R: Runtime>(app: &AppHandle<R>, target: f64, seconds: f64) -> Optio
     }
     let range = range_x(work_area, win_w);
     let (dir, distance) = plan(f64::from(pos.x), target, range, SHORTEST * sf)?;
-    let seconds = seconds.clamp(SECONDS.0, SECONDS.1);
     let id = state
         .next_id
         .fetch_add(1, Ordering::Relaxed)
@@ -158,7 +168,7 @@ pub fn start<R: Runtime>(app: &AppHandle<R>, target: f64, seconds: f64) -> Optio
         y: work_area.y + work_area.h - win_h,
         dir,
         distance,
-        speed: distance / seconds,
+        speed: pace(distance / sf, seconds) * sf,
         scale_factor: sf,
         range,
     };
@@ -326,6 +336,18 @@ mod tests {
         assert_eq!(plan(0.0, 1.0, (200.0, 1200.0), 60.0), Some((1, 1200.0)));
         // Never past the ends, whatever it is asked.
         assert_eq!(plan(500.0, 1.5, range, 60.0), Some((1, 500.0)));
+    }
+
+    #[test]
+    fn it_takes_the_time_asked_within_a_walking_pace() {
+        assert_eq!(pace(600.0, 10.0), 60.0);
+        // Too far to go in the time at a walk: it takes longer.
+        assert_eq!(pace(1200.0, 3.0), 120.0);
+        // Too near to take that long over: it gets there sooner.
+        assert_eq!(pace(60.0, 15.0), 30.0);
+        // The time is kept to 3 to 15 seconds first.
+        assert_eq!(pace(300.0, 1.0), 100.0);
+        assert_eq!(pace(900.0, 60.0), 60.0);
     }
 
     #[test]

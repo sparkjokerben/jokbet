@@ -12,6 +12,7 @@ import {
   typingFrameMs,
   typingReactMs,
   walkFrameMs,
+  walkPace,
   walkPlan,
   type Signals,
 } from "./machine";
@@ -85,6 +86,12 @@ describe("walking", () => {
     const far = walkPlan(() => 0.999);
     expect(far.target).toBeLessThan(1);
     expect(far.seconds).toBeLessThan(15);
+  });
+  it("takes the time asked, within a walking pace", () => {
+    expect(walkPace(600, 10)).toBe(60);
+    expect(walkPace(1200, 3)).toBe(120);
+    expect(walkPace(60, 15)).toBe(30);
+    expect(walkPace(300, 1)).toBe(100);
   });
   it("picks among the chosen idle animations", () => {
     expect(pickIdle([], () => 0.5)).toBeNull();

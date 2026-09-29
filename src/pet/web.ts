@@ -15,7 +15,7 @@ import { compileGrid } from "../sprites/compile.ts";
 import { ANIMS, GRID_H, GRID_W, PET_H, PET_W, PET_X, PET_Y, frameRows, type AnimName } from "../sprites/jokbet.ts";
 import { PetController, type WalkDriver } from "./controller.ts";
 import { attachGestures } from "./gestures.ts";
-import { walkFrameMs, type Blocked, type IdleChoice, type Input, type OneShot } from "./machine.ts";
+import { walkFrameMs, walkPace, type Blocked, type IdleChoice, type Input, type OneShot } from "./machine.ts";
 
 /** The app's own lift above the pet's box (src/pet/Pet.svelte). */
 const ABOVE_LIFT = 8;
@@ -346,8 +346,7 @@ export function createPet(host: HTMLElement, options: WebPetOptions = {}): WebPe
       const planned = planStroll(offset.x, plan.target, min, max);
       if (!planned) return false;
       const { dir, distance } = planned;
-      const seconds = Math.min(15, Math.max(3, plan.seconds));
-      const speed = distance / seconds;
+      const speed = walkPace(distance, plan.seconds);
       const id = ++walkIds;
       const frameMs = walkFrameMs(speed, scale);
       const report = (phase: "glance" | "walk" | "stop") => controller.walkPhase(id, phase, dir, frameMs);

@@ -31,9 +31,10 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   waits while the pet is hidden, and nothing adds up while counting is paused.
 - **Strolls.** While idle, the pet now and then takes a walk along the bottom of
   the screen — on the Dock or the taskbar — turned the way it is going and
-  bobbing as it steps. It picks a spot anywhere along the way and takes three to
-  fifteen seconds to get there, so a long way in a short time is a brisk walk
-  and a short way in a long one an amble. It stops the moment you type, click or
+  bobbing as it steps. It picks a spot anywhere along the way and three to
+  fifteen seconds to get there in, so a long way in a short time is a brisk
+  walk and a short way in a long one an amble — never slower or faster than a
+  walk, though, which can make the trip a little longer or shorter. It stops the moment you type, click or
   scroll, and stays where it stopped. A pet put down in the middle of the screen
   stays put. The one on the website strolls too.
 
