@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { compileGrid } from "../sprites/compile.ts";
 import { GRID_H, GRID_W } from "../sprites/jokbet.ts";
-import { clampBox, gazeFor, planLeg, stillFrame } from "./web.ts";
+import { clampBox, gazeFor, planStroll, stillFrame } from "./web.ts";
 
 const pet = { x: 100, y: 100, w: 120, h: 80 };
 
@@ -46,16 +46,17 @@ describe("the reduced-motion pose", () => {
 });
 
 describe("a stroll along the page", () => {
-  it("goes the way asked when there is room, stopping short of the edge", () => {
-    expect(planLeg(500, 1, 300, 0, 1000)).toEqual({ dir: 1, distance: 300 });
-    expect(planLeg(500, -1, 300, 0, 1000)).toEqual({ dir: -1, distance: 300 });
-    expect(planLeg(900, 1, 300, 0, 1000)).toEqual({ dir: 1, distance: 100 });
+  it("goes to the point picked along the line, either way", () => {
+    expect(planStroll(500, 0.8, 0, 1000)).toEqual({ dir: 1, distance: 300 });
+    expect(planStroll(500, 0.2, 0, 1000)).toEqual({ dir: -1, distance: 300 });
+    expect(planStroll(1000, 0, 0, 1000)).toEqual({ dir: -1, distance: 1000 });
+    // Never past the ends, whatever it is asked.
+    expect(planStroll(500, 1.5, 0, 1000)).toEqual({ dir: 1, distance: 500 });
   });
 
-  it("goes the other way when there is no room, and not at all with none either way", () => {
-    expect(planLeg(984, 1, 300, 0, 1000)).toEqual({ dir: -1, distance: 300 });
-    expect(planLeg(20, -1, 300, 0, 1000)).toEqual({ dir: 1, distance: 300 });
-    expect(planLeg(50, 1, 300, 0, 100)).toBeNull();
+  it("does not go when the point is too near", () => {
+    expect(planStroll(500, 0.55, 0, 1000)).toBeNull();
+    expect(planStroll(50, 1, 0, 100)).toBeNull();
   });
 });
 

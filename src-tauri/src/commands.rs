@@ -149,11 +149,12 @@ pub fn pet_drag_start(app: AppHandle, hover: State<'_, HoverState>) {
     crate::walker::stop(&app, crate::walker::Stop::Moved);
 }
 
-/// Sets off on a stroll along the bottom of the screen, a leg or two; `None`
-/// when the pet is not standing there, or is busy.
+/// Sets off on a stroll along the bottom of the screen, to the point `target`
+/// of the way along it (0 to 1) in `seconds`; `None` when the pet is not
+/// standing there, is busy, or is there already.
 #[tauri::command]
-pub fn walk_start(app: AppHandle, speed: f64, legs: Vec<crate::walker::Leg>) -> Option<u32> {
-    crate::walker::start(&app, speed, &legs)
+pub fn walk_start(app: AppHandle, target: f64, seconds: f64) -> Option<u32> {
+    crate::walker::start(&app, target, seconds)
 }
 
 #[tauri::command]

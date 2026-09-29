@@ -590,8 +590,7 @@ var N = [{
 				1,
 				0,
 				1
-			],
-			armL: "up"
+			]
 		}
 	},
 	{
@@ -628,8 +627,7 @@ var N = [{
 				0,
 				1,
 				0
-			],
-			armR: "up"
+			]
 		}
 	}
 ], F = {
@@ -985,50 +983,42 @@ var L = {
 	typing: 1e3,
 	click: 300
 }, R = 6e3, z = 400;
-function ee(e) {
+function B(e) {
 	let t = Math.max(0, e) / 1e3;
 	return Math.min(R, L.typing + z * Math.sqrt(t));
 }
-var B = (e) => Math.max(e.lastInputAt, e.lastScrollAt);
-function V(e, t) {
-	return e.blocked ? e.blocked : e.dragging ? "dragged" : t < e.celebrateUntil ? "celebrate" : e.oneShot && t < e.oneShot.until ? e.oneShot.anim : t - B(e) >= e.sleepAfterMs ? "sleep" : e.lastActivity && t - e.lastInputAt < e.reactMs ? e.lastActivity : e.walk ? "walk" : "idle";
+var V = (e) => Math.max(e.lastInputAt, e.lastScrollAt);
+function H(e, t) {
+	return e.blocked ? e.blocked : e.dragging ? "dragged" : t < e.celebrateUntil ? "celebrate" : e.oneShot && t < e.oneShot.until ? e.oneShot.anim : t - V(e) >= e.sleepAfterMs ? "sleep" : e.lastActivity && t - e.lastInputAt < e.reactMs ? e.lastActivity : e.walk ? "walk" : "idle";
 }
-function te(e, t) {
+function ee(e, t) {
 	return Math.min(250, Math.max(60, Math.round(1e3 * t / Math.max(e, 1))));
 }
-var H = .4;
 function U(e = Math.random) {
-	let t = 30 + 20 * e(), n = e() < .5 ? -1 : 1, r = [{
-		dir: n,
-		distance: 100 + 400 * e()
-	}];
-	return e() < H && r.push({
-		dir: n === 1 ? -1 : 1,
-		distance: 60 + 200 * e()
-	}), {
-		speed: t,
-		legs: r
+	return {
+		target: e(),
+		seconds: 3 + 12 * e()
 	};
 }
-function ne(e, t = Math.random) {
+function W(e, t = Math.random) {
 	return e.length ? e[Math.min(e.length - 1, Math.floor(t() * e.length))] : null;
 }
-function re(e, t) {
-	let n = [e.celebrateUntil, e.sleepAfterMs + B(e)];
+function te(e, t) {
+	let n = [e.celebrateUntil, e.sleepAfterMs + V(e)];
 	return e.oneShot && n.push(e.oneShot.until), e.lastActivity && n.push(e.lastInputAt + e.reactMs), Math.min(Infinity, ...n.filter((e) => e > t));
 }
-function ie(e) {
+function ne(e) {
 	return Math.min(350, Math.max(70, Math.round(350 / Math.max(e, .1))));
 }
-var W = (e) => e.reduce((e, t) => e + t, 0);
-function G(e) {
-	return W(e.frames.map((e) => e.ms));
+var G = (e) => e.reduce((e, t) => e + t, 0);
+function K(e) {
+	return G(e.frames.map((e) => e.ms));
 }
-function ae(e) {
-	return W(e.frames.slice(0, e.loop ? e.loopFrom ?? 0 : 0).map((e) => e.ms));
+function re(e) {
+	return G(e.frames.slice(0, e.loop ? e.loopFrom ?? 0 : 0).map((e) => e.ms));
 }
-function oe(e, t, n) {
-	let r = e.loop ? e.loopFrom ?? 0 : e.frames.length, i = e.frames.map((e, t) => t >= r ? n ?? e.ms : e.ms), a = W(i.slice(0, r)), o = W(i);
+function ie(e, t, n) {
+	let r = e.loop ? e.loopFrom ?? 0 : e.frames.length, i = e.frames.map((e, t) => t >= r ? n ?? e.ms : e.ms), a = G(i.slice(0, r)), o = G(i);
 	if (!e.loop && t >= o) return {
 		index: i.length - 1,
 		nextIn: Infinity
@@ -1048,11 +1038,11 @@ function oe(e, t, n) {
 }
 //#endregion
 //#region src/pet/controller.ts
-var K = 140, q = () => 3e3 + Math.random() * 3e3, J = () => 2e4 + Math.random() * 4e4, se = 700, ce = (() => {
+var q = 140, J = () => 3e3 + Math.random() * 3e3, Y = () => 2e4 + Math.random() * 4e4, ae = 700, oe = (() => {
 	let e = 0, t = 0;
 	for (let n of F.typingEnd.frames) e += n.ms, M(n).some((e) => e.includes("G")) && (t = e);
 	return t;
-})(), le = class {
+})(), se = class {
 	onRender;
 	now;
 	signals;
@@ -1088,7 +1078,7 @@ var K = 140, q = () => 3e3 + Math.random() * 3e3, J = () => 2e4 + Math.random() 
 			reactMs: L.typing,
 			sleepAfterMs: 3e5,
 			walk: null
-		}, this.animStart = n, this.blinkAt = n + q(), this.update();
+		}, this.animStart = n, this.blinkAt = n + J(), this.update();
 	}
 	input(e) {
 		let t = this.now();
@@ -1096,9 +1086,9 @@ var K = 140, q = () => 3e3 + Math.random() * 3e3, J = () => 2e4 + Math.random() 
 			this.signals.lastScrollAt = t, this.update();
 			return;
 		}
-		if (e === "typing" && this.anim === "typingEnd" && (this.signals.oneShot = null, this.resumeTyping = t - this.animStart < ce), e === "click" && (this.interacting(t) ? this.signals.reactMs = 0 : (this.signals.reactMs = L.click, this.animStart = t)), e === "typing") {
+		if (e === "typing" && this.anim === "typingEnd" && (this.signals.oneShot = null, this.resumeTyping = t - this.animStart < oe), e === "click" && (this.interacting(t) ? this.signals.reactMs = 0 : (this.signals.reactMs = L.click, this.animStart = t)), e === "typing") {
 			let e = t - this.signals.lastInputAt;
-			(this.signals.lastActivity !== "typing" || e > this.signals.reactMs) && (this.typingSince = t), this.signals.reactMs = ee(t - (this.typingSince ?? t));
+			(this.signals.lastActivity !== "typing" || e > this.signals.reactMs) && (this.typingSince = t), this.signals.reactMs = B(t - (this.typingSince ?? t));
 		}
 		this.signals.lastInputAt = t, this.signals.lastActivity = e, this.update();
 	}
@@ -1106,7 +1096,7 @@ var K = 140, q = () => 3e3 + Math.random() * 3e3, J = () => 2e4 + Math.random() 
 		let t = this.now();
 		this.signals.oneShot = {
 			anim: e,
-			until: t + G(F[e])
+			until: t + K(F[e])
 		}, this.animStart = t, this.update();
 	}
 	celebrate(e = 3e3) {
@@ -1129,7 +1119,7 @@ var K = 140, q = () => 3e3 + Math.random() * 3e3, J = () => 2e4 + Math.random() 
 	}
 	pressed() {
 		let e = this.now();
-		this.pressedUntil = e + se, this.signals.lastActivity === "click" && (this.signals.reactMs = 0), this.update();
+		this.pressedUntil = e + ae, this.signals.lastActivity === "click" && (this.signals.reactMs = 0), this.update();
 	}
 	interacting(e) {
 		return this.signals.oneShot !== null && e < this.signals.oneShot.until || e < this.pressedUntil;
@@ -1142,7 +1132,7 @@ var K = 140, q = () => 3e3 + Math.random() * 3e3, J = () => 2e4 + Math.random() 
 	}
 	walkPhase(e, t, n, r) {
 		let i = this.now();
-		if (t === "stop") this.signals.walk?.id === e && (this.signals.walk = null, this.idleShowAt = i + J()), this.walkStopped = Math.max(this.walkStopped, e);
+		if (t === "stop") this.signals.walk?.id === e && (this.signals.walk = null, this.idleShowAt = i + Y()), this.walkStopped = Math.max(this.walkStopped, e);
 		else {
 			if (e <= this.walkStopped) return;
 			t === "walk" && this.signals.walk?.glance && (this.animStart = i), this.signals.walk = {
@@ -1166,11 +1156,11 @@ var K = 140, q = () => 3e3 + Math.random() * 3e3, J = () => 2e4 + Math.random() 
 	walkDeclined() {
 		if (this.signals.walk) return;
 		let e = this.idleChoices.some((e) => e !== "walk");
-		this.idleNoWalk = e, this.idleShowAt = e ? this.now() : this.now() + J(), this.update();
+		this.idleNoWalk = e, this.idleShowAt = e ? this.now() : this.now() + Y(), this.update();
 	}
 	stopWalk(e) {
 		let t = this.signals.walk;
-		t && (this.signals.walk = null, this.walkStopped = Math.max(this.walkStopped, t.id), this.idleShowAt = e + J(), this.walkDriver?.stop());
+		t && (this.signals.walk = null, this.walkStopped = Math.max(this.walkStopped, t.id), this.idleShowAt = e + Y(), this.walkDriver?.stop());
 	}
 	setSleepAfter(e) {
 		this.signals.sleepAfterMs = e, this.update();
@@ -1180,18 +1170,18 @@ var K = 140, q = () => 3e3 + Math.random() * 3e3, J = () => 2e4 + Math.random() 
 	}
 	update() {
 		clearTimeout(this.timer);
-		let e = this.now(), t = V(this.signals, e);
-		this.signals.walk && t !== "walk" && (this.stopWalk(e), t = V(this.signals, e)), this.anim === "typing" && t === "idle" && (this.signals.oneShot = {
+		let e = this.now(), t = H(this.signals, e);
+		this.signals.walk && t !== "walk" && (this.stopWalk(e), t = H(this.signals, e)), this.anim === "typing" && t === "idle" && (this.signals.oneShot = {
 			anim: "typingEnd",
-			until: e + G(F.typingEnd)
-		}, t = "typingEnd"), t !== this.anim && (this.anim === "idle" && (this.idleShowUntil = 0), t === "idle" && this.idleShowAt < e && (this.idleShowAt = e + J()), this.anim = t, this.animStart = t === "typing" && this.resumeTyping ? e - ae(F.typing) : e), this.resumeTyping = !1;
+			until: e + K(F.typingEnd)
+		}, t = "typingEnd"), t !== this.anim && (this.anim === "idle" && (this.idleShowUntil = 0), t === "idle" && this.idleShowAt < e && (this.idleShowAt = e + Y()), this.anim = t, this.animStart = t === "typing" && this.resumeTyping ? e - re(F.typing) : e), this.resumeTyping = !1;
 		let n = this.anim, r = this.anim === "idle", i = r ? this.idlePool() : [];
 		if (i.length && e >= this.idleShowAt) {
-			let t = ne(i);
-			this.idleNoWalk = !1, t === "walk" ? this.beginWalk() : (this.idleShown = t, this.idleShowUntil = e + G(F[t]), this.idleShowAt = this.idleShowUntil + J(), this.animStart = e);
-		} else r && e >= this.idleShowAt && (this.idleNoWalk = !1, this.idleShowAt = this.idleChoices.length ? e + J() : Infinity);
+			let t = W(i);
+			this.idleNoWalk = !1, t === "walk" ? this.beginWalk() : (this.idleShown = t, this.idleShowUntil = e + K(F[t]), this.idleShowAt = this.idleShowUntil + Y(), this.animStart = e);
+		} else r && e >= this.idleShowAt && (this.idleNoWalk = !1, this.idleShowAt = this.idleChoices.length ? e + Y() : Infinity);
 		r && e < this.idleShowUntil && (n = this.idleShown);
-		let a = this.anim === "walk" ? this.signals.walk : null, o = F[n], { index: s, nextIn: c } = oe(o, e - this.animStart, this.anim === "typing" ? ie(this.keysPerSecond) : a ? a.frameMs : void 0), l = o.frames[s], u = l.rows ? null : { ...l.pose };
+		let a = this.anim === "walk" ? this.signals.walk : null, o = F[n], { index: s, nextIn: c } = ie(o, e - this.animStart, this.anim === "typing" ? ne(this.keysPerSecond) : a ? a.frameMs : void 0), l = o.frames[s], u = l.rows ? null : { ...l.pose };
 		u && a && (u = a.glance ? {
 			turn: a.dir,
 			gaze: [a.dir, 0]
@@ -1199,13 +1189,13 @@ var K = 140, q = () => 3e3 + Math.random() * 3e3, J = () => 2e4 + Math.random() 
 			...j(u, a.dir),
 			gaze: [a.dir, 0]
 		});
-		let d = Math.min(e + c, re(this.signals, e));
-		r && (d = Math.min(d, e < this.idleShowUntil ? this.idleShowUntil : this.idleShowAt)), u && (this.anim === "idle" || this.anim === "click" || this.anim === "walk") && (this.anim !== "walk" && (u.gaze = this.gaze), e >= this.blinkAt + K && (this.blinkAt = e + q()), e >= this.blinkAt && (u.eyes = "closed"), d = Math.min(d, e >= this.blinkAt ? this.blinkAt + K : this.blinkAt)), u && this.paused && !this.signals.blocked && (u.fx = [...u.fx ?? [], "pause"]);
+		let d = Math.min(e + c, te(this.signals, e));
+		r && (d = Math.min(d, e < this.idleShowUntil ? this.idleShowUntil : this.idleShowAt)), u && (this.anim === "idle" || this.anim === "click" || this.anim === "walk") && (this.anim !== "walk" && (u.gaze = this.gaze), e >= this.blinkAt + q && (this.blinkAt = e + J()), e >= this.blinkAt && (u.eyes = "closed"), d = Math.min(d, e >= this.blinkAt ? this.blinkAt + q : this.blinkAt)), u && this.paused && !this.signals.blocked && (u.fx = [...u.fx ?? [], "pause"]);
 		let f = u ? k(u) : M(l), p = f.join("\n");
 		p !== this.lastKey && (this.lastKey = p, this.onRender([...f])), Number.isFinite(d) && (this.timer = setTimeout(() => this.update(), Math.max(0, d - e)));
 	}
 };
-function ue(e, t) {
+function ce(e, t) {
 	let n = null, r = 0, i, a = (e) => {
 		e.button === 0 && (n = {
 			x: e.screenX,
@@ -1226,27 +1216,27 @@ function ue(e, t) {
 }
 //#endregion
 //#region src/pet/web.ts
-var de = 8, fe = 40, pe = 2200, Y = 5, me = 1600, he = 4200, X = 8, ge = 500, _e = 800, ve = 60, ye = "http://www.w3.org/2000/svg";
-function be(e, t, n) {
-	let r = (e) => e < -40 ? -1 : +(e > fe);
+var le = 8, ue = 40, de = 2200, X = 5, fe = 1600, pe = 4200, Z = 8, me = 500, he = 60, ge = "http://www.w3.org/2000/svg";
+function _e(e, t, n) {
+	let r = (e) => e < -40 ? -1 : +(e > ue);
 	return [r(e - (n.x + n.w / 2)), r(t - (n.y + n.h / 2))];
 }
-function Z(e) {
+function Q(e) {
 	let t = F[e].frames;
 	return [...M(t[Math.floor((t.length - 1) / 2)])];
 }
-function Q(e, t, n, r, i, a = ve) {
-	let o = (t) => t > 0 ? i - e : e - r, s = t > 0 ? -1 : 1, c = o(t) >= a ? t : o(s) >= a ? s : null;
-	return c === null ? null : {
-		dir: c,
-		distance: Math.min(n, o(c))
-	};
+function ve(e, t, n, r, i = he) {
+	let a = n + Math.min(1, Math.max(0, t)) * (r - n), o = Math.abs(a - e);
+	return o >= i ? {
+		dir: a < e ? -1 : 1,
+		distance: o
+	} : null;
 }
 function $(e, t, n, r = {
 	width: window.innerWidth,
 	height: window.innerHeight
 }) {
-	let i = Math.max(e.left, X), a = Math.max(e.top, X), o = Math.min(e.right, r.width - X), s = Math.min(e.bottom, r.height);
+	let i = Math.max(e.left, Z), a = Math.max(e.top, Z), o = Math.min(e.right, r.width - Z), s = Math.min(e.bottom, r.height);
 	return {
 		minX: i,
 		maxX: Math.max(i, o - t),
@@ -1254,18 +1244,18 @@ function $(e, t, n, r = {
 		maxY: Math.max(a, s - n)
 	};
 }
-function xe(e, t = {}) {
+function ye(e, t = {}) {
 	let n = t.scale ?? 6, i = t.still ?? !1, o = t.sleepAfterMs ?? 6e4, s = t.idleAnims ?? [
 		"soccer",
 		"lookAround",
 		"walk"
 	], c = t.clickAnim ?? "wave", l = t.doubleClickAnim ?? "hearts", u = t.counter ?? !0, d = t.lang ?? "zh", f = document.createElement("div");
-	f.className = "pet-stage", f.style.setProperty("--pet-w", `${40 * n}px`), f.style.setProperty("--pet-h", `${26 * n}px`), f.style.setProperty("--pet-above", `${16 * n + de}px`), f.style.setProperty("--pet-shift", `${-2 * n}px`);
+	f.className = "pet-stage", f.style.setProperty("--pet-w", `${40 * n}px`), f.style.setProperty("--pet-h", `${26 * n}px`), f.style.setProperty("--pet-above", `${16 * n + le}px`), f.style.setProperty("--pet-shift", `${-2 * n}px`);
 	let p = document.createElement("div");
 	p.className = "pet-above";
 	let m = document.createElement("div");
 	m.className = "pet-counter", u && p.append(m);
-	let h = document.createElementNS(ye, "svg");
+	let h = document.createElementNS(ge, "svg");
 	h.setAttribute("class", "pet-sprite"), h.setAttribute("viewBox", "0 0 40 26"), h.setAttribute("width", String(40 * n)), h.setAttribute("height", String(26 * n)), h.setAttribute("shape-rendering", "crispEdges"), h.setAttribute("aria-hidden", "true"), f.append(p, h), e.append(f);
 	let g = /* @__PURE__ */ new Map(), _ = "";
 	function v(e) {
@@ -1276,7 +1266,7 @@ function xe(e, t = {}) {
 		for (let { color: t, d: r } of a(e)) {
 			n.add(t);
 			let e = g.get(t);
-			e || (e = document.createElementNS(ye, "path"), e.setAttribute("fill", t), g.set(t, e), h.append(e)), e.setAttribute("d", r);
+			e || (e = document.createElementNS(ge, "path"), e.setAttribute("fill", t), g.set(t, e), h.append(e)), e.setAttribute("d", r);
 		}
 		for (let [e, t] of g) n.has(e) || t.setAttribute("d", "");
 	}
@@ -1284,14 +1274,14 @@ function xe(e, t = {}) {
 	function b() {
 		u && (m.textContent = r(y, d));
 	}
-	let x = new le((e) => {
+	let x = new se((e) => {
 		i || v(e);
 	}, () => performance.now());
 	x.setSleepAfter(o);
 	let S, C = null;
-	function w(e, t = me) {
-		C !== e && (C = e, v(Z(e)), clearTimeout(S), S = setTimeout(() => {
-			C = null, v(Z("idle"));
+	function w(e, t = fe) {
+		C !== e && (C = e, v(Q(e)), clearTimeout(S), S = setTimeout(() => {
+			C = null, v(Q("idle"));
 		}, t));
 	}
 	let T = !1;
@@ -1306,9 +1296,9 @@ function xe(e, t = {}) {
 		if (O(), i) return w(e);
 		switch (e) {
 			case "typing":
-				x.setKeysPerSecond(Y), D = setInterval(() => {
+				x.setKeysPerSecond(X), D = setInterval(() => {
 					E(), x.input("typing");
-				}, 1e3 / Y), setTimeout(O, pe);
+				}, 1e3 / X), setTimeout(O, de);
 				break;
 			case "sleep":
 				T = !0, x.setSleepAfter(0);
@@ -1323,7 +1313,7 @@ function xe(e, t = {}) {
 		E(), O(), i ? w(e) : x.oneShot(e);
 	}
 	let j;
-	function M(e, t = he) {
+	function M(e, t = pe) {
 		if (clearTimeout(j), i) {
 			e && w(e, t);
 			return;
@@ -1352,49 +1342,41 @@ function xe(e, t = {}) {
 		}, f.style.translate = `${I.x}px ${I.y}px`;
 	}, z = () => {
 		L && (L = null, window.removeEventListener("pointermove", R), window.removeEventListener("pointerup", z), window.removeEventListener("pointercancel", z), x.setDragging(!1));
-	}, ee = 0, B = null;
-	function V() {
-		B &&= (clearTimeout(B.glance), B.frame !== void 0 && cancelAnimationFrame(B.frame), null);
+	}, B = 0, V = null;
+	function H() {
+		V &&= (clearTimeout(V.glance), V.frame !== void 0 && cancelAnimationFrame(V.frame), null);
 	}
-	let H = {
+	let U = {
 		start(e) {
-			if (i || L || B || document.hidden || !e.legs.length) return !1;
-			let t = f.getBoundingClientRect(), r = $(P() ?? t, t.width, t.height), a = t.left - I.x, o = r.minX - a, s = r.maxX - a;
-			if (!Q(I.x, e.legs[0].dir, e.legs[0].distance, o, s)) return !1;
-			let c = ++ee, l = te(e.speed, n), u = 1, d = (e) => x.walkPhase(c, e, u, l), p = () => {
-				V(), d("stop");
-			}, m = (t) => {
-				let n = e.legs[t], r = n && Q(I.x, n.dir, n.distance, o, s);
-				if (!r || !B) return p();
-				let i = t > 0 && r.dir !== u;
-				u = r.dir;
-				let a = () => {
-					B?.id === c && (d("glance"), B.glance = setTimeout(() => {
-						B?.id === c && (d("walk"), B.frame = requestAnimationFrame((e) => h(e, e, 0, r.distance, t)));
-					}, t === 0 ? ge : _e / 2));
-				};
-				i ? B.glance = setTimeout(a, _e / 2) : a();
-			}, h = (t, n, r, i, a) => {
-				if (B?.id !== c) return;
-				let l = Math.min(e.speed * Math.min(.1, (t - n) / 1e3), i - r);
+			if (i || L || V || document.hidden) return !1;
+			let t = f.getBoundingClientRect(), r = $(P() ?? t, t.width, t.height), a = t.left - I.x, o = r.minX - a, s = r.maxX - a, c = ve(I.x, e.target, o, s);
+			if (!c) return !1;
+			let { dir: l, distance: u } = c, d = u / Math.min(15, Math.max(3, e.seconds)), p = ++B, m = ee(d, n), h = (e) => x.walkPhase(p, e, l, m), g = (e, t, n) => {
+				if (V?.id !== p) return;
+				let r = Math.min(d * Math.min(.1, (e - t) / 1e3), u - n);
 				if (I = {
-					x: Math.min(s, Math.max(o, I.x + u * l)),
+					x: Math.min(s, Math.max(o, I.x + l * r)),
 					y: I.y
-				}, f.style.translate = `${I.x}px ${I.y}px`, r + l >= i) return m(a + 1);
-				B.frame = requestAnimationFrame((e) => h(e, t, r + l, i, a));
+				}, f.style.translate = `${I.x}px ${I.y}px`, n + r >= u) {
+					H(), h("stop");
+					return;
+				}
+				V.frame = requestAnimationFrame((t) => g(t, e, n + r));
 			};
-			return B = { id: c }, m(0), !0;
+			return V = { id: p }, h("glance"), V.glance = setTimeout(() => {
+				V?.id === p && (h("walk"), V.frame = requestAnimationFrame((e) => g(e, e, 0)));
+			}, me), !0;
 		},
-		stop: V
+		stop: H
 	};
-	x.setWalkDriver(H), x.setIdleChoices(i ? s.filter((e) => e !== "walk") : s);
-	let U = () => {
-		if (!document.hidden || !B) return;
-		let e = B.id;
-		V(), x.walkPhase(e, "stop", 1, 0);
+	x.setWalkDriver(U), x.setIdleChoices(i ? s.filter((e) => e !== "walk") : s);
+	let W = () => {
+		if (!document.hidden || !V) return;
+		let e = V.id;
+		H(), x.walkPhase(e, "stop", 1, 0);
 	};
-	document.addEventListener("visibilitychange", U);
-	let ne = ue(f, {
+	document.addEventListener("visibilitychange", W);
+	let te = ce(f, {
 		press: () => x.pressed(),
 		click: () => A(c),
 		doubleClick: () => A(l),
@@ -1414,7 +1396,7 @@ function xe(e, t = {}) {
 		},
 		context: () => A("poke")
 	});
-	return b(), i && v(Z("idle")), {
+	return b(), i && v(Q("idle")), {
 		input(e) {
 			if (E(), i) {
 				e !== "scroll" && w(e === "typing" ? "typing" : "click");
@@ -1426,7 +1408,7 @@ function xe(e, t = {}) {
 		point(e, t) {
 			if (i) return;
 			let r = h.getBoundingClientRect();
-			r.width && x.setGaze(be(e, t, {
+			r.width && x.setGaze(_e(e, t, {
 				x: r.x + 6 * n,
 				y: r.y + 10 * n,
 				w: 24 * n,
@@ -1442,9 +1424,9 @@ function xe(e, t = {}) {
 		setBlocked: M,
 		demo: k,
 		destroy() {
-			clearTimeout(S), clearTimeout(j), O(), V(), document.removeEventListener("visibilitychange", U), ne?.(), x.destroy(), f.remove();
+			clearTimeout(S), clearTimeout(j), O(), H(), document.removeEventListener("visibilitychange", W), te?.(), x.destroy(), f.remove();
 		}
 	};
 }
 //#endregion
-export { $ as clampBox, xe as createPet, be as gazeFor, Q as planLeg, Z as stillFrame };
+export { $ as clampBox, ye as createPet, _e as gazeFor, ve as planStroll, Q as stillFrame };

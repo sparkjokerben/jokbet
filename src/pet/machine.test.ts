@@ -79,21 +79,12 @@ describe("walking", () => {
     expect(walkFrameMs(50, 1)).toBe(60);
     expect(walkFrameMs(1, 7)).toBe(250);
   });
-  it("plans a stroll either way, sometimes turning back part way", () => {
-    // Low rolls: left, slow and short, then a change of mind back to the right.
-    expect(walkPlan(() => 0)).toEqual({
-      speed: 30,
-      legs: [
-        { dir: -1, distance: 100 },
-        { dir: 1, distance: 60 },
-      ],
-    });
-    // High rolls: right, as far as it goes, and no turning back.
+  it("plans a stroll to anywhere along the line, in 3 to 15 seconds", () => {
+    expect(walkPlan(() => 0)).toEqual({ target: 0, seconds: 3 });
+    expect(walkPlan(() => 0.5)).toEqual({ target: 0.5, seconds: 9 });
     const far = walkPlan(() => 0.999);
-    expect(far.legs).toHaveLength(1);
-    expect(far.legs[0].dir).toBe(1);
-    expect(far.speed).toBeLessThanOrEqual(50);
-    expect(far.legs[0].distance).toBeLessThanOrEqual(500);
+    expect(far.target).toBeLessThan(1);
+    expect(far.seconds).toBeLessThan(15);
   });
   it("picks among the chosen idle animations", () => {
     expect(pickIdle([], () => 0.5)).toBeNull();

@@ -263,9 +263,9 @@ const BREATHE: readonly Frame[] = [{ ms: 1400, pose: {} }, { ms: 500, pose: { sq
 /** A stride of the walk (see ANIMS.walk). */
 const WALK: readonly Frame[] = [
   { ms: 100, pose: { turn: 1, legs: [4, 4, 4, 4], legDx: [1, 0, 1, 0] } },
-  { ms: 100, pose: { turn: 1, dy: -1, legs: [5, 3, 5, 3], legDx: [0, 1, 0, 1], armL: "up" } },
+  { ms: 100, pose: { turn: 1, dy: -1, legs: [5, 3, 5, 3], legDx: [0, 1, 0, 1] } },
   { ms: 100, pose: { turn: 1, legs: [4, 4, 4, 4], legDx: [0, 1, 0, 1] } },
-  { ms: 100, pose: { turn: 1, dy: -1, legs: [3, 5, 3, 5], legDx: [1, 0, 1, 0], armR: "up" } },
+  { ms: 100, pose: { turn: 1, dy: -1, legs: [3, 5, 3, 5], legDx: [1, 0, 1, 0] } },
 ];
 
 export const ANIMS: Record<AnimName, Anim> = {
@@ -381,8 +381,8 @@ export const ANIMS: Record<AnimName, Anim> = {
   // A stroll, drawn for walking right: turned towards where it is going, the
   // legs in two pairs (the first and third, the second and fourth). Each
   // step, one pair pushes off and the body rises a row as the other pair
-  // swings forward, with the arm on that side coming up; then both are down
-  // again, the other pair ahead. Walking left, it is all turned round (see
+  // swings forward; then both are down again, the other pair ahead. The arms
+  // stay at its sides. Walking left, it is all turned round (see
   // facing in src/pet/controller.ts); the pace follows the walking speed.
   walk: {
     loop: true,

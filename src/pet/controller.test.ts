@@ -151,7 +151,7 @@ describe("PetController", () => {
       // A new choice is shown, not wandered off with: the first walk waits.
       expect(driver.start).not.toHaveBeenCalled();
       advance(IDLE_GAP);
-      expect(driver.start).toHaveBeenCalledWith({ speed: 40, legs: [{ dir: 1, distance: 300 }] });
+      expect(driver.start).toHaveBeenCalledWith({ target: 0.5, seconds: 9 });
       pet.walkPhase(1, "glance", 1, 88);
       expect(last()).toEqual(compose({ turn: 1, gaze: [1, 0] }));
       pet.walkPhase(1, "walk", 1, 88);
@@ -164,7 +164,7 @@ describe("PetController", () => {
       pet.setIdleChoices(["walk"]);
       advance(IDLE_GAP);
       pet.walkPhase(1, "walk", -1, 88);
-      // Mirrored whole: turned the other way, the legs and arms swapped round.
+      // Mirrored whole: turned the other way, the legs swapped round.
       expect(last()).toEqual(compose({ ...facing(stride, -1), gaze: [-1, 0] }));
       expect(facing(stride, -1).turn).toBe(-1);
     });

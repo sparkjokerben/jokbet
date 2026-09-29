@@ -1,18 +1,18 @@
 //! A stroll along the bottom of the screen: the pet window moved a little at a
 //! time, on a thread of its own, while the page plays the walk.
 //!
-//! The page decides when to go, how fast, and which ways and how far (it knows
-//! what the pet is doing, and rolls the dice); this side knows the screen, and
-//! moves the window. It walks only on the bottom of the work area — standing on
-//! the Dock or the taskbar — so a pet put down somewhere in the middle of the
-//! screen stays where it was put. A leg that has no room the way it was meant
-//! to go goes the other way instead, and stops short of the monitor's edge. A
-//! stroll stops the moment anything else needs the pet, and saves where it
-//! ended up once, at the end.
+//! The page decides when to go, and rolls the dice for where to and how long
+//! to take: a point anywhere along the line the pet stands on, and a few
+//! seconds to get there in. This side knows the screen, so it turns those into
+//! a way to go and a speed, and moves the window. It walks only on the bottom
+//! of the work area — standing on the Dock or the taskbar — so a pet put down
+//! somewhere in the middle of the screen stays where it was put. A stroll stops
+//! the moment anything else needs the pet, and saves where it ended up once,
+//! at the end.
 
 use crate::hover::HoverState;
 use crate::pet_window::{self, Rect, PET_LABEL};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -22,27 +22,13 @@ use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, Runtime, WebviewWindo
 const NEAR_BOTTOM: f64 = 24.0;
 /// How often the window moves: about 30 times a second.
 const STEP: Duration = Duration::from_millis(33);
-/// The look in the direction of travel before setting off, and before turning
-/// round part way.
+/// The look in the direction of travel before setting off.
 const GLANCE: Duration = Duration::from_millis(500);
-const TURN_PAUSE: Duration = Duration::from_millis(800);
-/// Logical pixels a second, and logical pixels a leg, that are allowed.
-const SPEED: (f64, f64) = (30.0, 50.0);
-const DISTANCE: (f64, f64) = (40.0, 500.0);
-/// The shortest leg worth walking, in logical pixels: with less room than
-/// this one way, it goes the other.
+/// How long a stroll may take, in seconds.
+const SECONDS: (f64, f64) = (3.0, 15.0);
+/// The shortest stroll worth walking, in logical pixels: a point picked
+/// nearer than this is no stroll at all.
 const SHORTEST: f64 = 60.0;
-/// A stroll has a leg or two.
-const MAX_LEGS: usize = 3;
-
-/// One leg of a stroll, as the page asks for it.
-#[derive(Clone, Copy, Debug, PartialEq, Deserialize)]
-pub struct Leg {
-    /// -1 for left, 1 for right.
-    pub dir: i8,
-    /// Logical pixels.
-    pub distance: f64,
-}
 
 const RUNNING: u8 = 0;
 const STOPPED: u8 = 1;
@@ -73,13 +59,15 @@ pub struct WalkState {
     next_id: AtomicU32,
 }
 
-/// What the page is told as a walk goes on: `glance`, then `walk` (again at
-/// every turn), then `stop`.
+/// What the page is told as a walk goes on: `glance`, then `walk`, then
+/// `stop`.
 #[derive(Clone, Debug, Serialize)]
 pub struct WalkEvent {
     pub id: u32,
     pub phase: &'static str,
     pub dir: i8,
+    /// Logical pixels a second, which the page paces the steps by.
+    pub speed: f64,
 }
 
 /// Whether feet at `feet_y` stand on the bottom of `work_area`.
@@ -96,22 +84,13 @@ pub fn range_x(work_area: Rect, win_w: i32) -> (f64, f64) {
     (f64::from(min), f64::from(max))
 }
 
-/// Which way a leg from `x` goes, and how far: the way asked if there is room
-/// for at least `shortest` that way, else the other way, never past either
-/// end. `None` when there is no room either way.
-pub fn plan_leg(
-    x: f64,
-    dir: i8,
-    distance: f64,
-    (min, max): (f64, f64),
-    shortest: f64,
-) -> Option<(i8, f64)> {
-    let room = |d: i8| if d > 0 { max - x } else { x - min };
-    let wanted = if dir < 0 { -1 } else { 1 };
-    let dir = [wanted, -wanted]
-        .into_iter()
-        .find(|&d| room(d) >= shortest)?;
-    Some((dir, distance.min(room(dir))))
+/// Where a stroll from `x` goes: to the point `target` of the way (0 the left
+/// end, 1 the right) along `min..max`, as `(dir, distance)`. `None` when that
+/// is nearer than `shortest`.
+pub fn plan(x: f64, target: f64, (min, max): (f64, f64), shortest: f64) -> Option<(i8, f64)> {
+    let to = min + target.clamp(0.0, 1.0) * (max - min);
+    let distance = (to - x).abs();
+    (distance >= shortest).then_some((if to < x { -1 } else { 1 }, distance))
 }
 
 /// The work area of the monitor the point is on.
@@ -139,9 +118,10 @@ fn dragging<R: Runtime>(app: &AppHandle<R>) -> bool {
 }
 
 /// Sets off on a stroll, if the pet is standing on the bottom of the screen
-/// and nothing else has it. `speed` is in logical pixels a second. Returns the
-/// walk's id, which every event about it carries.
-pub fn start<R: Runtime>(app: &AppHandle<R>, speed: f64, legs: &[Leg]) -> Option<u32> {
+/// and nothing else has it: to the point `target` of the way along the bottom
+/// of the screen (0 to 1), in `seconds`. Returns the walk's id, which every
+/// event about it carries.
+pub fn start<R: Runtime>(app: &AppHandle<R>, target: f64, seconds: f64) -> Option<u32> {
     let state = app.state::<WalkState>();
     let mut current = state.current.lock().unwrap();
     if current.is_some() || !crate::visibility::shown(app) || dragging(app) {
@@ -157,23 +137,8 @@ pub fn start<R: Runtime>(app: &AppHandle<R>, speed: f64, legs: &[Leg]) -> Option
         return None;
     }
     let range = range_x(work_area, win_w);
-    let legs: Vec<Leg> = legs
-        .iter()
-        .take(MAX_LEGS)
-        .map(|leg| Leg {
-            dir: leg.dir,
-            distance: leg.distance.clamp(DISTANCE.0, DISTANCE.1) * sf,
-        })
-        .collect();
-    let first = legs.first()?;
-    // Nowhere to go from here, either way: stay put.
-    plan_leg(
-        f64::from(pos.x),
-        first.dir,
-        first.distance,
-        range,
-        SHORTEST * sf,
-    )?;
+    let (dir, distance) = plan(f64::from(pos.x), target, range, SHORTEST * sf)?;
+    let seconds = seconds.clamp(SECONDS.0, SECONDS.1);
     let id = state
         .next_id
         .fetch_add(1, Ordering::Relaxed)
@@ -191,10 +156,10 @@ pub fn start<R: Runtime>(app: &AppHandle<R>, speed: f64, legs: &[Leg]) -> Option
         x: f64::from(pos.x),
         // On the bottom edge exactly, wherever near it the pet was.
         y: work_area.y + work_area.h - win_h,
-        dir: 1,
-        speed: speed.clamp(SPEED.0, SPEED.1) * sf,
-        shortest: SHORTEST * sf,
-        legs,
+        dir,
+        distance,
+        speed: distance / seconds,
+        scale_factor: sf,
         range,
     };
     let handle = app.clone();
@@ -241,22 +206,24 @@ struct Stroll {
     x: f64,
     y: i32,
     dir: i8,
+    distance: f64,
+    /// Physical pixels a second.
     speed: f64,
-    shortest: f64,
-    legs: Vec<Leg>,
+    scale_factor: f64,
     range: (f64, f64),
 }
 
 impl Stroll {
     fn run<R: Runtime>(mut self, app: &AppHandle<R>, window: &WebviewWindow<R>, stop: &AtomicU8) {
-        let emit = |phase: &'static str, dir: i8| {
+        let emit = |phase: &'static str| {
             let _ = app.emit_to(
                 PET_LABEL,
                 "pet://walk",
                 WalkEvent {
                     id: self.id,
                     phase,
-                    dir,
+                    dir: self.dir,
+                    speed: self.speed / self.scale_factor,
                 },
             );
         };
@@ -266,47 +233,27 @@ impl Stroll {
             }
             stop.load(Ordering::Acquire) != RUNNING || !crate::visibility::shown(app)
         };
-        let pause = |how_long: Duration| {
-            let ends = Instant::now() + how_long;
-            while Instant::now() < ends && !stopped() {
-                std::thread::sleep(STEP);
-            }
-        };
         let _ = window.set_position(PhysicalPosition::new(self.x.round() as i32, self.y));
-        let legs = std::mem::take(&mut self.legs);
-        for (i, leg) in legs.into_iter().enumerate() {
-            if stopped() {
-                break;
-            }
-            let Some((dir, distance)) =
-                plan_leg(self.x, leg.dir, leg.distance, self.range, self.shortest)
-            else {
-                break;
-            };
-            // A look where it is going first; part way, a pause to make up its
-            // mind before it turns.
-            if i > 0 && dir != self.dir {
-                pause(TURN_PAUSE / 2);
-            }
-            self.dir = dir;
-            emit("glance", dir);
-            pause(if i == 0 { GLANCE } else { TURN_PAUSE / 2 });
-            if stopped() {
-                break;
-            }
-            emit("walk", dir);
+        // A look where it is going first.
+        emit("glance");
+        let ends = Instant::now() + GLANCE;
+        while Instant::now() < ends && !stopped() {
+            std::thread::sleep(STEP);
+        }
+        if !stopped() {
+            emit("walk");
             let mut walked = 0.0;
             let mut last = Instant::now();
-            while walked < distance && !stopped() {
+            while walked < self.distance && !stopped() {
                 std::thread::sleep(STEP);
                 let now = Instant::now();
                 // A stall (a menu holding the main thread, a sleeping laptop)
                 // is not made up for in one leap.
                 let dt = (now - last).as_secs_f64().min(0.1);
                 last = now;
-                let dx = (self.speed * dt).min(distance - walked);
+                let dx = (self.speed * dt).min(self.distance - walked);
                 walked += dx;
-                self.x = (self.x + f64::from(dir) * dx).clamp(self.range.0, self.range.1);
+                self.x = (self.x + f64::from(self.dir) * dx).clamp(self.range.0, self.range.1);
                 // Once more, right before the move: a drag or the menu may
                 // have taken the pet in the meantime.
                 if stopped() {
@@ -318,7 +265,7 @@ impl Stroll {
         // A drag can begin just as the walk is stopped for something else.
         let moved = stop.load(Ordering::Acquire) == MOVED || dragging(app);
         finish(app, self.id);
-        emit("stop", self.dir);
+        emit("stop");
         // Where it stopped is where it stays, unless something else moved it.
         if !moved {
             if let Err(e) = pet_window::save_position(window) {
@@ -370,21 +317,23 @@ mod tests {
     }
 
     #[test]
-    fn a_leg_goes_the_way_asked_when_there_is_room() {
+    fn it_goes_to_the_point_picked_along_the_line() {
         let range = (0.0, 1000.0);
-        assert_eq!(plan_leg(500.0, 1, 300.0, range, 60.0), Some((1, 300.0)));
-        assert_eq!(plan_leg(500.0, -1, 300.0, range, 60.0), Some((-1, 300.0)));
-        // Short of the edge: it stops there rather than turning round.
-        assert_eq!(plan_leg(900.0, 1, 300.0, range, 60.0), Some((1, 100.0)));
+        assert_eq!(plan(500.0, 0.8, range, 60.0), Some((1, 300.0)));
+        assert_eq!(plan(500.0, 0.2, range, 60.0), Some((-1, 300.0)));
+        // Either end of the line, whichever end it starts nearer.
+        assert_eq!(plan(1000.0, 0.0, range, 60.0), Some((-1, 1000.0)));
+        assert_eq!(plan(0.0, 1.0, (200.0, 1200.0), 60.0), Some((1, 1200.0)));
+        // Never past the ends, whatever it is asked.
+        assert_eq!(plan(500.0, 1.5, range, 60.0), Some((1, 500.0)));
     }
 
     #[test]
-    fn a_leg_with_no_room_goes_the_other_way() {
+    fn a_point_too_near_is_no_stroll() {
         let range = (0.0, 1000.0);
-        // In the corner it starts from, a walk to the right is a walk left.
-        assert_eq!(plan_leg(984.0, 1, 300.0, range, 60.0), Some((-1, 300.0)));
-        assert_eq!(plan_leg(20.0, -1, 300.0, range, 60.0), Some((1, 300.0)));
-        // No room either way: no walk.
-        assert_eq!(plan_leg(50.0, 1, 300.0, (0.0, 100.0), 60.0), None);
+        assert_eq!(plan(500.0, 0.55, range, 60.0), None);
+        assert_eq!(plan(500.0, 0.56, range, 60.0), Some((1, 60.0)));
+        // A screen with no room to walk on.
+        assert_eq!(plan(0.0, 1.0, (0.0, 0.0), 60.0), None);
     }
 }

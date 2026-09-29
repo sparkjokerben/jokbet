@@ -30,12 +30,12 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   have seen it. Both lengths are settings, and so is the reminder itself. It
   waits while the pet is hidden, and nothing adds up while counting is paused.
 - **Strolls.** While idle, the pet now and then takes a walk along the bottom of
-  the screen — on the Dock or the taskbar — turned the way it is going, bobbing
-  and swinging its arms. Which way, how far and how fast are up to it, and
-  sometimes it changes its mind part way and heads back a little; it stops
-  short of the screen's edges, and the moment you type, click or scroll. It
-  stays where it stopped. A pet put down in the middle of the screen stays put.
-  The one on the website strolls too.
+  the screen — on the Dock or the taskbar — turned the way it is going and
+  bobbing as it steps. It picks a spot anywhere along the way and takes three to
+  fifteen seconds to get there, so a long way in a short time is a brisk walk
+  and a short way in a long one an amble. It stops the moment you type, click or
+  scroll, and stays where it stopped. A pet put down in the middle of the screen
+  stays put. The one on the website strolls too.
 
 ### Changed
 

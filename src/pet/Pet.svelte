@@ -139,16 +139,10 @@
   });
 
   const pet = new PetController((r) => (rows = r));
-  /** The speed the page asked the latest stroll to go at, which sets the pace
-      of its steps. */
-  let walkSpeed = 40;
   // Strolls move the window, which only the app's side can do; it says how
-  // each one goes on pet://walk.
+  // each one goes on pet://walk, and how fast, which paces the steps.
   pet.setWalkDriver({
-    start: async (plan) => {
-      walkSpeed = plan.speed;
-      return (await invoke<number | null>("walk_start", { ...plan })) !== null;
-    },
+    start: async (plan) => (await invoke<number | null>("walk_start", { ...plan })) !== null,
     stop: () => void invoke("walk_stop"),
   });
 
@@ -279,8 +273,8 @@
       }),
       listen<{ hits: MilestoneHit[] }>("pet://celebrate", (e) => celebrate(e.payload.hits)),
       listen<{ minutes: number }>("pet://rest", (e) => remindRest(e.payload.minutes)),
-      listen<{ id: number; phase: "glance" | "walk" | "stop"; dir: -1 | 1 }>("pet://walk", (e) =>
-        pet.walkPhase(e.payload.id, e.payload.phase, e.payload.dir, walkFrameMs(walkSpeed, scale)),
+      listen<{ id: number; phase: "glance" | "walk" | "stop"; dir: -1 | 1; speed: number }>("pet://walk", (e) =>
+        pet.walkPhase(e.payload.id, e.payload.phase, e.payload.dir, walkFrameMs(e.payload.speed, scale)),
       ),
       listen("pet://drag-end", () => pet.setDragging(false)),
       listen<UpdateStatus>("app://update", (e) => applyUpdate(e.payload, true)),

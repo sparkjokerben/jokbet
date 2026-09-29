@@ -103,28 +103,16 @@ export function walkFrameMs(speed: number, scale: number): number {
   return Math.min(250, Math.max(60, Math.round((1000 * scale) / Math.max(speed, 1))));
 }
 
-/** One leg of a stroll: which way, and how far in logical pixels. The app
- * turns a leg round if there is no room that way. */
-export interface WalkLeg {
-  dir: -1 | 1;
-  distance: number;
-}
-
-/** How fast a stroll goes (logical pixels a second), and its legs. */
+/** Where a stroll goes, and how long it takes: a point anywhere along the
+ * line the pet stands on (0 its left end, 1 its right), and 3 to 15 seconds.
+ * The way to go and the speed follow from where the pet is. */
 export interface WalkPlan {
-  speed: number;
-  legs: WalkLeg[];
+  target: number;
+  seconds: number;
 }
-
-/** How often a stroll turns back part way, and goes back a little. */
-const TURN_BACK_CHANCE = 0.4;
 
 export function walkPlan(random: () => number = Math.random): WalkPlan {
-  const speed = 30 + 20 * random();
-  const dir: -1 | 1 = random() < 0.5 ? -1 : 1;
-  const legs: WalkLeg[] = [{ dir, distance: 100 + 400 * random() }];
-  if (random() < TURN_BACK_CHANCE) legs.push({ dir: dir === 1 ? -1 : 1, distance: 60 + 200 * random() });
-  return { speed, legs };
+  return { target: random(), seconds: 3 + 12 * random() };
 }
 
 /** One of the chosen idle animations, at random. */
