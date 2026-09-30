@@ -60,7 +60,7 @@ export const PLATFORMS: Platform[] = [
   { id: "macos-x64", file: (v) => `Jokbet_${v}_x64.dmg`, bundle: "dmg" },
   { id: "windows-x64", file: (v) => `Jokbet_${v}_x64-setup.exe`, bundle: "nsis" },
   { id: "windows-x64-msi", file: (v) => `Jokbet_${v}_x64_en-US.msi`, bundle: "msi" },
-  { id: "windows-x64-portable", file: (v) => `Jokbet_${v}_x64-portable.zip`, bundle: "portable", since: "0.5.0" },
+  { id: "windows-x64-portable", file: (v) => `Jokbet_${v}_x64-portable.zip`, bundle: "portable", since: "0.4.1" },
   { id: "linux-appimage", file: (v) => `Jokbet_${v}_amd64.AppImage`, bundle: "appimage" },
   { id: "linux-deb", file: (v) => `Jokbet_${v}_amd64.deb`, bundle: "deb" },
 ];
