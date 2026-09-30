@@ -175,12 +175,12 @@ describe("the installers of a version", () => {
     expect(validateChangelog(log)).toEqual([]);
   });
 
-  it("expects the portable Windows zip from 0.4.1 on", () => {
+  it("expects the portable Windows zip from 0.5.0 on", () => {
     expect(platformsFor("0.4.0").map((p) => p.id)).not.toContain("windows-x64-portable");
-    const portable = platformsFor("0.4.1").find((p) => p.id === "windows-x64-portable");
-    expect(portable?.file("0.4.1")).toBe("Jokbet_0.4.1_x64-portable.zip");
-    const manifest = latestFrom([release({ tag_name: "v0.4.1", assets: everything("0.4.1") })]);
-    expect(manifest.files["windows-x64-portable"]).toMatchObject({ name: "Jokbet_0.4.1_x64-portable.zip" });
+    const portable = platformsFor("0.5.0").find((p) => p.id === "windows-x64-portable");
+    expect(portable?.file("0.5.0")).toBe("Jokbet_0.5.0_x64-portable.zip");
+    const manifest = latestFrom([release({ tag_name: "v0.5.0", assets: everything("0.5.0") })]);
+    expect(manifest.files["windows-x64-portable"]).toMatchObject({ name: "Jokbet_0.5.0_x64-portable.zip" });
     delete manifest.files["windows-x64-portable"];
     expect(validateManifest(manifest)).toContain("files.windows-x64-portable is missing");
   });
