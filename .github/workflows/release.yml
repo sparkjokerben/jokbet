@@ -130,3 +130,55 @@ jobs:
           codesign --verify --strict "$app"
           ditto -c -k --sequesterRsrc --keepParent "$app" "$zip"
           gh release upload "$GITHUB_REF_NAME" "$zip" --repo "$GITHUB_REPOSITORY" --clobber
+
+      - name: Zip the portable Windows app
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          # The exe the installer holds, with portable.txt beside it: that file
+          # is what makes the app keep its data in a folder next to the exe and
+          # update by replacing the exe. The zip is signed like the installers
+          # are, so the updater can check it; the portable-update job below
+          # adds it to latest.json.
+          version="$(node -p 'require("./package.json").version')"
+          zip="Jokbet_${version}_x64-portable.zip"
+          mkdir -p portable/Jokbet
+          cp src-tauri/target/release/jokbet.exe portable/Jokbet/Jokbet.exe
+          printf '%s\r\n' \
+            "This file makes Jokbet portable: its counts, settings and logs stay in the" \
+            "data folder beside it, and an update replaces Jokbet.exe in place." \
+            "Delete this file to use the installed app's folders instead." \
+            "" \
+            "这个文件让 Jokbet 以便携模式运行：统计、设置和日志都保存在旁边的 data 文件夹里，" \
+            "更新时直接替换 Jokbet.exe。删掉这个文件则改用安装版的数据位置。" \
+            > portable/Jokbet/portable.txt
+          (cd portable && 7z a -tzip "../$zip" Jokbet)
+          npx tauri signer sign "$zip"
+          gh release upload "$GITHUB_REF_NAME" "$zip" "$zip.sig" --repo "$GITHUB_REPOSITORY" --clobber
+
+  portable-update:
+    # tauri-action writes latest.json for the installers, each build job adding
+    # its own; the portable zip goes in once they all have, so no job's copy
+    # overwrites it.
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Add the portable zip to latest.json
+        run: |
+          version="$(node -p 'require("./package.json").version')"
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --dir assets \
+            --pattern latest.json --pattern "Jokbet_${version}_x64-portable.zip*"
+          node scripts/make-manifest.ts portable --tag "$GITHUB_REF_NAME" --dir assets --out assets/latest.json
+          gh release upload "$GITHUB_REF_NAME" assets/latest.json --repo "$GITHUB_REPOSITORY" --clobber

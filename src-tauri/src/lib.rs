@@ -10,6 +10,7 @@ mod menu;
 mod panels;
 mod pet_window;
 mod platform;
+mod portable;
 mod settings;
 mod shortcuts;
 mod updater;
@@ -88,12 +89,16 @@ pub fn run() {
                 std::env::consts::ARCH
             );
 
-            let config_dir = app.path().app_config_dir()?;
-            let data_dir = app.path().app_data_dir()?;
-            // The app used to be called jokerben-desktop-pet, and its data lives
-            // under that name: bring it over rather than start from zero.
-            for path in legacy::adopt(&data_dir, &config_dir) {
-                log::info!("kept {} from the pre-rename app", path.display());
+            let config_dir = portable::config_dir(app.handle())?;
+            let data_dir = portable::data_dir(app.handle())?;
+            if let Some(root) = portable::root() {
+                log::info!("portable: keeping everything in {}", root.display());
+            } else {
+                // The app used to be called jokerben-desktop-pet, and its data
+                // lives under that name: bring it over rather than start from zero.
+                for path in legacy::adopt(&data_dir, &config_dir) {
+                    log::info!("kept {} from the pre-rename app", path.display());
+                }
             }
             let settings = SettingsStore::load(config_dir.join("settings.json"));
             let initial = settings.get();
@@ -150,7 +155,13 @@ fn logger<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
     tauri_plugin_log::Builder::new()
         .targets([
             Target::new(TargetKind::Stdout),
-            Target::new(TargetKind::LogDir { file_name: None }),
+            Target::new(match portable::root() {
+                Some(root) => TargetKind::Folder {
+                    path: root.join("logs"),
+                    file_name: None,
+                },
+                None => TargetKind::LogDir { file_name: None },
+            }),
         ])
         .level(log::LevelFilter::Info)
         .timezone_strategy(TimezoneStrategy::UseLocal)

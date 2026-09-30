@@ -9,6 +9,9 @@
 //! the same path on both (`/dl/<tag>/<name>` on the mirror,
 //! `/releases/download/<tag>/<name>` on GitHub), and the signature the manifest
 //! carries is the file's, so either copy verifies against it.
+//!
+//! A portable copy asks for the manifest's portable zip instead of the
+//! installer, and installs by putting the exe in it where its own is.
 
 use serde::Serialize;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -84,9 +87,12 @@ pub fn spawn<R: Runtime>(app: AppHandle<R>) {
     }
     std::thread::Builder::new()
         .name("updater".into())
-        .spawn(move || loop {
-            tauri::async_runtime::block_on(check_now(&app));
-            std::thread::sleep(CHECK_EVERY);
+        .spawn(move || {
+            crate::portable::remove_old_exe();
+            loop {
+                tauri::async_runtime::block_on(check_now(&app));
+                std::thread::sleep(CHECK_EVERY);
+            }
         })
         .expect("spawn updater thread");
 }
@@ -128,8 +134,11 @@ pub async fn check_now<R: Runtime>(app: &AppHandle<R>) -> UpdateStatus {
 async fn check<R: Runtime>(
     app: &AppHandle<R>,
 ) -> Result<Option<(Update, Vec<u8>)>, tauri_plugin_updater::Error> {
-    let updater = app
-        .updater_builder()
+    let mut builder = app.updater_builder();
+    if let Some(target) = crate::portable::updater_target() {
+        builder = builder.target(target);
+    }
+    let updater = builder
         .timeout(CHECK_TIMEOUT)
         .configure_client(|client| {
             client
@@ -190,7 +199,11 @@ pub fn install_pending<R: Runtime>(app: &AppHandle<R>) -> bool {
     let Some((update, bytes)) = app.state::<Updates>().pending.lock().unwrap().take() else {
         return false;
     };
-    match update.install(bytes) {
+    let installed = match crate::portable::root() {
+        Some(_) => crate::portable::install(&bytes).map_err(|e| e.to_string()),
+        None => update.install(bytes).map_err(|e| e.to_string()),
+    };
+    match installed {
         Ok(()) => true,
         Err(e) => {
             log::error!("installing update failed: {e}");

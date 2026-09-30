@@ -66,7 +66,11 @@ const T = {
       "macos-x64-zip": "macOS · Intel（x64）",
       "macos-x64": "macOS · Intel（x64）",
     },
-    windows: { "windows-x64": "Windows · 安装程序", "windows-x64-msi": "Windows · MSI" },
+    windows: {
+      "windows-x64": "Windows · 安装程序",
+      "windows-x64-msi": "Windows · MSI",
+      "windows-x64-portable": "Windows · 便携版（免安装）",
+    },
     linux: { "linux-appimage": "Linux · AppImage", "linux-deb": "Linux · deb" },
   },
   en: {
@@ -100,7 +104,11 @@ const T = {
       "macos-x64-zip": "macOS · Intel (x64)",
       "macos-x64": "macOS · Intel (x64)",
     },
-    windows: { "windows-x64": "Windows · installer", "windows-x64-msi": "Windows · MSI" },
+    windows: {
+      "windows-x64": "Windows · installer",
+      "windows-x64-msi": "Windows · MSI",
+      "windows-x64-portable": "Windows · portable (no install)",
+    },
     linux: { "linux-appimage": "Linux · AppImage", "linux-deb": "Linux · .deb" },
   },
 };
@@ -120,7 +128,7 @@ const platformLabel = (l, id) => {
  * Gatekeeper once where the disk image is stopped twice. */
 const GROUPS = /** @type {{ key: "macos" | "windows" | "linux", ids: string[] }[]} */ ([
   { key: "macos", ids: ["macos-aarch64-zip", "macos-aarch64", "macos-x64-zip", "macos-x64"] },
-  { key: "windows", ids: ["windows-x64", "windows-x64-msi"] },
+  { key: "windows", ids: ["windows-x64", "windows-x64-msi", "windows-x64-portable"] },
   { key: "linux", ids: ["linux-appimage", "linux-deb"] },
 ]);
 

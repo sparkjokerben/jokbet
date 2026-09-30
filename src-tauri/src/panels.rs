@@ -50,11 +50,14 @@ pub fn open<R: Runtime>(app: &AppHandle<R>, panel: Panel, title: &str) -> tauri:
         q => q.to_string(),
     };
     let url = WebviewUrl::App(format!("app.html?{query}").into());
-    let window = WebviewWindowBuilder::new(app, panel.label(), url)
+    let mut builder = WebviewWindowBuilder::new(app, panel.label(), url)
         .title(title)
         .inner_size(w, h)
         .min_inner_size(w * 0.75, h * 0.75)
-        .center()
-        .build()?;
+        .center();
+    if let Some(dir) = crate::portable::webview_dir() {
+        builder = builder.data_directory(dir);
+    }
+    let window = builder.build()?;
     window.set_focus()
 }

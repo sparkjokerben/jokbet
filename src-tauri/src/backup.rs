@@ -343,7 +343,7 @@ pub fn device_id(data_dir: &Path) -> String {
 // --- the app's side ---------------------------------------------------------
 
 fn data_dir<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
-    app.path().app_data_dir().map_err(io_err)
+    crate::portable::data_dir(app).map_err(io_err)
 }
 
 /// The app's own backup folder.

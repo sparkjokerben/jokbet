@@ -89,6 +89,13 @@ Run the `.exe` or the `.msi`. If SmartScreen says "Windows protected your PC",
 click **More info → Run anyway**. Some antivirus tools flag any program that
 listens to the keyboard; this one only counts presses.
 
+Or take the portable build, `Jokbet_<version>_x64-portable.zip`: unzip it into
+a folder you can write to (not Program Files) and run `Jokbet.exe`. The
+`portable.txt` beside it keeps the counts, settings, backups and logs in a
+`data` folder next to the exe instead of your profile, so moving or deleting the
+folder takes all of it along; updates replace `Jokbet.exe` in place. It needs
+the WebView2 runtime, which Windows 10 and 11 already have.
+
 ### Linux (X11)
 
 Use the AppImage, which updates itself, or the `.deb`. Only X11 sessions are
@@ -117,6 +124,7 @@ Analytics, which sets no cookies and does not identify anyone.
 |---|---|---|
 | macOS | `~/Library/Application Support/io.github.sparkjokerben.jokbet/` | same directory |
 | Windows | `%APPDATA%\io.github.sparkjokerben.jokbet\` | same directory |
+| Windows, portable | `data\` beside `Jokbet.exe` | same directory |
 | Linux | `~/.local/share/io.github.sparkjokerben.jokbet/` | `~/.config/io.github.sparkjokerben.jokbet/` |
 
 Deleting both files resets Jokbet to a first run. An install upgrading from the
@@ -140,6 +148,7 @@ Folder** opens it, which is the file to attach to a bug report.
 |---|---|
 | macOS | `~/Library/Logs/io.github.sparkjokerben.jokbet/` |
 | Windows | `%LOCALAPPDATA%\io.github.sparkjokerben.jokbet\logs\` |
+| Windows, portable | `data\logs\` beside `Jokbet.exe` |
 | Linux | `~/.local/share/io.github.sparkjokerben.jokbet/logs/` |
 
 ## Known limitations

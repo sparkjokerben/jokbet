@@ -43,7 +43,8 @@ export interface Manifest {
 export interface Platform {
   id: string;
   file: (version: string) => string;
-  /** Where it comes from: a Tauri bundle, or "app" for the zip of the .app the release job makes. */
+  /** Where it comes from: a Tauri bundle, "app" for the zip of the .app the
+   * release job makes, or "portable" for its zip of the Windows exe. */
   bundle: string;
   /** The first version that ships it; the releases before it are not expected to. */
   since?: string;
@@ -59,6 +60,7 @@ export const PLATFORMS: Platform[] = [
   { id: "macos-x64", file: (v) => `Jokbet_${v}_x64.dmg`, bundle: "dmg" },
   { id: "windows-x64", file: (v) => `Jokbet_${v}_x64-setup.exe`, bundle: "nsis" },
   { id: "windows-x64-msi", file: (v) => `Jokbet_${v}_x64_en-US.msi`, bundle: "msi" },
+  { id: "windows-x64-portable", file: (v) => `Jokbet_${v}_x64-portable.zip`, bundle: "portable", since: "0.4.1" },
   { id: "linux-appimage", file: (v) => `Jokbet_${v}_amd64.AppImage`, bundle: "appimage" },
   { id: "linux-deb", file: (v) => `Jokbet_${v}_amd64.deb`, bundle: "deb" },
 ];
@@ -257,6 +259,25 @@ export function updaterForMirror(manifest: UpdaterManifest, tag: string, present
     platforms[target] = { url: mirrorUrl(tag, name), signature };
   }
   return { ...manifest, platforms };
+}
+
+/** The updater manifest's entry the portable Windows build asks for. */
+export const PORTABLE_TARGET = "windows-x86_64-portable";
+
+/**
+ * The release's updater manifest with the portable zip in it, which Tauri does
+ * not know about: the release job signs the zip itself and adds it here, under
+ * the target the portable build asks for.
+ */
+export function withPortable(manifest: UpdaterManifest, tag: string, name: string, signature: string): UpdaterManifest {
+  if (manifest.version?.replace(/^v/, "") !== tag.replace(/^v/, "")) {
+    throw new Error(`the updater manifest is for ${manifest.version}, not ${tag}`);
+  }
+  if (!signature.trim()) throw new Error(`${name}: no signature`);
+  return {
+    ...manifest,
+    platforms: { ...manifest.platforms, [PORTABLE_TARGET]: { url: githubUrl(tag, name), signature: signature.trim() } },
+  };
 }
 
 /**

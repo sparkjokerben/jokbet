@@ -9,6 +9,12 @@
 //   node scripts/make-manifest.ts update --tag v0.1.0 --dir release-assets \
 //     --release-json release.json --out manifests/update.json
 //
+// In the release workflow, once every platform is built, to add the portable
+// Windows zip (which Tauri does not know about) to the release's own
+// latest.json, from the signature the Windows job made for it:
+//
+//   node scripts/make-manifest.ts portable --tag v0.1.0 --dir assets --out assets/latest.json
+//
 // After a release, to refresh the copies compiled into the Worker (what the
 // site shows when the bucket cannot answer) — `npm run site:fallback`:
 //
@@ -32,11 +38,13 @@ import {
   releaseUrl,
   updaterForMirror,
   validateChangelog,
+  withPortable,
   validateManifest,
   withReleaseNotes,
   type GithubRelease,
   type Manifest,
   type UpdaterManifest,
+  PLATFORMS,
 } from "./site-manifest.ts";
 
 const FALLBACK_DIR = "worker/fallback";
@@ -107,6 +115,16 @@ function update(): UpdaterManifest {
   return withReleaseNotes(pointed, release.body);
 }
 
+/** The release's own updater manifest, with the portable zip added. */
+function portable(): UpdaterManifest {
+  const tag = required("tag");
+  const dir = flag("dir") ?? "release-assets";
+  const source = JSON.parse(readFileSync(flag("in") ?? join(dir, "latest.json"), "utf8")) as UpdaterManifest;
+  const name = PLATFORMS.find((p) => p.bundle === "portable")!.file(tag.replace(/^v/, ""));
+  statSync(join(dir, name));
+  return withPortable(source, tag, name, readFileSync(join(dir, `${name}.sig`), "utf8"));
+}
+
 /** The releases API's answer, from `--releases-json` or piped in with `--stdin`. */
 function releasesFromApi(): GithubRelease[] {
   const from = flag("releases-json");
@@ -141,6 +159,9 @@ switch (mode) {
   case "update":
     write(flag("out") ?? "update.json", update(), () => []);
     break;
+  case "portable":
+    write(flag("out") ?? "latest.json", portable(), () => []);
+    break;
   case "fallback": {
     const dir = flag("dir") ?? FALLBACK_DIR;
     const releases = releasesFromApi();
@@ -165,7 +186,7 @@ switch (mode) {
     break;
   }
   default:
-    console.error("usage: node scripts/make-manifest.ts full|changelog|update|fallback|check …  (see the top of this file)");
+    console.error("usage: node scripts/make-manifest.ts full|changelog|update|portable|fallback|check …  (see the top of this file)");
     process.exit(1);
 }
 

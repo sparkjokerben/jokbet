@@ -76,7 +76,7 @@ pub fn default_position(win: (i32, i32), work_area: Rect, margin: i32) -> (i32, 
 pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>> {
     let scale = app.state::<SettingsStore>().get().pet_scale;
     let (w, h) = window_size(scale);
-    let window = WebviewWindowBuilder::new(app, PET_LABEL, WebviewUrl::App("pet.html".into()))
+    let mut builder = WebviewWindowBuilder::new(app, PET_LABEL, WebviewUrl::App("pet.html".into()))
         .title("Jokbet")
         .inner_size(w, h)
         .transparent(true)
@@ -88,8 +88,11 @@ pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>>
         .focusable(false)
         .accept_first_mouse(true)
         .visible_on_all_workspaces(true)
-        .visible(false)
-        .build()?;
+        .visible(false);
+    if let Some(dir) = crate::portable::webview_dir() {
+        builder = builder.data_directory(dir);
+    }
+    let window = builder.build()?;
     place(&window)?;
     window.show()?;
     Ok(window)

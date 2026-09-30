@@ -51,6 +51,7 @@ body:
         - macOS — .dmg
         - Windows — .exe installer
         - Windows — .msi
+        - Windows — portable .zip
         - Linux — AppImage
         - Linux — .deb
         - Built it from source

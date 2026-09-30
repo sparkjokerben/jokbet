@@ -295,7 +295,7 @@ pub fn open_external(app: AppHandle, target: String) -> Result<(), String> {
         "site" => opener.open_url("https://jokbet.jokerben.top", None::<&str>),
         "github" => opener.open_url("https://github.com/sparkjokerben/jokbet", None::<&str>),
         "logs" => {
-            let dir = app.path().app_log_dir().map_err(|e| e.to_string())?;
+            let dir = crate::portable::log_dir(&app).map_err(|e| e.to_string())?;
             std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
             opener.open_path(dir.to_string_lossy(), None::<&str>)
         }

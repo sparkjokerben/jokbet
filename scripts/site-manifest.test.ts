@@ -13,6 +13,7 @@ import {
   updaterForMirror,
   validateChangelog,
   validateManifest,
+  withPortable,
   withReleaseNotes,
   type GithubRelease,
   type UpdaterManifest,
@@ -174,6 +175,16 @@ describe("the installers of a version", () => {
     expect(validateChangelog(log)).toEqual([]);
   });
 
+  it("expects the portable Windows zip from 0.4.1 on", () => {
+    expect(platformsFor("0.4.0").map((p) => p.id)).not.toContain("windows-x64-portable");
+    const portable = platformsFor("0.4.1").find((p) => p.id === "windows-x64-portable");
+    expect(portable?.file("0.4.1")).toBe("Jokbet_0.4.1_x64-portable.zip");
+    const manifest = latestFrom([release({ tag_name: "v0.4.1", assets: everything("0.4.1") })]);
+    expect(manifest.files["windows-x64-portable"]).toMatchObject({ name: "Jokbet_0.4.1_x64-portable.zip" });
+    delete manifest.files["windows-x64-portable"];
+    expect(validateManifest(manifest)).toContain("files.windows-x64-portable is missing");
+  });
+
   it("refuses a zip in the manifest of a release made before there were any", () => {
     const manifest = latestFrom([release({ tag_name: "v0.1.1", assets: everything("0.1.1") })]);
     manifest.files["macos-aarch64-zip"] = { name: "Jokbet_0.1.1_aarch64.app.zip", size: 1, sha256: null };
@@ -220,6 +231,21 @@ describe("the updater manifest the mirror serves", () => {
 
   it("refuses an empty manifest", () => {
     expect(() => updaterForMirror({ ...tauri(), platforms: {} }, "v0.1.0", present)).toThrow(/no platforms/);
+  });
+
+  it("gains the portable zip, which the mirror then points at like the rest", () => {
+    const out = withPortable(tauri(), "v0.1.0", "Jokbet_0.1.0_x64-portable.zip", "sig-p\n");
+    expect(out.platforms["windows-x86_64-portable"]).toEqual({
+      url: `${github}/Jokbet_0.1.0_x64-portable.zip`,
+      signature: "sig-p",
+    });
+    expect(out.platforms["windows-x86_64-nsis"]).toEqual(tauri().platforms["windows-x86_64-nsis"]);
+    const mirrored = updaterForMirror(out, "v0.1.0", new Set([...present, "Jokbet_0.1.0_x64-portable.zip"]));
+    expect(mirrored.platforms["windows-x86_64-portable"].url).toBe(
+      "https://jokbet.jokerben.top/dl/v0.1.0/Jokbet_0.1.0_x64-portable.zip",
+    );
+    expect(() => withPortable(tauri(), "v0.2.0", "Jokbet_0.2.0_x64-portable.zip", "sig")).toThrow(/not v0.2.0/);
+    expect(() => withPortable(tauri(), "v0.1.0", "Jokbet_0.1.0_x64-portable.zip", " \n")).toThrow(/no signature/);
   });
 
   it("takes the notes from the release, not from the draft's own manifest", () => {

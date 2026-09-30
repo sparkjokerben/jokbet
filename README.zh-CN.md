@@ -46,6 +46,8 @@ curl -fsSL https://jokbet.jokerben.top/install.sh | sh
 
 运行 `.exe` 或 `.msi`。SmartScreen 提示「Windows 已保护你的电脑」时，点**更多信息 → 仍要运行**。部分杀毒软件会把监听键盘的程序当成可疑程序；本程序只做计数。
 
+也可以用便携版 `Jokbet_<版本>_x64-portable.zip`：解压到一个可写的文件夹（别放进 Program Files），运行里面的 `Jokbet.exe`。旁边的 `portable.txt` 让统计、设置、备份和日志都存进 exe 旁边的 `data` 文件夹，而不是用户目录，所以挪走或删掉这个文件夹就带走或清掉了全部数据；更新时直接替换 `Jokbet.exe`。需要 WebView2 运行时，Windows 10 和 11 都自带。
+
 ### Linux (X11)
 
 用 AppImage（支持自动更新）或 `.deb`。只支持 X11 会话——Wayland 不允许程序监听全局输入。透明窗口需要合成器，托盘菜单需要支持 AppIndicator 的环境。
@@ -68,6 +70,7 @@ curl -fsSL https://jokbet.jokerben.top/install.sh | sh
 |---|---|---|
 | macOS | `~/Library/Application Support/io.github.sparkjokerben.jokbet/` | 同一目录 |
 | Windows | `%APPDATA%\io.github.sparkjokerben.jokbet\` | 同一目录 |
+| Windows 便携版 | `Jokbet.exe` 旁边的 `data\` | 同一目录 |
 | Linux | `~/.local/share/io.github.sparkjokerben.jokbet/` | `~/.config/io.github.sparkjokerben.jokbet/` |
 
 两个文件都删掉，Jokbet 就回到初次运行的状态。从项目旧名 `jokerben-desktop-pet` 升级上来的安装，会在首次启动时把这两个文件迁移过来。`settings.json` 损坏时，Jokbet 会保留还能读出的设置，并把原文件另存为 `settings.bad-<时间>.json`。
@@ -80,6 +83,7 @@ Jokbet 还会写日志 `Jokbet.log`（超过 1 MB 自动轮转），只记录错
 |---|---|
 | macOS | `~/Library/Logs/io.github.sparkjokerben.jokbet/` |
 | Windows | `%LOCALAPPDATA%\io.github.sparkjokerben.jokbet\logs\` |
+| Windows 便携版 | `Jokbet.exe` 旁边的 `data\logs\` |
 | Linux | `~/.local/share/io.github.sparkjokerben.jokbet/logs/` |
 
 ## 已知限制
