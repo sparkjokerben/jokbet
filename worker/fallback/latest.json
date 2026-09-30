@@ -1,52 +1,57 @@
 {
  "schema": 1,
- "version": "0.3.2",
- "tag": "v0.3.2",
- "pubDate": "2026-09-26T21:31:41Z",
+ "version": "0.4.1",
+ "tag": "v0.4.1",
+ "pubDate": "2026-09-30T21:32:21Z",
  "draft": false,
- "notes": "这一版修的是 Windows 上那层材质，以及卡片照着什么来画。\n\n- **Windows 上的材质换成真正的亚克力，装在它自己的窗口里。** 之前在 Windows 上顶着「液态玻璃」这个名字的，其实是「在桌宠自己的窗口上圈一块矩形做模糊」：它裁在桌宠的窗口里，跟着桌宠走得很糟，也说不出自己盖住的到底是什么。现在是亚克力——会把底下的东西透出来的那层材质——装在一个只属于卡片的窗口里，正好裁成卡片的圆角形状，一直待在桌宠下面。需要 Windows 10 1803 及以上；开关按系统实际的材质命名：Windows 上是「亚克力」，macOS 26 是「液态玻璃」，再往前是 vibrancy。\n\n- **卡片改成照着自己背后的东西来画。** 材质会把桌面透出来，所以面板现在是读卡片底下的东西，而不是跟着系统的深浅色走——之前正是它，只要系统是浅色就让深色桌面上的字也变成深色；也是它，让那档固定的灰在桌面既不深也不浅时糊成一片。现在：桌面浅就画深字、桌面深就画浅字，整张卡片上的字都用这一种颜色，桌面杂到读不清时卡片再多带一点自己的颜色。每次读数都是漂过去的而不是跳过去的，换字色只换一次、并且是淡过去的；收起再出现时，卡片用的是它收起时的那个颜色，而不是重新读一次、当着你的面纠正自己。macOS 的材质和卡片维持原样。\n\n- **材质跟着桌宠走。** 它是自己的一个窗口，所以得有东西告诉它：拖动时它跟着桌宠，右键菜单占着页面那条线程时它也跟着光标，桌宠被隐藏时它一起消失。\n\n- **气泡底色默认改为 0**，也就是材质本身，全平台一致。\n\n---\n\nThis release fixes the material behind the card on Windows, and what the card is drawn from.\n\n- **The material on Windows is the acrylic, in a window of its own.** What appeared as \"Liquid Glass\" on Windows was a blur behind a region of the pet's own window: a rectangle cut out of the pet's window, which followed the pet badly and had nothing to say about what it was covering. It is the acrylic now — the material that shows what is under it through — in a window of its own, cut to the card's rounded shape and kept directly under the pet. Windows 10 1803 and later, and the switch is named for the material the system actually has: Acrylic on Windows, Liquid Glass on macOS 26 and vibrancy before it.\n\n- **The card is drawn from what is behind it.** The material shows the desktop through, so the panel is drawn from what is under it rather than from the system's light or dark — which is what put dark ink over a dark desktop whenever the system was light, and a grey of its own that washed out wherever the desktop was neither dark nor pale. It reads the desktop now: dark ink over a pale one, light ink over a dark one, every word on the card in that one ink, and a little of the card's own colour where the desktop is too mixed to read against. A reading drifts into the next rather than stepping, the ink changes hands once and fades across, and a card that is taken away comes back in the colour it went down in instead of reading the desktop afresh and correcting itself in front of you. macOS keeps the material, and the card, it has always had.\n\n- **The material goes where the pet goes.** It is a window of its own, so it has to be told: it follows the pet through a drag, stays with the cursor while the right-click menu holds the thread the page would have said so on, and goes away with the pet when the pet is hidden.\n\n- **The panel tint starts at 0** — the bare material — on every platform.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
- "releaseUrl": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.2",
- "downloadBase": "https://github.com/sparkjokerben/jokbet/releases/download/v0.3.2",
+ "notes": "这一版给 Windows 多了一个免安装的便携版，并换上了安装程序的图标。\n\n- **Windows 便携版。** 下载 `Jokbet_0.4.1_x64-portable.zip`，解压到一个可写的文件夹（别放进 Program Files），运行里面的 `Jokbet.exe` 即可，不用安装。统计、设置、备份和日志都存在 exe 旁边的 `data` 文件夹里，挪走或删掉整个文件夹就带走或清掉了全部数据；有新版本时直接替换 exe。需要 WebView2 运行时，Windows 10 和 11 都自带。\n\n- **安装程序用上了应用图标。** Windows 的安装程序和卸载程序原来显示的是 NSIS 的默认图标，现在和应用本身一样。\n\n---\n\nThis release adds a portable Windows build that needs no installing, and gives the installer the app's icon.\n\n- **A portable Windows build.** Download `Jokbet_0.4.1_x64-portable.zip`, unzip it into a folder you can write to (not Program Files) and run `Jokbet.exe` — nothing to install. Its counts, settings, backups and logs stay in a `data` folder beside the exe, so moving or deleting the folder takes all of it along, and an update replaces the exe where it is. It needs the WebView2 runtime, which Windows 10 and 11 already have.\n\n- **The installer shows the app's icon.** The Windows installer and uninstaller showed NSIS's generic icon; they now show the app's own.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+ "releaseUrl": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.1",
+ "downloadBase": "https://github.com/sparkjokerben/jokbet/releases/download/v0.4.1",
  "files": {
   "macos-aarch64-zip": {
-   "name": "Jokbet_0.3.2_aarch64.app.zip",
-   "size": 3889959,
-   "sha256": "f39f0f06b6c67f90b4e26f692ddcaf26a93f9392b1b88fc115e7219323adc272"
+   "name": "Jokbet_0.4.1_aarch64.app.zip",
+   "size": 4064786,
+   "sha256": "3988cc6e0dd8f2ae810a0f3c1265bcde7c2dc55e293b9f686163c6c77c87b2db"
   },
   "macos-aarch64": {
-   "name": "Jokbet_0.3.2_aarch64.dmg",
-   "size": 3922972,
-   "sha256": "846375d94beeb3ed1fc29d225ed86ffdf0219b0f5609d39d8001e4c7e0ad2561"
+   "name": "Jokbet_0.4.1_aarch64.dmg",
+   "size": 4099617,
+   "sha256": "9d1ffb13c142d4c7009f31a2975fc3f890603109000204b36dd3394d81c9f160"
   },
   "macos-x64-zip": {
-   "name": "Jokbet_0.3.2_x64.app.zip",
-   "size": 4201669,
-   "sha256": "4b219732c798ca621ff091b6f4507dca1ecf1dd949ea399e0696de0d34b84ae1"
+   "name": "Jokbet_0.4.1_x64.app.zip",
+   "size": 4394904,
+   "sha256": "d11d1ceacf95fee53d10fbcd9846a5e63032ca9de847dd64bb04a7cba11596f2"
   },
   "macos-x64": {
-   "name": "Jokbet_0.3.2_x64.dmg",
-   "size": 4233273,
-   "sha256": "49428071864b758df0a14dbacdb78e1bf47a6d104ea3ec0dd0bb1fcbd02591cd"
+   "name": "Jokbet_0.4.1_x64.dmg",
+   "size": 4424826,
+   "sha256": "2fb9fec7fb0377ecba367b6c6ff444e7385c880a7bd39c6c560b8ab9be7759f9"
   },
   "windows-x64": {
-   "name": "Jokbet_0.3.2_x64-setup.exe",
-   "size": 3348050,
-   "sha256": "7be3b24d35b4f81ddc8e9f36c295af9c6a24b0c2ff23e224e68375ca2198d44b"
+   "name": "Jokbet_0.4.1_x64-setup.exe",
+   "size": 3477582,
+   "sha256": "99e476ee6144e238b09d0ba8ae608d798ae4fd64fc525c80d236964cb272346f"
   },
   "windows-x64-msi": {
-   "name": "Jokbet_0.3.2_x64_en-US.msi",
-   "size": 4587520,
-   "sha256": "856fb1241fe748d5dbacd21e2799c3dfbfdf25f3fd5496f3cdd020071781971a"
+   "name": "Jokbet_0.4.1_x64_en-US.msi",
+   "size": 4784128,
+   "sha256": "e136b020a7f24de2926dbb5f5f418689434ba55c87f82d19af8ed59ff5cf0db6"
+  },
+  "windows-x64-portable": {
+   "name": "Jokbet_0.4.1_x64-portable.zip",
+   "size": 4363265,
+   "sha256": "9bd079a68ae6c471bf14f9bcf5570a915ec8babf9e881b1bc87a232cbe21fb13"
   },
   "linux-appimage": {
-   "name": "Jokbet_0.3.2_amd64.AppImage",
-   "size": 82971128,
-   "sha256": "d4d6404e4e7e8a92eb59a1bcb61cf69bfdae97a1937ad172986dc1370ddd7407"
+   "name": "Jokbet_0.4.1_amd64.AppImage",
+   "size": 83163640,
+   "sha256": "a65b0455007dfbbfb26db4ded1922df9747586e09dfbc9b281a4c06d308d4269"
   },
   "linux-deb": {
-   "name": "Jokbet_0.3.2_amd64.deb",
-   "size": 4664492,
-   "sha256": "66cd1a526cc8f50934d876c02e3b92c37d167dca45579dd8d6cc8446b0a74be6"
+   "name": "Jokbet_0.4.1_amd64.deb",
+   "size": 4866938,
+   "sha256": "a4cf250333e99edbe72a0ca83e7305dc9cce4e8f3fb0b5d76c5a746213111500"
   }
  }
 }

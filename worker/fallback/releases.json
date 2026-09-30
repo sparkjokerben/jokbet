@@ -1,7 +1,190 @@
 {
  "schema": 1,
- "generatedAt": "2026-09-26T21:31:50.283Z",
+ "generatedAt": "2026-09-30T21:33:46.860Z",
  "releases": [
+  {
+   "version": "0.4.1",
+   "tag": "v0.4.1",
+   "name": "Jokbet v0.4.1",
+   "pubDate": "2026-09-30T21:32:21Z",
+   "prerelease": false,
+   "notes": "这一版给 Windows 多了一个免安装的便携版，并换上了安装程序的图标。\n\n- **Windows 便携版。** 下载 `Jokbet_0.4.1_x64-portable.zip`，解压到一个可写的文件夹（别放进 Program Files），运行里面的 `Jokbet.exe` 即可，不用安装。统计、设置、备份和日志都存在 exe 旁边的 `data` 文件夹里，挪走或删掉整个文件夹就带走或清掉了全部数据；有新版本时直接替换 exe。需要 WebView2 运行时，Windows 10 和 11 都自带。\n\n- **安装程序用上了应用图标。** Windows 的安装程序和卸载程序原来显示的是 NSIS 的默认图标，现在和应用本身一样。\n\n---\n\nThis release adds a portable Windows build that needs no installing, and gives the installer the app's icon.\n\n- **A portable Windows build.** Download `Jokbet_0.4.1_x64-portable.zip`, unzip it into a folder you can write to (not Program Files) and run `Jokbet.exe` — nothing to install. Its counts, settings, backups and logs stay in a `data` folder beside the exe, so moving or deleting the folder takes all of it along, and an update replaces the exe where it is. It needs the WebView2 runtime, which Windows 10 and 11 already have.\n\n- **The installer shows the app's icon.** The Windows installer and uninstaller showed NSIS's generic icon; they now show the app's own.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+   "url": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.1",
+   "files": [
+    {
+     "platform": "macos-aarch64-zip",
+     "name": "Jokbet_0.4.1_aarch64.app.zip",
+     "size": 4064786,
+     "sha256": "3988cc6e0dd8f2ae810a0f3c1265bcde7c2dc55e293b9f686163c6c77c87b2db"
+    },
+    {
+     "platform": "macos-aarch64",
+     "name": "Jokbet_0.4.1_aarch64.dmg",
+     "size": 4099617,
+     "sha256": "9d1ffb13c142d4c7009f31a2975fc3f890603109000204b36dd3394d81c9f160"
+    },
+    {
+     "platform": "macos-x64-zip",
+     "name": "Jokbet_0.4.1_x64.app.zip",
+     "size": 4394904,
+     "sha256": "d11d1ceacf95fee53d10fbcd9846a5e63032ca9de847dd64bb04a7cba11596f2"
+    },
+    {
+     "platform": "macos-x64",
+     "name": "Jokbet_0.4.1_x64.dmg",
+     "size": 4424826,
+     "sha256": "2fb9fec7fb0377ecba367b6c6ff444e7385c880a7bd39c6c560b8ab9be7759f9"
+    },
+    {
+     "platform": "windows-x64",
+     "name": "Jokbet_0.4.1_x64-setup.exe",
+     "size": 3477582,
+     "sha256": "99e476ee6144e238b09d0ba8ae608d798ae4fd64fc525c80d236964cb272346f"
+    },
+    {
+     "platform": "windows-x64-msi",
+     "name": "Jokbet_0.4.1_x64_en-US.msi",
+     "size": 4784128,
+     "sha256": "e136b020a7f24de2926dbb5f5f418689434ba55c87f82d19af8ed59ff5cf0db6"
+    },
+    {
+     "platform": "windows-x64-portable",
+     "name": "Jokbet_0.4.1_x64-portable.zip",
+     "size": 4363265,
+     "sha256": "9bd079a68ae6c471bf14f9bcf5570a915ec8babf9e881b1bc87a232cbe21fb13"
+    },
+    {
+     "platform": "linux-appimage",
+     "name": "Jokbet_0.4.1_amd64.AppImage",
+     "size": 83163640,
+     "sha256": "a65b0455007dfbbfb26db4ded1922df9747586e09dfbc9b281a4c06d308d4269"
+    },
+    {
+     "platform": "linux-deb",
+     "name": "Jokbet_0.4.1_amd64.deb",
+     "size": 4866938,
+     "sha256": "a4cf250333e99edbe72a0ca83e7305dc9cce4e8f3fb0b5d76c5a746213111500"
+    }
+   ]
+  },
+  {
+   "version": "0.4.0",
+   "tag": "v0.4.0",
+   "name": "Jokbet v0.4.0",
+   "pubDate": "2026-09-29T16:44:32Z",
+   "prerelease": false,
+   "notes": "这一版带来三样新东西：数据备份与恢复、休息提醒，以及沿屏幕底边散步。\n\n- **备份与恢复。** **设置 › 数据** 可以把计数和设置存成一个 `.zip`，也能从中恢复。恢复会用备份里的计数替换现有的全部计数；勾选后设置也一并恢复，但桌宠站的位置不变。被替换掉的计数会先存进一份安全备份，所以恢复本身也能撤销。\n\n- **每天自动备份。** Jokbet 每天自动备份一次，存在数据旁边的 `backups` 文件夹里，也可以换成你选的文件夹（选一个同步盘，备份就不只在这块硬盘上），默认保留最近七份；文件夹和份数都能在设置里改。每台电脑只命名和清理自己的备份，两台电脑共用一个文件夹也不会删掉对方的。\n\n- **休息提醒。** 连续打字、点击、滚动 50 分钟，中间没有停过五分钟，桌宠就会伸个懒腰、打个哈欠，提醒你起来活动；之后若还没休息，每隔一刻钟再提醒一次。点一下桌宠表示知道了。两个时长和提醒本身都能在设置里调整或关闭。桌宠隐藏时提醒会等它回来再播，暂停计数期间时间不累计。\n\n- **散步。** 闲着的时候，桌宠偶尔会沿着屏幕底边——Dock 或任务栏上沿——走一走，身子侧向前进的方向，一步一颠。它在整条线上随机挑个地方，再随机定个 3 到 15 秒走过去，远的地方时间短就走得快，近的地方时间长就慢悠悠地晃，但始终是走路的速度。一有打字、点击或滚动就停下，停在哪儿就留在哪儿。放在屏幕半空的桌宠不会走。官网上的桌宠也会散步。\n\n- **闲置动画可以多选。** 踢足球、东张西望、散步随便勾几个，桌宠会不时随机挑一个来做；都不勾就只呼吸，也就是原来的「呼吸」选项。已安装的版本会保留原来选的那一项，想看它散步请勾上 **散步**。\n\n- **滚动也能让桌宠保持清醒。** 往下读长网页时它不会再睡着；滚动本身不会触发动作。\n\n---\n\nThis release brings three new things: backups, a break reminder, and strolls along the bottom of the screen.\n\n- **Backups.** **Settings › Data** saves your counts and your settings to one `.zip`, and restores from one. A restore replaces every count with the backup's, and the settings too if you tick the box — though never where the pet stands. The counts it replaces go into a safety backup first, so a restore can itself be undone.\n\n- **A backup every day.** Jokbet backs itself up once a day, in a `backups` folder beside its data or in a folder you pick (a synced one keeps it off this disk), and keeps the newest seven; both are settings. Each computer names and tidies its own, so two sharing a folder leave each other's alone.\n\n- **A break reminder.** After 50 minutes of typing, clicking and scrolling without a five-minute pause, the pet stretches, yawns and tells you to get up, and again every quarter of an hour until you do; a click on the pet says you have seen it. Both lengths are settings, and so is the reminder itself. It waits while the pet is hidden, and nothing adds up while counting is paused.\n\n- **Strolls.** While idle, the pet now and then takes a walk along the bottom of the screen — on the Dock or the taskbar — turned the way it is going and bobbing as it steps. It picks a spot anywhere along the way and three to fifteen seconds to get there in, so a long way in a short time is a brisk walk and a short way in a long one an amble — never slower or faster than a walk, though. It stops the moment you type, click or scroll, and stays where it stopped. A pet put down in the middle of the screen stays put. The one on the website strolls too.\n\n- **Idle animations are a choice of several.** Tick any of juggling, looking around and strolling, and the pet picks one of them at random now and then; tick none and it just breathes, which is what \"Breathe\" used to mean. An existing install keeps the one it had, so tick **Stroll** to see it walk.\n\n- **Scrolling keeps the pet awake.** Reading down a long page no longer puts it to sleep; it still acts nothing out for a scroll.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+   "url": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.0",
+   "files": [
+    {
+     "platform": "macos-aarch64-zip",
+     "name": "Jokbet_0.4.0_aarch64.app.zip",
+     "size": 4051242,
+     "sha256": "463ad027a0458ed83c1bdc94bf77a25f8e9e7790547cb9581953e110d5a61401"
+    },
+    {
+     "platform": "macos-aarch64",
+     "name": "Jokbet_0.4.0_aarch64.dmg",
+     "size": 4087950,
+     "sha256": "739505498dedd2cd31f03ec1edd10dc7d66f4bd42265b501f96872bf919a68b2"
+    },
+    {
+     "platform": "macos-x64-zip",
+     "name": "Jokbet_0.4.0_x64.app.zip",
+     "size": 4381326,
+     "sha256": "21b9bb72a0aedbe29805efc7a9f0795fffbf6d95923fce0256615398c2ee3d9d"
+    },
+    {
+     "platform": "macos-x64",
+     "name": "Jokbet_0.4.0_x64.dmg",
+     "size": 4412515,
+     "sha256": "32f0152a8e585c38fbc8a162562edea6dc1c883e77fad8f14c783b9aac1be3d6"
+    },
+    {
+     "platform": "windows-x64",
+     "name": "Jokbet_0.4.0_x64-setup.exe",
+     "size": 3483526,
+     "sha256": "5286aec8aa035abb0fb902d389c53403513271b3fd95d6e01589a8b05faa90db"
+    },
+    {
+     "platform": "windows-x64-msi",
+     "name": "Jokbet_0.4.0_x64_en-US.msi",
+     "size": 4780032,
+     "sha256": "7451bcc336031a36ef2087bb2b82e31b80fe68c073b8f40122d29baf182ca163"
+    },
+    {
+     "platform": "linux-appimage",
+     "name": "Jokbet_0.4.0_amd64.AppImage",
+     "size": 83143160,
+     "sha256": "d6a861218bb3048caaf04ebc6bb8f796fba6723e3736dc80203d621b7d177032"
+    },
+    {
+     "platform": "linux-deb",
+     "name": "Jokbet_0.4.0_amd64.deb",
+     "size": 4853550,
+     "sha256": "51106f22f6f4f40f14538354e3901c876785b04b9d1b0c248b4fe4929ca992a2"
+    }
+   ]
+  },
+  {
+   "version": "0.3.3",
+   "tag": "v0.3.3",
+   "name": "Jokbet v0.3.3",
+   "pubDate": "2026-09-28T10:17:35Z",
+   "prerelease": false,
+   "notes": "这一版修的是 macOS 上的三个问题：全屏隐藏、拖动时的气泡，和玻璃卡片上的字。\r\n\r\n- **全屏时隐藏对所有应用都生效了。** 打开「全屏时隐藏」后，有的应用（VS Code）全屏时桌宠会让开，有的（Edge、邮件）却只闪几下又回来；而且不管哪个应用，只要把标题栏拉下来，桌宠就会出现。原因是之前靠「最前面的窗口有没有铺满屏幕」来判断全屏，而全屏应用的工具栏和标题栏是叠在它前面的另一个窗口。现在直接问系统这块显示器是不是正处在全屏空间里，不需要任何权限；不走全屏空间、直接铺满屏幕的游戏和演示照样算数。\r\n\r\n- **拖动桌宠时悬停卡片不再闪。** 拖着走的时候窗口会稍微落后于光标，拖得快时光标会短暂离开桌宠，卡片就一收一放地闪。现在整个拖动过程中都当作光标在桌宠身上。\r\n\r\n- **液态玻璃卡片上的字在深色桌面上也看得清了。** 标签原来是固定的灰色，玻璃透出深灰桌面时就跟它糊在一起。现在 macOS 玻璃卡片上的次要文字只比正文略浅一点。\r\n\r\n---\r\n\r\nThis release fixes three things on macOS: hiding in full screen, the card during a drag, and the words on the glass card.\r\n\r\n- **The pet stays out of the way of every full-screen app.** With \"Hide in full screen\" on, the pet went away for some apps (VS Code) but only flickered and came back for others (Edge, Mail), and it reappeared for all of them whenever the title bar was pulled down. It was judging full screen by whether the frontmost window covered the display, and a full-screen app's toolbar and title bar sit in a window of their own in front of it. It now asks the system whether the display is showing a full-screen Space, which needs no permission; a window covering the display still counts, for games and presentations that go full screen without one.\r\n\r\n- **The hover card stays up while the pet is dragged.** The window trails the cursor a little while it is carried, and a quick drag put the cursor off the pet long enough to take the card down and bring it back, over and over. The pet counts as under the cursor for the whole of a drag now.\r\n\r\n- **The words on the Liquid Glass card stay readable over a dark desktop.** The labels were a fixed grey, which sank into a grey desktop showing through the glass. On macOS the quieter words on the glass are now only a little lighter than the rest.\r\n\r\n---\r\n\r\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\r\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\r\n\r\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+   "url": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.3",
+   "files": [
+    {
+     "platform": "macos-aarch64-zip",
+     "name": "Jokbet_0.3.3_aarch64.app.zip",
+     "size": 3891300,
+     "sha256": "d874a00f637bcef74b31903220e25b79e52564c5075d7a95fc6b1edb93a0bc2c"
+    },
+    {
+     "platform": "macos-aarch64",
+     "name": "Jokbet_0.3.3_aarch64.dmg",
+     "size": 3924532,
+     "sha256": "33554dafcb16bdf25fbf6c26ddb2912a7ee9d0bd209beb3db8ae9f2b761bd6fc"
+    },
+    {
+     "platform": "macos-x64-zip",
+     "name": "Jokbet_0.3.3_x64.app.zip",
+     "size": 4204548,
+     "sha256": "c9f278d440ed276a8ffa544ad2883c0a1500a1798719929a87fc32491531ae45"
+    },
+    {
+     "platform": "macos-x64",
+     "name": "Jokbet_0.3.3_x64.dmg",
+     "size": 4235652,
+     "sha256": "47cadf117d26ef2795554be593ead0cf106aca2ac47a173c9559d56988d4c2d7"
+    },
+    {
+     "platform": "windows-x64",
+     "name": "Jokbet_0.3.3_x64-setup.exe",
+     "size": 3347021,
+     "sha256": "b5dde79d231c9e508e6eaefaedc082999fcfbdb3e8dfb479b3bc7e993f14b6cd"
+    },
+    {
+     "platform": "windows-x64-msi",
+     "name": "Jokbet_0.3.3_x64_en-US.msi",
+     "size": 4587520,
+     "sha256": "8bb69054ca7956d3c42aac6f2e6ac386033defca2ee85a265e115e02ee4739eb"
+    },
+    {
+     "platform": "linux-appimage",
+     "name": "Jokbet_0.3.3_amd64.AppImage",
+     "size": 82971128,
+     "sha256": "b4dec1c9f33c127785c1b6a81d6561259503c4ca6152f431a7a9dcf489c22a77"
+    },
+    {
+     "platform": "linux-deb",
+     "name": "Jokbet_0.3.3_amd64.deb",
+     "size": 4664246,
+     "sha256": "837184afede5371a84a2c544befb287bcdf20207c425165a35831be80dbc2cb0"
+    }
+   ]
+  },
   {
    "version": "0.3.2",
    "tag": "v0.3.2",
