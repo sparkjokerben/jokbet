@@ -1,7 +1,72 @@
 {
  "schema": 1,
- "generatedAt": "2026-09-30T21:33:46.860Z",
+ "generatedAt": "2026-10-02T12:39:53.396Z",
  "releases": [
+  {
+   "version": "0.4.2",
+   "tag": "v0.4.2",
+   "name": "Jokbet v0.4.2",
+   "pubDate": "2026-10-02T12:38:56Z",
+   "prerelease": false,
+   "notes": "Unofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+   "url": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.2",
+   "files": [
+    {
+     "platform": "macos-aarch64-zip",
+     "name": "Jokbet_0.4.2_aarch64.app.zip",
+     "size": 4070166,
+     "sha256": "e97e046fa34be68ce9addce106b077900bdd8bb030e3f84dfd71a99802fecf89"
+    },
+    {
+     "platform": "macos-aarch64",
+     "name": "Jokbet_0.4.2_aarch64.dmg",
+     "size": 4104601,
+     "sha256": "431920e045c12527fdc24610a1396990d004fd24bb6032502b53c55c8686f0f0"
+    },
+    {
+     "platform": "macos-x64-zip",
+     "name": "Jokbet_0.4.2_x64.app.zip",
+     "size": 4405945,
+     "sha256": "e37f936e873bcac246095b39909f8ab40837596bafa8e9614692966f2f13acf4"
+    },
+    {
+     "platform": "macos-x64",
+     "name": "Jokbet_0.4.2_x64.dmg",
+     "size": 4437625,
+     "sha256": "fac4153dfbb42b0a81245abfd5ea38137254d03b603a22595a2057c12d1ff416"
+    },
+    {
+     "platform": "windows-x64",
+     "name": "Jokbet_0.4.2_x64-setup.exe",
+     "size": 3482723,
+     "sha256": "d51667e0438c75ec57454b35f9279e166f447d9e1f0c1120cec0c429e9e4c670"
+    },
+    {
+     "platform": "windows-x64-msi",
+     "name": "Jokbet_0.4.2_x64_en-US.msi",
+     "size": 4780032,
+     "sha256": "0b37556062c380fde955ac36df4903fcf0dd694920913d56fb1537b473d2a413"
+    },
+    {
+     "platform": "windows-x64-portable",
+     "name": "Jokbet_0.4.2_x64-portable.zip",
+     "size": 4359394,
+     "sha256": "0604765d521a665610eaee4f8c5b695d23fb0654aabf29a336adf517375781c6"
+    },
+    {
+     "platform": "linux-appimage",
+     "name": "Jokbet_0.4.2_amd64.AppImage",
+     "size": 83159544,
+     "sha256": "9f4fd17ed7fba0cc50736e1ce4569872060ad65b7f0eab0e2e914c412a3a8e84"
+    },
+    {
+     "platform": "linux-deb",
+     "name": "Jokbet_0.4.2_amd64.deb",
+     "size": 4873064,
+     "sha256": "2994d77740b8a7c8476e9ad654ca016d8eb60d8d3a032e1fe98291bc09055c02"
+    }
+   ]
+  },
   {
    "version": "0.4.1",
    "tag": "v0.4.1",

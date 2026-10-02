@@ -1,57 +1,57 @@
 {
  "schema": 1,
- "version": "0.4.1",
- "tag": "v0.4.1",
- "pubDate": "2026-09-30T21:32:21Z",
+ "version": "0.4.2",
+ "tag": "v0.4.2",
+ "pubDate": "2026-10-02T12:38:56Z",
  "draft": false,
- "notes": "这一版给 Windows 多了一个免安装的便携版，并换上了安装程序的图标。\n\n- **Windows 便携版。** 下载 `Jokbet_0.4.1_x64-portable.zip`，解压到一个可写的文件夹（别放进 Program Files），运行里面的 `Jokbet.exe` 即可，不用安装。统计、设置、备份和日志都存在 exe 旁边的 `data` 文件夹里，挪走或删掉整个文件夹就带走或清掉了全部数据；有新版本时直接替换 exe。需要 WebView2 运行时，Windows 10 和 11 都自带。\n\n- **安装程序用上了应用图标。** Windows 的安装程序和卸载程序原来显示的是 NSIS 的默认图标，现在和应用本身一样。\n\n---\n\nThis release adds a portable Windows build that needs no installing, and gives the installer the app's icon.\n\n- **A portable Windows build.** Download `Jokbet_0.4.1_x64-portable.zip`, unzip it into a folder you can write to (not Program Files) and run `Jokbet.exe` — nothing to install. Its counts, settings, backups and logs stay in a `data` folder beside the exe, so moving or deleting the folder takes all of it along, and an update replaces the exe where it is. It needs the WebView2 runtime, which Windows 10 and 11 already have.\n\n- **The installer shows the app's icon.** The Windows installer and uninstaller showed NSIS's generic icon; they now show the app's own.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
- "releaseUrl": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.1",
- "downloadBase": "https://github.com/sparkjokerben/jokbet/releases/download/v0.4.1",
+ "notes": "Unofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+ "releaseUrl": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.2",
+ "downloadBase": "https://github.com/sparkjokerben/jokbet/releases/download/v0.4.2",
  "files": {
   "macos-aarch64-zip": {
-   "name": "Jokbet_0.4.1_aarch64.app.zip",
-   "size": 4064786,
-   "sha256": "3988cc6e0dd8f2ae810a0f3c1265bcde7c2dc55e293b9f686163c6c77c87b2db"
+   "name": "Jokbet_0.4.2_aarch64.app.zip",
+   "size": 4070166,
+   "sha256": "e97e046fa34be68ce9addce106b077900bdd8bb030e3f84dfd71a99802fecf89"
   },
   "macos-aarch64": {
-   "name": "Jokbet_0.4.1_aarch64.dmg",
-   "size": 4099617,
-   "sha256": "9d1ffb13c142d4c7009f31a2975fc3f890603109000204b36dd3394d81c9f160"
+   "name": "Jokbet_0.4.2_aarch64.dmg",
+   "size": 4104601,
+   "sha256": "431920e045c12527fdc24610a1396990d004fd24bb6032502b53c55c8686f0f0"
   },
   "macos-x64-zip": {
-   "name": "Jokbet_0.4.1_x64.app.zip",
-   "size": 4394904,
-   "sha256": "d11d1ceacf95fee53d10fbcd9846a5e63032ca9de847dd64bb04a7cba11596f2"
+   "name": "Jokbet_0.4.2_x64.app.zip",
+   "size": 4405945,
+   "sha256": "e37f936e873bcac246095b39909f8ab40837596bafa8e9614692966f2f13acf4"
   },
   "macos-x64": {
-   "name": "Jokbet_0.4.1_x64.dmg",
-   "size": 4424826,
-   "sha256": "2fb9fec7fb0377ecba367b6c6ff444e7385c880a7bd39c6c560b8ab9be7759f9"
+   "name": "Jokbet_0.4.2_x64.dmg",
+   "size": 4437625,
+   "sha256": "fac4153dfbb42b0a81245abfd5ea38137254d03b603a22595a2057c12d1ff416"
   },
   "windows-x64": {
-   "name": "Jokbet_0.4.1_x64-setup.exe",
-   "size": 3477582,
-   "sha256": "99e476ee6144e238b09d0ba8ae608d798ae4fd64fc525c80d236964cb272346f"
+   "name": "Jokbet_0.4.2_x64-setup.exe",
+   "size": 3482723,
+   "sha256": "d51667e0438c75ec57454b35f9279e166f447d9e1f0c1120cec0c429e9e4c670"
   },
   "windows-x64-msi": {
-   "name": "Jokbet_0.4.1_x64_en-US.msi",
-   "size": 4784128,
-   "sha256": "e136b020a7f24de2926dbb5f5f418689434ba55c87f82d19af8ed59ff5cf0db6"
+   "name": "Jokbet_0.4.2_x64_en-US.msi",
+   "size": 4780032,
+   "sha256": "0b37556062c380fde955ac36df4903fcf0dd694920913d56fb1537b473d2a413"
   },
   "windows-x64-portable": {
-   "name": "Jokbet_0.4.1_x64-portable.zip",
-   "size": 4363265,
-   "sha256": "9bd079a68ae6c471bf14f9bcf5570a915ec8babf9e881b1bc87a232cbe21fb13"
+   "name": "Jokbet_0.4.2_x64-portable.zip",
+   "size": 4359394,
+   "sha256": "0604765d521a665610eaee4f8c5b695d23fb0654aabf29a336adf517375781c6"
   },
   "linux-appimage": {
-   "name": "Jokbet_0.4.1_amd64.AppImage",
-   "size": 83163640,
-   "sha256": "a65b0455007dfbbfb26db4ded1922df9747586e09dfbc9b281a4c06d308d4269"
+   "name": "Jokbet_0.4.2_amd64.AppImage",
+   "size": 83159544,
+   "sha256": "9f4fd17ed7fba0cc50736e1ce4569872060ad65b7f0eab0e2e914c412a3a8e84"
   },
   "linux-deb": {
-   "name": "Jokbet_0.4.1_amd64.deb",
-   "size": 4866938,
-   "sha256": "a4cf250333e99edbe72a0ca83e7305dc9cce4e8f3fb0b5d76c5a746213111500"
+   "name": "Jokbet_0.4.2_amd64.deb",
+   "size": 4873064,
+   "sha256": "2994d77740b8a7c8476e9ad654ca016d8eb60d8d3a032e1fe98291bc09055c02"
   }
  }
 }
