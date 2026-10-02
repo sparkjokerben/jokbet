@@ -11,7 +11,7 @@ the fuller entries elsewhere:
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.2] — 2026-10-02
 
 ### Changed
 
@@ -257,6 +257,7 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the tray; milestones; a stats window with a trend and a keyboard heatmap; and
   an interface in English and Simplified Chinese.
 
+[0.4.2]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.2
 [0.4.1]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.1
 [0.4.0]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.0
 [0.3.3]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.3.3
