@@ -9,3 +9,9 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+    ignore:
+      # v1 writes GitHub API addresses into latest.json and puts the version in
+      # the macOS updater bundles' names; scripts/site-manifest.ts expects
+      # releases/download/ links and the old names, so the move needs both.
+      - dependency-name: tauri-apps/tauri-action
+        update-types: ["version-update:semver-major"]
