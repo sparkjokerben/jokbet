@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "generatedAt": "2026-10-02T12:39:53.396Z",
+ "generatedAt": "2026-10-02T16:27:26.908Z",
  "releases": [
   {
    "version": "0.4.2",
@@ -8,7 +8,7 @@
    "name": "Jokbet v0.4.2",
    "pubDate": "2026-10-02T12:38:56Z",
    "prerelease": false,
-   "notes": "Unofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+   "notes": "这一版把滚动改成按行数统计，悬浮卡片也能停下来细看了。\n\n- **滚动按行数统计。** 悬浮卡片、统计窗口、导出文件和里程碑里的滚动，现在记的是滚了多少行，而不是滚了几次。macOS 用系统给出的行数，触控板滚动的零头和松手后的惯性滑动都算在内；Windows 按系统鼠标设置里\"一次滚动的行数\"计算；Linux 每格算 3 行。以前按次数记下的滚动仍留在数据库里，但不再显示，所以更新之前的日子滚动显示为 0。导出文件里的 `scrolls` 列改名为 `scroll_lines`。\n\n- **滚动里程碑改用行数。** 已经设好的滚动里程碑保留原来的数字，单位变成行；重复的里程碑至少每 500 行一次。一行比原来的一次滚动少得多，建议到设置里重新看一下。\n\n- **悬浮卡片可以停留阅读。** 鼠标从桌宠往上移到卡片上，卡片不会再收起，等鼠标离开桌宠和卡片才消失。在卡片上右键也不会再弹出网页自带的菜单。\n\n---\n\nThis release counts scrolling in lines, and lets the hover card stay up while you read it.\n\n- **Scrolling is counted in lines.** On the hover card, in the stats, in the exports and in milestones, scrolling is now how many lines you scrolled rather than how many times. A Mac says how many lines each scroll moves, parts of one from a trackpad and the glide after a flick included; on Windows a notch of the wheel is as many lines as the system's mouse setting says, and on Linux three. Scrolls counted before are kept in the database but no longer shown, so earlier days read as nothing scrolled. The exports' `scrolls` column is now `scroll_lines`.\n\n- **Scroll milestones are in lines.** A milestone you set on scrolls keeps its number, now in lines, and a repeating one steps at least every 500 lines. A line is far less than a scroll was, so look them over in the settings.\n\n- **The hover card stays up while you read it.** Move the cursor up from the pet onto its card and the card stays, going only once the cursor leaves both. A right click on it no longer brings up the web view's own menu.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
    "url": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.2",
    "files": [
     {
