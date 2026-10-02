@@ -72,7 +72,7 @@
       <span class="sub">{t("clickSplit", { l: d.clickLeft, r: d.clickRight, m: d.clickMiddle })}</span>
     </dd>
     <dt>{t("scrolls")}</dt>
-    <dd>{formatCount(d.scrolls)}</dd>
+    <dd>{t("lines", { n: formatCount(Math.round(d.scrollLines)) })}</dd>
     <dt>{t("distance")}</dt>
     <dd>{formatDistance(d.moveMm)}</dd>
     {#if showSpeed}

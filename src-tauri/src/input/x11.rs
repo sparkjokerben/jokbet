@@ -2,7 +2,7 @@
 //! recording context, a second one streams the recorded device events.
 //! Wayland sessions do not allow global input listening at all.
 
-use super::{keymap, EventSink, InputHandle, MouseButton, Permission, RawEvent};
+use super::{keymap, EventSink, InputHandle, MouseButton, Permission, RawEvent, LINES_PER_NOTCH};
 use std::sync::mpsc;
 use std::thread::JoinHandle;
 use x11rb::connection::Connection;
@@ -70,7 +70,11 @@ impl Decoder {
                         down,
                     }),
                     // Buttons 4-7 are wheel steps; each step sends press + release.
-                    4..=7 if down => out(RawEvent::Scroll { momentum: false }),
+                    // X says nothing of how many lines a step scrolls.
+                    4..=7 if down => out(RawEvent::Scroll {
+                        lines: LINES_PER_NOTCH,
+                        momentum: false,
+                    }),
                     4..=7 => {}
                     _ => out(RawEvent::Button {
                         button: MouseButton::Other,
@@ -240,7 +244,10 @@ mod tests {
         assert_eq!(
             out,
             [
-                RawEvent::Scroll { momentum: false },
+                RawEvent::Scroll {
+                    lines: LINES_PER_NOTCH,
+                    momentum: false
+                },
                 RawEvent::Button {
                     button: MouseButton::Left,
                     down: true

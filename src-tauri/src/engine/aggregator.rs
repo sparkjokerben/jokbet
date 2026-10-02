@@ -3,7 +3,6 @@
 
 use super::distance::{DisplayMap, DistanceTracker};
 use super::rate::RateWindow;
-use super::scroll::ScrollSegmenter;
 use crate::input::{MouseButton, RawEvent, TimedEvent};
 use serde::Serialize;
 use std::collections::HashMap;
@@ -19,7 +18,8 @@ pub struct Totals {
     pub click_left: u64,
     pub click_right: u64,
     pub click_middle: u64,
-    pub scrolls: u64,
+    /// Lines scrolled, as the system counts them; a trackpad scrolls parts of one.
+    pub scroll_lines: f64,
     pub move_px: f64,
     pub move_mm: f64,
 }
@@ -30,7 +30,7 @@ impl Totals {
         self.click_left += o.click_left;
         self.click_right += o.click_right;
         self.click_middle += o.click_middle;
-        self.scrolls += o.scrolls;
+        self.scroll_lines += o.scroll_lines;
         self.move_px += o.move_px;
         self.move_mm += o.move_mm;
     }
@@ -101,7 +101,6 @@ pub struct Aggregator {
     pub pending: DayCounters,
     pub paused: bool,
     held: HashMap<&'static str, u64>,
-    scroll: ScrollSegmenter,
     keys_rate: RateWindow,
     clicks_rate: RateWindow,
     distance: DistanceTracker,
@@ -153,16 +152,18 @@ impl Aggregator {
                 Some(Activity::Click)
             }
             RawEvent::Button { down: false, .. } => None,
-            // The glide after a flick is the system's, not the user's.
-            RawEvent::Scroll { momentum: true } => None,
-            // Scrolling keeps the pet awake and counts towards a break, but
-            // does not change what it is doing.
-            RawEvent::Scroll { momentum: false } => {
-                if self.scroll.feed(e.t_ms) && !self.paused {
-                    self.today.apply(hour, |t| t.scrolls += 1);
-                    self.pending.apply(hour, |t| t.scrolls += 1);
+            RawEvent::Scroll { lines, momentum } => {
+                // The glide after a flick still scrolls lines, as a wheel's
+                // notch does however smoothly the app animates it.
+                if !self.paused && lines > 0.0 {
+                    for day in [&mut self.today, &mut self.pending] {
+                        day.apply(hour, |t| t.scroll_lines += lines);
+                    }
                 }
-                Some(Activity::Scroll)
+                // But the glide is the system's, not the user's. Scrolling
+                // keeps the pet awake and counts towards a break, but does not
+                // change what it is doing.
+                (!momentum).then_some(Activity::Scroll)
             }
             RawEvent::Move { x, y } => {
                 let (px, mm) = self.distance.feed(x, y, displays);
@@ -279,22 +280,26 @@ mod tests {
         assert_eq!((t.click_left, t.click_right, t.click_middle), (2, 1, 1));
     }
 
+    fn scroll(t: u64, lines: f64, momentum: bool) -> TimedEvent {
+        ev(t, RawEvent::Scroll { lines, momentum })
+    }
+
     #[test]
-    fn scroll_gestures_ignore_momentum() {
+    fn scrolling_adds_up_lines_glide_included() {
         let mut a = Aggregator::default();
-        let scroll = |t, momentum| ev(t, RawEvent::Scroll { momentum });
-        feed(
+        feed_at(
             &mut a,
+            10,
             [
-                scroll(0, false),
-                scroll(16, false),
-                scroll(32, false),
-                scroll(400, true),
-                scroll(800, true),
-                scroll(1200, false),
+                scroll(16, 3.0, false),
+                scroll(32, 0.5, false),
+                scroll(400, 6.5, true),
+                scroll(1200, 0.0, false),
             ],
         );
-        assert_eq!(a.today.totals.scrolls, 2);
+        assert_eq!(a.today.totals.scroll_lines, 10.0);
+        assert_eq!(a.today.per_hour[10].scroll_lines, 10.0);
+        assert_eq!(a.pending, a.today);
     }
 
     #[test]
@@ -322,7 +327,7 @@ mod tests {
         );
         feed(&mut a, click(10, MouseButton::Left));
         assert_eq!(
-            a.ingest(ev(20, RawEvent::Scroll { momentum: false }), &map, 12),
+            a.ingest(scroll(20, 3.0, false), &map, 12),
             Some(Activity::Scroll)
         );
         assert!(a.today.is_empty());
@@ -333,10 +338,15 @@ mod tests {
     fn a_scroll_is_activity_and_its_momentum_is_not() {
         let mut a = Aggregator::default();
         let map = DisplayMap::default();
-        let scroll = |t, momentum| ev(t, RawEvent::Scroll { momentum });
-        assert_eq!(a.ingest(scroll(0, false), &map, 9), Some(Activity::Scroll));
-        assert_eq!(a.ingest(scroll(16, false), &map, 9), Some(Activity::Scroll));
-        assert_eq!(a.ingest(scroll(400, true), &map, 9), None);
+        assert_eq!(
+            a.ingest(scroll(0, 3.0, false), &map, 9),
+            Some(Activity::Scroll)
+        );
+        assert_eq!(
+            a.ingest(scroll(16, 3.0, false), &map, 9),
+            Some(Activity::Scroll)
+        );
+        assert_eq!(a.ingest(scroll(400, 3.0, true), &map, 9), None);
         let mv = ev(500, RawEvent::Move { x: 10.0, y: 10.0 });
         assert_eq!(a.ingest(mv, &map, 9), None, "moving the mouse is not");
     }

@@ -36,8 +36,11 @@ pub enum RawEvent {
         button: MouseButton,
         down: bool,
     },
-    /// `momentum` marks macOS inertial scrolling after the fingers lift.
+    /// How many lines the content moved, as the system counts them (a part
+    /// of one from a trackpad); `momentum` marks macOS inertial scrolling after
+    /// the fingers lift.
     Scroll {
+        lines: f64,
         momentum: bool,
     },
     /// Cursor position in the platform's global coordinates
@@ -47,6 +50,11 @@ pub enum RawEvent {
         y: f64,
     },
 }
+
+/// How many lines one wheel notch scrolls where the system does not say, or
+/// says a page: the default everywhere.
+#[cfg_attr(target_os = "macos", allow(dead_code))]
+pub const LINES_PER_NOTCH: f64 = 3.0;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TimedEvent {

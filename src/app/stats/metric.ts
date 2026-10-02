@@ -10,18 +10,18 @@ export const METRIC_LABEL: Record<Metric, MessageKey> = {
   keys: "metricKeys",
   clicks: "metricClicks",
   inputs: "metricInputs",
-  scrolls: "metricScrolls",
+  scrollLines: "metricScrollLines",
   distance: "metricDistance",
 };
 
 /** The metrics the selector offers; "inputs" is only used by the milestones. */
-export const METRICS = ["keys", "clicks", "scrolls", "distance"] as const;
+export const METRICS = ["keys", "clicks", "scrollLines", "distance"] as const;
 
 const VALUE: Record<Metric, (x: Totals) => number> = {
   keys: (x) => x.keys,
   clicks,
   inputs: (x) => x.keys + clicks(x),
-  scrolls: (x) => x.scrolls,
+  scrollLines: (x) => x.scrollLines,
   distance: (x) => x.moveMm,
 };
 

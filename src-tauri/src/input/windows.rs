@@ -1,19 +1,22 @@
 //! Windows low-level keyboard and mouse hooks on a dedicated thread with its
 //! own message loop. No permission is needed.
 
-use super::{keymap, EventSink, InputHandle, MouseButton, Permission, RawEvent};
-use std::sync::atomic::{AtomicPtr, Ordering};
+use super::{keymap, EventSink, InputHandle, MouseButton, Permission, RawEvent, LINES_PER_NOTCH};
+use std::ffi::c_void;
+use std::sync::atomic::{AtomicPtr, AtomicU64, Ordering};
 use std::sync::mpsc;
 use std::thread::JoinHandle;
 use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CallNextHookEx, GetMessageW, PostThreadMessageW, SetWindowsHookExW, UnhookWindowsHookEx,
-    HC_ACTION, KBDLLHOOKSTRUCT, LLKHF_EXTENDED, LLKHF_INJECTED, LLMHF_INJECTED, MSG,
-    MSLLHOOKSTRUCT, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_LBUTTONDOWN, WM_LBUTTONUP,
-    WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_QUIT,
-    WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN, WM_XBUTTONDOWN, WM_XBUTTONUP,
+    CallNextHookEx, GetMessageW, PostThreadMessageW, SetWindowsHookExW, SystemParametersInfoW,
+    UnhookWindowsHookEx, HC_ACTION, KBDLLHOOKSTRUCT, LLKHF_EXTENDED, LLKHF_INJECTED,
+    LLMHF_INJECTED, MSG, MSLLHOOKSTRUCT, SPI_GETWHEELSCROLLCHARS, SPI_GETWHEELSCROLLLINES,
+    SYSTEM_PARAMETERS_INFO_ACTION, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, WH_KEYBOARD_LL,
+    WH_MOUSE_LL, WM_KEYDOWN, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP,
+    WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_QUIT, WM_RBUTTONDOWN, WM_RBUTTONUP,
+    WM_SYSKEYDOWN, WM_XBUTTONDOWN, WM_XBUTTONUP,
 };
 
 /// Hook procedures are plain functions, so the sink lives in a static.
@@ -23,6 +26,33 @@ static SINK: AtomicPtr<EventSink> = AtomicPtr::new(std::ptr::null_mut());
 fn sink() -> Option<&'static EventSink> {
     // SAFETY: the pointer is either null or a leaked Box that is never freed.
     unsafe { SINK.load(Ordering::Acquire).as_ref() }
+}
+
+/// One notch of a wheel's travel in `mouseData`.
+const WHEEL_DELTA: f64 = 120.0;
+
+/// How many lines a notch of the vertical wheel scrolls, and how many
+/// characters one of the horizontal wheel does (as `f64` bits); a character
+/// sideways counts as a line. Read from the system's settings as the hooks go
+/// in, so the hook itself makes no calls for it.
+static NOTCH_V: AtomicU64 = AtomicU64::new(0);
+static NOTCH_H: AtomicU64 = AtomicU64::new(0);
+
+fn lines_per_notch(action: SYSTEM_PARAMETERS_INFO_ACTION) -> f64 {
+    let mut lines: u32 = 0;
+    let read = unsafe {
+        SystemParametersInfoW(
+            action,
+            0,
+            Some(&mut lines as *mut u32 as *mut c_void),
+            SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0),
+        )
+    };
+    // A page per notch (WHEEL_PAGESCROLL) has no number of lines.
+    if read.is_err() || lines == u32::MAX {
+        return LINES_PER_NOTCH;
+    }
+    f64::from(lines)
 }
 
 unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
@@ -50,6 +80,15 @@ unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
         let m = &*(lparam.0 as *const MSLLHOOKSTRUCT);
         if let (Some(sink), true) = (sink(), m.flags & LLMHF_INJECTED == 0) {
             let button = |button, down| RawEvent::Button { button, down };
+            let scroll = |notch: &AtomicU64| {
+                // The high word is the signed travel, in multiples of WHEEL_DELTA.
+                let delta = (m.mouseData >> 16) as u16 as i16;
+                RawEvent::Scroll {
+                    lines: f64::from(delta.unsigned_abs()) / WHEEL_DELTA
+                        * f64::from_bits(notch.load(Ordering::Relaxed)),
+                    momentum: false,
+                }
+            };
             let ev = match wparam.0 as u32 {
                 WM_MOUSEMOVE => Some(RawEvent::Move {
                     x: m.pt.x as f64,
@@ -63,7 +102,8 @@ unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
                 WM_MBUTTONUP => Some(button(MouseButton::Middle, false)),
                 WM_XBUTTONDOWN => Some(button(MouseButton::Other, true)),
                 WM_XBUTTONUP => Some(button(MouseButton::Other, false)),
-                WM_MOUSEWHEEL | WM_MOUSEHWHEEL => Some(RawEvent::Scroll { momentum: false }),
+                WM_MOUSEWHEEL => Some(scroll(&NOTCH_V)),
+                WM_MOUSEHWHEEL => Some(scroll(&NOTCH_H)),
                 _ => None,
             };
             if let Some(ev) = ev {
@@ -100,6 +140,14 @@ impl InputHandle for WinHandle {
 
 pub fn start(sink: EventSink) -> Result<Box<dyn InputHandle>, String> {
     SINK.store(Box::into_raw(Box::new(sink)), Ordering::Release);
+    NOTCH_V.store(
+        lines_per_notch(SPI_GETWHEELSCROLLLINES).to_bits(),
+        Ordering::Relaxed,
+    );
+    NOTCH_H.store(
+        lines_per_notch(SPI_GETWHEELSCROLLCHARS).to_bits(),
+        Ordering::Relaxed,
+    );
     let (ready_tx, ready_rx) = mpsc::channel::<Result<u32, String>>();
     let thread = std::thread::Builder::new()
         .name("input-hook".into())

@@ -8,7 +8,7 @@ export const PET_SCALE_DEFAULT = 3.5;
 export const GLASS_TINT_MAX = 60;
 export type CounterKind = "today" | "rate";
 export type Period = "daily" | "lifetime";
-export type Metric = "keys" | "clicks" | "inputs" | "scrolls" | "distance";
+export type Metric = "keys" | "clicks" | "inputs" | "scrollLines" | "distance";
 /** What the engine saw since the last tick; a scroll only keeps the pet awake. */
 export type Activity = "typing" | "click" | "scroll";
 export type Permission = "granted" | "denied" | "notRequired" | "unsupported";
@@ -129,7 +129,8 @@ export interface Totals {
   clickLeft: number;
   clickRight: number;
   clickMiddle: number;
-  scrolls: number;
+  /** Lines scrolled; a trackpad scrolls parts of one. */
+  scrollLines: number;
   movePx: number;
   moveMm: number;
 }

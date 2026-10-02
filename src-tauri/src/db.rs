@@ -55,22 +55,30 @@ CREATE TABLE hourly(
 ) WITHOUT ROWID;
 ";
 
+/// Scrolling is counted in lines. The `scrolls` columns keep the gestures
+/// counted before; they are no longer written, and a day from back then reads
+/// as one with nothing scrolled.
+const SCHEMA_V3: &str = "
+ALTER TABLE daily ADD COLUMN scroll_lines REAL NOT NULL DEFAULT 0;
+ALTER TABLE hourly ADD COLUMN scroll_lines REAL NOT NULL DEFAULT 0;
+";
+
 /// The schema `init` brings a database up to. A backup made by a newer version
 /// may be ahead of it, and is refused rather than read wrong.
-pub const SCHEMA_VERSION: i64 = 2;
+pub const SCHEMA_VERSION: i64 = 3;
 
 /// The tables a restore copies over, with their columns in order. Every count
 /// the app keeps is in one of these; settings live in their own file.
 const TABLES: [(&str, &str); 4] = [
     (
         "daily",
-        "date, keys, click_left, click_right, click_middle, scrolls, move_px, move_mm",
+        "date, keys, click_left, click_right, click_middle, scrolls, scroll_lines, move_px, move_mm",
     ),
     ("daily_keys", "date, key, count"),
     ("milestone_state", "id, period, last_value, fired_at"),
     (
         "hourly",
-        "date, hour, keys, click_left, click_right, click_middle, scrolls, move_px, move_mm",
+        "date, hour, keys, click_left, click_right, click_middle, scrolls, scroll_lines, move_px, move_mm",
     ),
 ];
 
@@ -91,7 +99,7 @@ fn totals_from_row(row: &rusqlite::Row, first: usize) -> rusqlite::Result<Totals
         click_left: row.get::<_, i64>(first + 1)? as u64,
         click_right: row.get::<_, i64>(first + 2)? as u64,
         click_middle: row.get::<_, i64>(first + 3)? as u64,
-        scrolls: row.get::<_, i64>(first + 4)? as u64,
+        scroll_lines: row.get(first + 4)?,
         move_px: row.get(first + 5)?,
         move_mm: row.get(first + 6)?,
     })
@@ -127,6 +135,12 @@ impl Db {
             let tx = conn.transaction()?;
             tx.execute_batch(SCHEMA_V2)?;
             tx.pragma_update(None, "user_version", 2)?;
+            tx.commit()?;
+        }
+        if version < 3 {
+            let tx = conn.transaction()?;
+            tx.execute_batch(SCHEMA_V3)?;
+            tx.pragma_update(None, "user_version", 3)?;
             tx.commit()?;
         }
         Ok(Self { conn })
@@ -197,14 +211,14 @@ impl Db {
         let t = &delta.totals;
         let tx = self.conn.transaction()?;
         tx.execute(
-            "INSERT INTO daily(date, keys, click_left, click_right, click_middle, scrolls, move_px, move_mm)
+            "INSERT INTO daily(date, keys, click_left, click_right, click_middle, scroll_lines, move_px, move_mm)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
              ON CONFLICT(date) DO UPDATE SET
                keys = keys + excluded.keys,
                click_left = click_left + excluded.click_left,
                click_right = click_right + excluded.click_right,
                click_middle = click_middle + excluded.click_middle,
-               scrolls = scrolls + excluded.scrolls,
+               scroll_lines = scroll_lines + excluded.scroll_lines,
                move_px = move_px + excluded.move_px,
                move_mm = move_mm + excluded.move_mm",
             params![
@@ -213,7 +227,7 @@ impl Db {
                 t.click_left as i64,
                 t.click_right as i64,
                 t.click_middle as i64,
-                t.scrolls as i64,
+                t.scroll_lines,
                 t.move_px,
                 t.move_mm
             ],
@@ -231,14 +245,14 @@ impl Db {
             // Its own scope, like the one above: the commit cannot move a
             // transaction a statement is still borrowing.
             let mut stmt = tx.prepare_cached(
-                "INSERT INTO hourly(date, hour, keys, click_left, click_right, click_middle, scrolls, move_px, move_mm)
+                "INSERT INTO hourly(date, hour, keys, click_left, click_right, click_middle, scroll_lines, move_px, move_mm)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
                  ON CONFLICT(date, hour) DO UPDATE SET
                    keys = keys + excluded.keys,
                    click_left = click_left + excluded.click_left,
                    click_right = click_right + excluded.click_right,
                    click_middle = click_middle + excluded.click_middle,
-                   scrolls = scrolls + excluded.scrolls,
+                   scroll_lines = scroll_lines + excluded.scroll_lines,
                    move_px = move_px + excluded.move_px,
                    move_mm = move_mm + excluded.move_mm",
             )?;
@@ -253,7 +267,7 @@ impl Db {
                     t.click_left as i64,
                     t.click_right as i64,
                     t.click_middle as i64,
-                    t.scrolls as i64,
+                    t.scroll_lines,
                     t.move_px,
                     t.move_mm
                 ])?;
@@ -267,7 +281,7 @@ impl Db {
         let totals = self
             .conn
             .query_row(
-                "SELECT keys, click_left, click_right, click_middle, scrolls, move_px, move_mm
+                "SELECT keys, click_left, click_right, click_middle, scroll_lines, move_px, move_mm
                  FROM daily WHERE date = ?1",
                 [&d],
                 |row| totals_from_row(row, 0),
@@ -283,7 +297,7 @@ impl Db {
         // Today's hours come back too, so `today` stays what it says it is.
         let mut per_hour: [Totals; 24] = std::array::from_fn(|_| Totals::default());
         let mut hours = self.conn.prepare(
-            "SELECT hour, keys, click_left, click_right, click_middle, scrolls, move_px, move_mm
+            "SELECT hour, keys, click_left, click_right, click_middle, scroll_lines, move_px, move_mm
              FROM hourly WHERE date = ?1",
         )?;
         let mut rows = hours.query([&d])?;
@@ -307,7 +321,7 @@ impl Db {
         to: NaiveDate,
     ) -> rusqlite::Result<Vec<(NaiveDate, Totals)>> {
         let mut stmt = self.conn.prepare(
-            "SELECT date, keys, click_left, click_right, click_middle, scrolls, move_px, move_mm
+            "SELECT date, keys, click_left, click_right, click_middle, scroll_lines, move_px, move_mm
              FROM daily WHERE date BETWEEN ?1 AND ?2",
         )?;
         let stored = stmt
@@ -344,7 +358,7 @@ impl Db {
         let mut out: [Totals; 24] = std::array::from_fn(|_| Totals::default());
         let mut stmt = self.conn.prepare(
             "SELECT hour, SUM(keys), SUM(click_left), SUM(click_right), SUM(click_middle),
-                    SUM(scrolls), SUM(move_px), SUM(move_mm)
+                    SUM(scroll_lines), SUM(move_px), SUM(move_mm)
              FROM hourly WHERE date BETWEEN ?1 AND ?2 GROUP BY hour",
         )?;
         let mut rows = stmt.query([day_key(from), day_key(to)])?;
@@ -361,7 +375,7 @@ impl Db {
     /// never written, so this is far smaller than the span it covers.
     pub fn history(&self) -> rusqlite::Result<Vec<(String, Totals)>> {
         let mut stmt = self.conn.prepare(
-            "SELECT date, keys, click_left, click_right, click_middle, scrolls, move_px, move_mm
+            "SELECT date, keys, click_left, click_right, click_middle, scroll_lines, move_px, move_mm
              FROM daily ORDER BY date DESC LIMIT ?1",
         )?;
         let mut days = stmt
@@ -385,10 +399,11 @@ impl Db {
 
     /// All days as CSV: date, totals.
     pub fn daily_csv(&self) -> rusqlite::Result<String> {
-        let mut out =
-            String::from("date,keys,click_left,click_right,click_middle,scrolls,move_px,move_m\n");
+        let mut out = String::from(
+            "date,keys,click_left,click_right,click_middle,scroll_lines,move_px,move_m\n",
+        );
         let mut stmt = self.conn.prepare(
-            "SELECT date, keys, click_left, click_right, click_middle, scrolls, move_px, move_mm
+            "SELECT date, keys, click_left, click_right, click_middle, scroll_lines, move_px, move_mm
              FROM daily ORDER BY date",
         )?;
         let mut rows = stmt.query([])?;
@@ -396,12 +411,12 @@ impl Db {
             let d: String = row.get(0)?;
             let t = totals_from_row(row, 1)?;
             out.push_str(&format!(
-                "{d},{},{},{},{},{},{:.0},{:.2}\n",
+                "{d},{},{},{},{},{:.0},{:.0},{:.2}\n",
                 t.keys,
                 t.click_left,
                 t.click_right,
                 t.click_middle,
-                t.scrolls,
+                t.scroll_lines,
                 t.move_px,
                 t.move_mm / 1000.0
             ));
@@ -426,10 +441,10 @@ impl Db {
     /// All days as CSV: date, hour, totals.
     pub fn hourly_csv(&self) -> rusqlite::Result<String> {
         let mut out = String::from(
-            "date,hour,keys,click_left,click_right,click_middle,scrolls,move_px,move_m\n",
+            "date,hour,keys,click_left,click_right,click_middle,scroll_lines,move_px,move_m\n",
         );
         let mut stmt = self.conn.prepare(
-            "SELECT date, hour, keys, click_left, click_right, click_middle, scrolls, move_px, move_mm
+            "SELECT date, hour, keys, click_left, click_right, click_middle, scroll_lines, move_px, move_mm
              FROM hourly ORDER BY date, hour",
         )?;
         let mut rows = stmt.query([])?;
@@ -437,12 +452,12 @@ impl Db {
             let (d, h): (String, i64) = (row.get(0)?, row.get(1)?);
             let t = totals_from_row(row, 2)?;
             out.push_str(&format!(
-                "{d},{h},{},{},{},{},{},{:.0},{:.2}\n",
+                "{d},{h},{},{},{},{},{:.0},{:.0},{:.2}\n",
                 t.keys,
                 t.click_left,
                 t.click_right,
                 t.click_middle,
-                t.scrolls,
+                t.scroll_lines,
                 t.move_px,
                 t.move_mm / 1000.0
             ));
@@ -498,7 +513,7 @@ impl Db {
     pub fn lifetime_totals(&self) -> rusqlite::Result<Totals> {
         self.conn.query_row(
             "SELECT COALESCE(SUM(keys), 0), COALESCE(SUM(click_left), 0), COALESCE(SUM(click_right), 0),
-                    COALESCE(SUM(click_middle), 0), COALESCE(SUM(scrolls), 0),
+                    COALESCE(SUM(click_middle), 0), COALESCE(SUM(scroll_lines), 0.0),
                     COALESCE(SUM(move_px), 0.0), COALESCE(SUM(move_mm), 0.0)
              FROM daily",
             [],
@@ -623,7 +638,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             db.daily_csv().unwrap(),
-            "date,keys,click_left,click_right,click_middle,scrolls,move_px,move_m\n2026-09-23,3,1,0,0,0,0,0.00\n"
+            "date,keys,click_left,click_right,click_middle,scroll_lines,move_px,move_m\n2026-09-23,3,1,0,0,0,0,0.00\n"
         );
         assert_eq!(
             db.keys_csv().unwrap(),
@@ -718,14 +733,14 @@ mod tests {
             .unwrap();
         assert_eq!(
             db.hourly_csv().unwrap(),
-            "date,hour,keys,click_left,click_right,click_middle,scrolls,move_px,move_m\n\
+            "date,hour,keys,click_left,click_right,click_middle,scroll_lines,move_px,move_m\n\
              2026-09-23,9,3,0,0,0,0,0,0.00\n\
              2026-09-23,14,5,0,0,0,0,0,0.00\n"
         );
         db.clear().unwrap();
         assert_eq!(
             db.hourly_csv().unwrap(),
-            "date,hour,keys,click_left,click_right,click_middle,scrolls,move_px,move_m\n"
+            "date,hour,keys,click_left,click_right,click_middle,scroll_lines,move_px,move_m\n"
         );
         assert!(db
             .hours(day(2026, 9, 1), day(2026, 9, 30))
@@ -763,7 +778,38 @@ mod tests {
             .conn
             .pragma_query_value(None, "user_version", |r| r.get(0))
             .unwrap();
-        assert_eq!(version, 2);
+        assert_eq!(version, SCHEMA_VERSION);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn upgrading_a_v2_database_leaves_counted_scrolls_behind() {
+        let dir = temp_dir("v2");
+        let path = dir.join("stats.sqlite");
+        let d = day(2026, 9, 23);
+        {
+            // Scrolls were counted as gestures then; there are no lines in them.
+            let conn = Connection::open(&path).unwrap();
+            conn.execute_batch(SCHEMA_V1).unwrap();
+            conn.execute_batch(SCHEMA_V2).unwrap();
+            conn.pragma_update(None, "user_version", 2).unwrap();
+            conn.execute(
+                "INSERT INTO daily(date, keys, scrolls) VALUES (?1, 42, 7)",
+                [day_key(d)],
+            )
+            .unwrap();
+        }
+        let mut db = Db::open(&path).unwrap();
+        assert_eq!(db.schema_version().unwrap(), SCHEMA_VERSION);
+        let before = db.load_day(d).unwrap().totals;
+        assert_eq!((before.keys, before.scroll_lines), (42, 0.0));
+        let mut delta = DayCounters::default();
+        delta.totals.scroll_lines = 1234.5;
+        delta.per_hour[9].scroll_lines = 1234.5;
+        db.add_day(d, &delta).unwrap();
+        assert_eq!(db.load_day(d).unwrap().totals.scroll_lines, 1234.5);
+        assert_eq!(db.hours(d, d).unwrap()[9].scroll_lines, 1234.5);
+        assert_eq!(db.lifetime_totals().unwrap().scroll_lines, 1234.5);
         let _ = std::fs::remove_dir_all(&dir);
     }
 

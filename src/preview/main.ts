@@ -20,7 +20,7 @@ const withKeys = (keys: number) => ({
   clickLeft: Math.round(keys * 0.18),
   clickRight: Math.round(keys * 0.02),
   clickMiddle: Math.round(keys * 0.004),
-  scrolls: Math.round(keys * 0.05),
+  scrollLines: Math.round(keys * 0.6),
   movePx: keys * 40,
   moveMm: keys * 9,
 });

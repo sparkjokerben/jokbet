@@ -72,7 +72,7 @@ pub fn metric_value(t: &Totals, m: Metric) -> f64 {
         Metric::Keys => t.keys as f64,
         Metric::Clicks => clicks(t) as f64,
         Metric::Inputs => (t.keys + clicks(t)) as f64,
-        Metric::Scrolls => t.scrolls as f64,
+        Metric::ScrollLines => t.scroll_lines,
         Metric::Distance => t.move_mm / 1000.0,
     }
 }

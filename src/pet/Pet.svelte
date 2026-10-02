@@ -40,7 +40,7 @@
   let rows = $state<string[]>([]);
   let settings = $state<Settings | null>(null);
   let tick = $state<Tick>({
-    today: { keys: 0, clickLeft: 0, clickRight: 0, clickMiddle: 0, scrolls: 0, movePx: 0, moveMm: 0 },
+    today: { keys: 0, clickLeft: 0, clickRight: 0, clickMiddle: 0, scrollLines: 0, movePx: 0, moveMm: 0 },
     kps: 0,
     cps: 0,
     activity: null,

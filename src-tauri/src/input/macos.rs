@@ -36,6 +36,7 @@ extern "C" {
     fn CGEventTapEnable(tap: CFMachPortRef, enable: bool);
     fn CGEventTapIsEnabled(tap: CFMachPortRef) -> bool;
     fn CGEventGetIntegerValueField(event: CGEventRef, field: u32) -> i64;
+    fn CGEventGetDoubleValueField(event: CGEventRef, field: u32) -> f64;
     fn CGEventGetFlags(event: CGEventRef) -> u64;
     fn CGEventGetLocation(event: CGEventRef) -> CGPoint;
     fn CGPreflightListenEventAccess() -> bool;
@@ -84,6 +85,8 @@ const TAP_DISABLED_BY_USER_INPUT: u32 = 0xFFFF_FFFF;
 const FIELD_BUTTON_NUMBER: u32 = 3;
 const FIELD_AUTOREPEAT: u32 = 8;
 const FIELD_KEYCODE: u32 = 9;
+const FIELD_FIXED_PT_DELTA_AXIS1: u32 = 93;
+const FIELD_FIXED_PT_DELTA_AXIS2: u32 = 94;
 const FIELD_MOMENTUM_PHASE: u32 = 123;
 
 const CAPS_LOCK: u16 = 0x39;
@@ -184,9 +187,17 @@ extern "C" fn on_event(
             },
             down: event_type == OTHER_DOWN,
         }),
-        SCROLL_WHEEL => sink.send(RawEvent::Scroll {
-            momentum: field(FIELD_MOMENTUM_PHASE) != 0,
-        }),
+        SCROLL_WHEEL => {
+            // In lines, fractions of one included: a wheel's notches and a
+            // trackpad's travel alike, acceleration included. Sideways counts
+            // the same as up and down, as on the other systems.
+            let delta = |f| unsafe { CGEventGetDoubleValueField(event, f) };
+            sink.send(RawEvent::Scroll {
+                lines: delta(FIELD_FIXED_PT_DELTA_AXIS1).abs()
+                    + delta(FIELD_FIXED_PT_DELTA_AXIS2).abs(),
+                momentum: field(FIELD_MOMENTUM_PHASE) != 0,
+            });
+        }
         MOUSE_MOVED | LEFT_DRAGGED | RIGHT_DRAGGED | OTHER_DRAGGED => {
             let p = unsafe { CGEventGetLocation(event) };
             sink.send(RawEvent::Move { x: p.x, y: p.y });

@@ -12,7 +12,7 @@ import { detectLang, messages, resolveLang, t } from "./i18n";
 import type { HeadCounter, MilestoneHit, Tick } from "./types";
 
 const tick: Tick = {
-  today: { keys: 1000, clickLeft: 50, clickRight: 20, clickMiddle: 5, scrolls: 7, movePx: 0, moveMm: 0 },
+  today: { keys: 1000, clickLeft: 50, clickRight: 20, clickMiddle: 5, scrollLines: 7, movePx: 0, moveMm: 0 },
   kps: 3.2,
   cps: 0.4,
   activity: null,
@@ -111,6 +111,8 @@ describe("celebrationText", () => {
     expect(celebrationText([hit({})], "en")).toBe("🎉 10,000 keys today!");
     expect(celebrationText([hit({ period: "lifetime", level: 1_000_000 })], "zh")).toBe("🎉 累计按键 100万！");
     expect(celebrationText([hit({ metric: "distance", level: 1000 })], "en")).toBe("🎉 1.00 km of mouse travel today!");
+    expect(celebrationText([hit({ metric: "scrollLines", level: 5000 })], "en")).toBe("🎉 5,000 lines scrolled today!");
+    expect(celebrationText([hit({ metric: "scrollLines", level: 5000 })], "zh")).toBe("🎉 今天滚动行数 5,000！");
     expect(celebrationText([hit({ metric: "inputs", level: 1000 })], "zh")).toBe("🎉 今天按键+点击 1,000！");
     expect(celebrationText([hit({ metric: "inputs", level: 1000 })], "en")).toBe("🎉 1,000 keys + clicks today!");
   });

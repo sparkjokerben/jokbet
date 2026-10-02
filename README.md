@@ -19,7 +19,7 @@ settings.
 
 ## Features
 
-- Counts key presses per key, left/right/middle clicks, scroll gestures, and
+- Counts key presses per key, left/right/middle clicks, lines scrolled, and
   mouse travel in metres, stored per day
 - A number above its head: today's total or the live per-second rate, from the
   keyboard, the mouse, or both added together
@@ -109,7 +109,7 @@ Jokbet stores counts and nothing else:
 
 - how many times each key was pressed — no characters, no words, no order
 - how many clicks, by button
-- how many scroll gestures, and how far the mouse moved
+- how many lines were scrolled, and how far the mouse moved
 
 There is no telemetry and no account, and no network request other than the
 update check. Everything goes into a local SQLite file, and the app works

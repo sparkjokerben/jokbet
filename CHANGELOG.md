@@ -11,6 +11,26 @@ the fuller entries elsewhere:
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Scrolling is counted in lines.** Jokbet now adds up how many lines you
+  scrolled — on the hover card, in the stats, in the exports and in milestones
+  — instead of how many bursts of scrolling there were. A Mac says how many
+  lines each scroll moves, parts of one from a trackpad and the glide after a
+  flick included; on Windows a notch of the wheel is as many lines as the
+  system's mouse setting says, and on Linux three. The gestures counted on
+  earlier days are kept in the database but no longer shown, so those days read
+  as nothing scrolled. The exports' `scrolls` column is now `scroll_lines`.
+- **Scroll milestones are in lines.** A milestone you set on scrolls keeps its
+  number, now in lines; a repeating one is raised to the smallest step lines
+  allow, 500. Look them over, since a line is far less than a gesture was.
+- **The hover card stays up while you read it.** Move the cursor up from the
+  pet onto its card, and the card stays where it is instead of going as you
+  leave the pet; it goes once the cursor leaves both. A right click on it no
+  longer brings up the web view's own menu.
+
 ## [0.4.1] — 2026-10-01
 
 ### Changed

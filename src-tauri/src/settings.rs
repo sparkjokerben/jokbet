@@ -184,7 +184,8 @@ pub enum Metric {
     Clicks,
     /// Key presses and clicks together.
     Inputs,
-    Scrolls,
+    /// Lines scrolled.
+    ScrollLines,
     /// Metres of mouse travel.
     Distance,
 }
@@ -194,7 +195,7 @@ impl Metric {
     pub fn min_repeat_step(self) -> f64 {
         match self {
             Metric::Keys | Metric::Clicks | Metric::Inputs => 500.0,
-            Metric::Scrolls => 200.0,
+            Metric::ScrollLines => 500.0,
             Metric::Distance => 50.0,
         }
     }
@@ -343,6 +344,7 @@ impl Settings {
 
 /// Carries settings from older versions over to the current shape.
 fn migrate(value: &mut serde_json::Value) {
+    use serde_json::{json, Value};
     let Some(obj) = value.as_object_mut() else {
         return;
     };
@@ -368,6 +370,22 @@ fn migrate(value: &mut serde_json::Value) {
             };
             if let Some(anims) = anims {
                 obj.insert("idleAnims".into(), anims);
+            }
+        }
+    }
+    // Up to 0.4.1 scrolling was counted in gestures. A milestone on them keeps
+    // its number, now in lines, and a repeating one at least the step lines
+    // allow, so that the user's milestones survive to be looked at again.
+    if let Some(Value::Array(milestones)) = obj.get_mut("customMilestones") {
+        for m in milestones.iter_mut().filter_map(Value::as_object_mut) {
+            if m.get("metric").and_then(Value::as_str) != Some("scrolls") {
+                continue;
+            }
+            m.insert("metric".into(), json!("scrollLines"));
+            let step = Metric::ScrollLines.min_repeat_step();
+            let threshold = m.get("threshold").and_then(Value::as_f64);
+            if m.get("repeat") == Some(&json!(true)) && threshold.is_some_and(|t| t < step) {
+                m.insert("threshold".into(), json!(step));
             }
         }
     }
@@ -625,6 +643,23 @@ mod tests {
             br#"{"idleAnim":"breathe","idleAnims":["walk"]}"#,
         );
         assert_eq!(store.get().idle_anims, [IdleAnim::Walk]);
+    }
+
+    #[test]
+    fn milestones_on_scroll_gestures_carry_over_to_lines() {
+        let (store, path) = load_file(
+            "scroll-milestones",
+            br#"{"customMilestones":[
+                {"id":"a","period":"daily","metric":"scrolls","threshold":2000,"repeat":false},
+                {"id":"b","period":"lifetime","metric":"scrolls","threshold":200,"repeat":true},
+                {"id":"c","period":"daily","metric":"keys","threshold":100,"repeat":false}
+            ]}"#,
+        );
+        let m = store.get().custom_milestones;
+        assert_eq!(backups(&path), 0, "carried over, not dropped");
+        assert_eq!((m[0].metric, m[0].threshold), (Metric::ScrollLines, 2000.0));
+        assert_eq!((m[1].metric, m[1].threshold), (Metric::ScrollLines, 500.0));
+        assert_eq!((m[2].metric, m[2].threshold), (Metric::Keys, 100.0));
     }
 
     #[test]

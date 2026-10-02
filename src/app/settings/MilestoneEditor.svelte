@@ -5,12 +5,12 @@
   let { items, onchange }: { items: CustomMilestone[]; onchange: (next: CustomMilestone[]) => void } = $props();
 
   /** Mirrors Metric::min_repeat_step in settings.rs. */
-  const MIN_STEP: Record<Metric, number> = { keys: 500, clicks: 500, inputs: 500, scrolls: 200, distance: 50 };
+  const MIN_STEP: Record<Metric, number> = { keys: 500, clicks: 500, inputs: 500, scrollLines: 500, distance: 50 };
   const METRICS: Array<[Metric, Parameters<typeof t>[0]]> = [
     ["keys", "metricKeys"],
     ["clicks", "metricClicks"],
     ["inputs", "metricInputs"],
-    ["scrolls", "metricScrolls"],
+    ["scrollLines", "metricScrollLines"],
     ["distance", "metricDistance"],
   ];
 
@@ -50,7 +50,7 @@
         value={m.threshold}
         onchange={(e) => edit(i, { threshold: Number(e.currentTarget.value) })}
       />
-      <span class="unit muted">{m.metric === "distance" ? "m" : ""}</span>
+      <span class="unit muted">{m.metric === "distance" ? "m" : m.metric === "scrollLines" ? t("linesUnit") : ""}</span>
       <label class="repeat">
         <input type="checkbox" checked={m.repeat} onchange={(e) => edit(i, { repeat: e.currentTarget.checked })} />
         {t("repeat")}

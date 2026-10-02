@@ -5,7 +5,7 @@ import { busiestDay, streaks, weekOverWeek } from "./insights";
 const TODAY = "2026-09-25";
 
 function day(date: string, keys: number, moveMm = 0): DayStat {
-  return { date, keys, clickLeft: 0, clickRight: 0, clickMiddle: 0, scrolls: 0, movePx: 0, moveMm };
+  return { date, keys, clickLeft: 0, clickRight: 0, clickMiddle: 0, scrollLines: 0, movePx: 0, moveMm };
 }
 
 const days = (...dates: string[]) => dates.map((d) => day(d, 10));

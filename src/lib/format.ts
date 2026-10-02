@@ -47,7 +47,7 @@ const METRIC_WORD: Record<Metric, Parameters<typeof t>[0]> = {
   keys: "metricKeys",
   clicks: "metricClicks",
   inputs: "metricInputs",
-  scrolls: "metricScrolls",
+  scrollLines: "metricScrollLinesVerb",
   distance: "metricDistanceVerb",
 };
 
