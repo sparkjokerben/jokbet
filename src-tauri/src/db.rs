@@ -55,13 +55,15 @@ CREATE TABLE hourly(
 ) WITHOUT ROWID;
 ";
 
-/// Scrolling is counted in lines. The `scrolls` columns keep the gestures
-/// counted before; they are no longer written, and a day from back then reads
-/// as one with nothing scrolled.
-const SCHEMA_V3: &str = "
-ALTER TABLE daily ADD COLUMN scroll_lines REAL NOT NULL DEFAULT 0;
-ALTER TABLE hourly ADD COLUMN scroll_lines REAL NOT NULL DEFAULT 0;
-";
+/// Version 3 counts scrolling in lines, in a `scroll_lines` column on both of
+/// these. The `scrolls` columns keep the gestures counted before; they are no
+/// longer written, and a day from back then reads as one with nothing scrolled.
+///
+/// A build from before 0.4.2 shipped took a database to version 3 with the
+/// scrolling in millimetres instead, as `scroll_mm`. What it left, and the
+/// backups it made, are at version 3 without `scroll_lines`, so the column is
+/// looked for on every open rather than trusted to come with the number.
+const SCROLL_LINES_TABLES: [&str; 2] = ["daily", "hourly"];
 
 /// The schema `init` brings a database up to. A backup made by a newer version
 /// may be ahead of it, and is refused rather than read wrong.
@@ -91,6 +93,15 @@ const HISTORY_DAYS: i64 = 3660;
 
 fn day_key(date: NaiveDate) -> String {
     date.format(DATE_FMT).to_string()
+}
+
+fn has_column(conn: &Connection, table: &str, column: &str) -> rusqlite::Result<bool> {
+    conn.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info(?1) WHERE name = ?2",
+        [table, column],
+        |r| r.get::<_, i64>(0),
+    )
+    .map(|n| n > 0)
 }
 
 fn totals_from_row(row: &rusqlite::Row, first: usize) -> rusqlite::Result<Totals> {
@@ -137,10 +148,23 @@ impl Db {
             tx.pragma_update(None, "user_version", 2)?;
             tx.commit()?;
         }
-        if version < 3 {
+        let mut missing = Vec::new();
+        for table in SCROLL_LINES_TABLES {
+            if !has_column(&conn, table, "scroll_lines")? {
+                missing.push(table);
+            }
+        }
+        if version < 3 || !missing.is_empty() {
             let tx = conn.transaction()?;
-            tx.execute_batch(SCHEMA_V3)?;
-            tx.pragma_update(None, "user_version", 3)?;
+            for table in missing {
+                tx.execute(
+                    &format!("ALTER TABLE {table} ADD COLUMN scroll_lines REAL NOT NULL DEFAULT 0"),
+                    [],
+                )?;
+            }
+            if version < 3 {
+                tx.pragma_update(None, "user_version", 3)?;
+            }
             tx.commit()?;
         }
         Ok(Self { conn })
@@ -810,6 +834,52 @@ mod tests {
         assert_eq!(db.load_day(d).unwrap().totals.scroll_lines, 1234.5);
         assert_eq!(db.hours(d, d).unwrap()[9].scroll_lines, 1234.5);
         assert_eq!(db.lifetime_totals().unwrap().scroll_lines, 1234.5);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// What the build that measured scrolling in millimetres left behind:
+    /// version 3, with `scroll_mm` where `scroll_lines` should be.
+    #[test]
+    fn a_database_at_v3_without_scroll_lines_gets_them() {
+        let dir = temp_dir("v3-mm");
+        let path = dir.join("stats.sqlite");
+        let d = day(2026, 10, 2);
+        {
+            let conn = Connection::open(&path).unwrap();
+            conn.execute_batch(SCHEMA_V1).unwrap();
+            conn.execute_batch(SCHEMA_V2).unwrap();
+            conn.execute_batch(
+                "ALTER TABLE daily ADD COLUMN scroll_mm REAL NOT NULL DEFAULT 0;
+                 ALTER TABLE hourly ADD COLUMN scroll_mm REAL NOT NULL DEFAULT 0;",
+            )
+            .unwrap();
+            conn.pragma_update(None, "user_version", 3).unwrap();
+            conn.execute(
+                "INSERT INTO daily(date, keys, scroll_mm) VALUES (?1, 945, 3689.5)",
+                [day_key(d)],
+            )
+            .unwrap();
+        }
+        let mut db = Db::open(&path).unwrap();
+        assert_eq!(db.schema_version().unwrap(), SCHEMA_VERSION);
+        assert_eq!(db.load_day(d).unwrap().totals.keys, 945);
+        let mut delta = DayCounters::default();
+        delta.totals.scroll_lines = 12.0;
+        delta.per_hour[9].scroll_lines = 12.0;
+        db.add_day(d, &delta).unwrap();
+        assert_eq!(db.range(d, d).unwrap()[0].1.scroll_lines, 12.0);
+        assert_eq!(db.hours(d, d).unwrap()[9].scroll_lines, 12.0);
+        drop(db);
+        // Opening it again finds nothing more to do.
+        assert_eq!(
+            Db::open(&path)
+                .unwrap()
+                .load_day(d)
+                .unwrap()
+                .totals
+                .scroll_lines,
+            12.0
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 

@@ -11,6 +11,15 @@ the fuller entries elsewhere:
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- A database left by a pre-release build that measured scrolling in
+  millimetres could no longer be read or saved to ("no such column:
+  scroll_lines"); it now gets the column it is missing when it is opened, and
+  so does a backup made by that build when it is restored.
+
 ## [0.4.2] — 2026-10-02
 
 ### Changed
