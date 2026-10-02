@@ -113,6 +113,23 @@
     });
   }
 
+  /** Tells Rust where the card is while it is up, so that the cursor can go up
+      onto it, to read it, without taking it down on the way. */
+  function reportCardRect() {
+    const card = bubbleEl?.querySelector<HTMLElement>(".bubble");
+    if (!hovering || !card) {
+      void invoke("set_bubble_rect", { rect: null });
+      return;
+    }
+    const box = card.getBoundingClientRect();
+    void invoke("set_bubble_rect", { rect: { x: box.left, y: box.top, w: box.width, h: box.height } });
+  }
+
+  function reportBubble() {
+    reportCardRect();
+    reportGlassRect();
+  }
+
   $effect(() => {
     // Re-runs when the bubble comes and goes, changes size, or the window moves.
     void glassBubble;
@@ -124,9 +141,9 @@
     // the observer below to notice, and the material would be left behind.
     void showCounter;
     void banner;
-    reportGlassRect();
-    if (!glassBubble || !hovering || !bubbleEl) return;
-    const observer = new ResizeObserver(reportGlassRect);
+    reportBubble();
+    if (!hovering || !bubbleEl) return;
+    const observer = new ResizeObserver(reportBubble);
     observer.observe(bubbleEl);
     return () => observer.disconnect();
   });
@@ -240,6 +257,10 @@
       resized++;
     };
     window.addEventListener("resize", onResize);
+    // The cursor can rest on the card now, and a right click there is not to
+    // bring up the webview's own menu.
+    const noMenu = (e: MouseEvent) => e.preventDefault();
+    window.addEventListener("contextmenu", noMenu);
 
     const detach = attachGestures(spriteEl, {
       press: pressed,
@@ -307,6 +328,7 @@
 
     return () => {
       window.removeEventListener("resize", onResize);
+      window.removeEventListener("contextmenu", noMenu);
       scheme.removeEventListener("change", onScheme);
       detach();
       pet.destroy();

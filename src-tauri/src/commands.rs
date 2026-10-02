@@ -99,6 +99,13 @@ pub fn set_hit_rect(rect: HitRect, hover: State<'_, HoverState>) {
     *hover.hit_rect.lock().unwrap() = Some(rect);
 }
 
+/// Where the hover bubble is while it is up, in the hit rect's terms; `None`
+/// once it is gone. The cursor on it keeps it up.
+#[tauri::command]
+pub fn set_bubble_rect(rect: Option<HitRect>, hover: State<'_, HoverState>) {
+    *hover.bubble_rect.lock().unwrap() = rect;
+}
+
 /// Which system glass the hover bubble can use, or `"none"` where there is none.
 #[tauri::command]
 pub fn glass_support() -> &'static str {

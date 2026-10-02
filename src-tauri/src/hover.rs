@@ -33,6 +33,8 @@ pub struct HitRect {
 #[derive(Default)]
 pub struct HoverState {
     pub hit_rect: Mutex<Option<HitRect>>,
+    /// The hover card while it is up, in the same terms as the hit rect.
+    pub bubble_rect: Mutex<Option<HitRect>>,
     /// The pet is being dragged; ends when the primary button is released,
     /// however long the pointer rests on the way.
     pub dragging: AtomicBool,
@@ -45,15 +47,40 @@ pub struct CursorSample {
     pub gaze: (i8, i8),
 }
 
+impl HitRect {
+    fn contains(&self, x: f64, y: f64) -> bool {
+        x >= self.x && x < self.x + self.w && y >= self.y && y < self.y + self.h
+    }
+}
+
+/// The way up from the sprite to the card: as wide as the two of them, from
+/// the card's bottom down to the sprite's top, over the counter or banner
+/// between them.
+fn bridge(rect: HitRect, card: HitRect) -> HitRect {
+    let left = rect.x.min(card.x);
+    let right = (rect.x + rect.w).max(card.x + card.w);
+    let top = card.y + card.h;
+    HitRect {
+        x: left,
+        y: top,
+        w: right - left,
+        h: (rect.y - top).max(0.0),
+    }
+}
+
+/// `card` is the hover card while it is up: the cursor on it, or on the way up
+/// to it, is still on the pet, so the card stays up to be read.
 pub fn sample(
     cursor: (f64, f64),
     window_pos: (f64, f64),
     scale: f64,
     rect: HitRect,
+    card: Option<HitRect>,
 ) -> CursorSample {
     let lx = (cursor.0 - window_pos.0) / scale;
     let ly = (cursor.1 - window_pos.1) / scale;
-    let inside = lx >= rect.x && lx < rect.x + rect.w && ly >= rect.y && ly < rect.y + rect.h;
+    let inside = rect.contains(lx, ly)
+        || card.is_some_and(|card| card.contains(lx, ly) || bridge(rect, card).contains(lx, ly));
     let dx = lx - (rect.x + rect.w / 2.0);
     let dy = ly - (rect.y + rect.h / 2.0);
     let axis = |d: f64| {
@@ -89,6 +116,7 @@ fn run<R: Runtime>(app: AppHandle<R>) {
             continue;
         };
         let rect = *app.state::<HoverState>().hit_rect.lock().unwrap();
+        let card = *app.state::<HoverState>().bubble_rect.lock().unwrap();
         let (Some(rect), Ok(true)) = (rect, window.is_visible()) else {
             // Away, or nothing to sample against: forget the last sample, so
             // that whatever is there when it comes back is reported again.
@@ -124,6 +152,7 @@ fn run<R: Runtime>(app: AppHandle<R>) {
             (pos.x as f64, pos.y as f64),
             scale,
             rect,
+            card,
         );
         // The pet is in hand for the whole of a drag. The window trails the
         // cursor while it is carried, so a fast drag puts the cursor off the
@@ -137,6 +166,11 @@ fn run<R: Runtime>(app: AppHandle<R>) {
             ignoring = Some(!s.inside);
         }
         if last.map(|l| l.inside) != Some(s.inside) {
+            // The card goes as the cursor leaves; until the page says so, the
+            // place it was is not to hold the hover.
+            if !s.inside {
+                *state.bubble_rect.lock().unwrap() = None;
+            }
             // The material behind the bubble is native, and a menu can hold the
             // main thread: told here, it can follow the cursor even then.
             crate::platform::pet_hovered(s.inside);
@@ -180,6 +214,7 @@ mod tests {
             (1000.0, 500.0),
             2.0,
             RECT,
+            None,
         );
         assert!(s.inside);
         assert_eq!(s.gaze, (0, 0));
@@ -187,16 +222,44 @@ mod tests {
 
     #[test]
     fn transparent_area_is_outside() {
-        let s = sample((1000.0 + 20.0, 500.0 + 20.0), (1000.0, 500.0), 1.0, RECT);
+        let s = sample(
+            (1000.0 + 20.0, 500.0 + 20.0),
+            (1000.0, 500.0),
+            1.0,
+            RECT,
+            None,
+        );
         assert!(!s.inside);
         assert_eq!(s.gaze, (-1, -1));
     }
 
     #[test]
     fn gaze_follows_far_cursor() {
-        let s = sample((5000.0, 500.0 + 210.0), (1000.0, 500.0), 1.0, RECT);
+        let s = sample((5000.0, 500.0 + 210.0), (1000.0, 500.0), 1.0, RECT, None);
         assert_eq!(s.gaze, (1, 0));
-        let s = sample((1000.0 + 110.0, 2000.0), (1000.0, 500.0), 1.0, RECT);
+        let s = sample((1000.0 + 110.0, 2000.0), (1000.0, 500.0), 1.0, RECT, None);
         assert_eq!(s.gaze, (0, 1));
+    }
+
+    /// A card wider than the pet, up above it with a gap between.
+    const CARD: HitRect = HitRect {
+        x: 35.0,
+        y: 60.0,
+        w: 150.0,
+        h: 90.0,
+    };
+
+    #[test]
+    fn card_keeps_the_hover() {
+        let at = |x: f64, y: f64, card| sample((x, y), (0.0, 0.0), 1.0, RECT, card).inside;
+        // On the card, and in the gap on the way up to it.
+        assert!(at(40.0, 100.0, Some(CARD)));
+        assert!(at(110.0, 165.0, Some(CARD)));
+        // Neither is anything without a card up.
+        assert!(!at(40.0, 100.0, None));
+        assert!(!at(110.0, 165.0, None));
+        // Beside the card and above it is off the pet.
+        assert!(!at(20.0, 100.0, Some(CARD)));
+        assert!(!at(110.0, 40.0, Some(CARD)));
     }
 }

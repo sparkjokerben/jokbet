@@ -43,6 +43,7 @@ pub fn run() {
             commands::get_settings,
             commands::update_settings,
             commands::set_hit_rect,
+            commands::set_bubble_rect,
             commands::glass_support,
             commands::set_glass_bubble,
             commands::pet_drag_start,
