@@ -1,21 +1,87 @@
 name: CI
 
+# Every check a change has to pass, in parallel jobs:
+#
+#   web     the frontend, the site and the Worker (Linux)
+#   fmt     Rust formatting (Linux; needs nothing built)
+#   rust    clippy and the tests on macOS, Windows and Linux, the input hooks
+#           of each compiled for real
+#   ci-ok   passes only when all of the above did — the one check for branch
+#           protection to require
+#
+# `npm run verify` runs the same locally. Release calls this workflow first, so
+# a tag is only built once the commit it points at passes.
+
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # A newer push replaces a run still going; a release's own run is never cut short.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  check:
+  web:
+    name: Frontend, site and Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - name: svelte-check
+        run: npm run check
+      - name: vitest
+        run: npm test
+      - name: vite build
+        run: npm run build
+      - name: the site's generated files match their sources
+        run: npm run site:check
+      - name: type-check the Worker
+        run: npx tsc -p worker/tsconfig.json
+
+  fmt:
+    name: Rust formatting
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: cargo fmt
+        working-directory: src-tauri
+        run: cargo fmt --check
+
+  rust:
+    name: Rust on ${{ matrix.name }}
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-22.04]
+        include:
+          - name: macOS
+            os: macos-latest
+          - name: Windows
+            os: windows-latest
+          - name: Linux
+            os: ubuntu-22.04
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -32,31 +98,40 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy, rustfmt
+          components: clippy
 
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          # Pull requests read main's cache but do not each write their own.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
+      # The app embeds the built frontend, so it has to exist to compile.
       - run: npm ci
-      - run: npm run check
-      - run: npm test
       - run: npm run build
 
-      - name: the site's generated assets match the sprites
-        if: runner.os == 'Linux'
-        run: npm run site:check
-
-      - name: type-check the Worker
-        if: runner.os == 'Linux'
-        run: npx tsc -p worker/tsconfig.json
-
-      - name: cargo fmt
-        working-directory: src-tauri
-        run: cargo fmt --check
       - name: cargo clippy
         working-directory: src-tauri
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --all-targets --locked -- -D warnings
       - name: cargo test
         working-directory: src-tauri
-        run: cargo test
+        run: cargo test --locked
+
+  ci-ok:
+    name: CI passed
+    if: always()
+    needs: [web, fmt, rust]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Every job passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "results: $RESULTS"
+          for r in $RESULTS; do
+            if [ "$r" != "success" ]; then
+              echo "::error::a CI job ended in $r"
+              exit 1
+            fi
+          done

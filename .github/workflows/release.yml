@@ -1,7 +1,8 @@
 name: Release
 
 # Push a tag like v0.1.0 (matching package.json) to build every platform into
-# a draft GitHub release. Publish the draft to ship it to the auto-updater.
+# a draft GitHub release, once CI has passed on it. Publish the draft to ship it
+# to the auto-updater.
 on:
   push:
     tags: ["v*"]
@@ -10,7 +11,15 @@ permissions:
   contents: write
 
 jobs:
+  checks:
+    # The whole of CI, on the commit the tag points at: nothing is built for a
+    # release that would not pass it.
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   build:
+    needs: checks
     strategy:
       fail-fast: false
       matrix:

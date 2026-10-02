@@ -27,14 +27,18 @@ dev-only page `/preview.html?view=stats` (`settings`, `onboarding`, `pet`)
 renders a window in a normal browser against fake data, so layout work does not
 need the Tauri shell or a rebuilt app.
 
-The complete check that CI runs on every push and pull request:
+The complete check that CI runs on every push and pull request, in one command:
 
 ```sh
-npm run check && npm test && npm run build
-npm run site:check
-npx tsc -p worker/tsconfig.json
-cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
+npm run verify          # both halves below
+npm run verify:web      # svelte-check, vitest, vite build, site:check, the Worker's types
+npm run verify:rust     # cargo fmt --check, clippy -D warnings, cargo test
 ```
+
+CI runs the frontend half once, on Linux, and the Rust half on macOS, Windows
+and Linux, so each platform's input hooks are compiled and linted for real. Its
+**CI passed** check succeeds only when every job did; a release tag is built
+only once CI has passed on it.
 
 ## Layout
 
@@ -129,7 +133,7 @@ bucket from a local shell — pass `--local` to every `wrangler r2 object` comma
 4. Open a pull request describing what changed and why. Screenshots help for
    anything visual — include one at the pet's real size, and one in each
    language if the text changed.
-5. CI runs on macOS, Windows, and Linux; all three need to pass.
+5. CI runs on macOS, Windows, and Linux; **CI passed** needs all of it to pass.
 
 Small, focused pull requests are much easier to review than large ones. If a
 change touches the input hooks, say which platforms you tested it on.

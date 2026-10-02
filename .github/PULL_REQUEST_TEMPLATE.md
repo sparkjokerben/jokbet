@@ -20,8 +20,7 @@ something looks, say what you looked at — screenshots welcome.
 
 ## Checklist
 
-- [ ] `npm run check`, `npm test`, and `cd src-tauri && cargo test` pass
-- [ ] `cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings` is clean
+- [ ] `npm run verify` passes (what CI runs: the frontend, the site, `cargo fmt`, clippy and the Rust tests)
 - [ ] If it touched `src/sprites/` or `src/pet/`, `npm run site:assets` was run and the result committed
 - [ ] If it touched `site/partials/`, `npm run site:pages` was run and the result committed
 - [ ] If it changed visible text, both languages were updated (`src/lib/i18n.ts`, `src-tauri/src/i18n.rs`)
