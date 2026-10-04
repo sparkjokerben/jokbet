@@ -289,6 +289,26 @@ pub fn open_input_monitoring_settings() -> Result<(), String> {
 /// Some macOS versions only honour a new Input Monitoring grant after a relaunch.
 #[tauri::command]
 pub fn restart_app(app: AppHandle) {
+    restart(&app);
+}
+
+/// Restarts the app, and where it can, keeps going with what it had: a copy
+/// running as administrator (Windows) asks for the token again, which an
+/// ordinary restart would quietly drop along with the input it was watching
+/// for. The consent dialog turned down, it restarts without the token — the
+/// restart was asked for, even if the rights were not.
+#[cfg(windows)]
+pub fn restart(app: &AppHandle) {
+    if crate::platform::is_elevated() && crate::platform::relaunch_elevated().is_ok() {
+        app.exit(0);
+        return;
+    }
+    app.restart();
+}
+
+/// Restarts the app; no platform here but Windows has a token to carry over.
+#[cfg(not(windows))]
+pub fn restart(app: &AppHandle) {
     app.restart();
 }
 
@@ -339,7 +359,10 @@ pub async fn check_update(app: AppHandle) -> crate::updater::UpdateStatus {
 #[tauri::command]
 pub fn install_update(app: AppHandle) -> Result<(), String> {
     if crate::updater::install_pending(&app) {
-        app.restart();
+        restart(&app);
+        // Reached on Windows with the token asked for again: the next copy is
+        // already starting, so there is nothing to tell the window.
+        return Ok(());
     }
     Err("no update could be installed".into())
 }

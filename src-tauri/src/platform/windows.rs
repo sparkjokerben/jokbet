@@ -661,6 +661,92 @@ pub fn fullscreen_covers(x: f64, y: f64) -> bool {
     }
 }
 
+/// Whether this process's token is an administrator's. Only a copy started
+/// without one has something to ask for: with it, input aimed at windows
+/// running as administrator is seen like any other.
+///
+/// The token answers for itself, through `GetTokenInformation`'s elevation
+/// flag, rather than the rights being inferred from anything else.
+pub fn is_elevated() -> bool {
+    use windows::Win32::Foundation::CloseHandle;
+    use windows::Win32::Foundation::HANDLE;
+    use windows::Win32::Security::{
+        GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY,
+    };
+    use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+
+    unsafe {
+        let mut token = HANDLE::default();
+        if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).is_err() {
+            return false;
+        }
+        let mut elevation = TOKEN_ELEVATION::default();
+        let mut size = 0u32;
+        let read = GetTokenInformation(
+            token,
+            TokenElevation,
+            Some(std::ptr::from_mut(&mut elevation).cast()),
+            std::mem::size_of::<TOKEN_ELEVATION>() as u32,
+            &mut size,
+        );
+        let _ = CloseHandle(token);
+        read.is_ok() && elevation.TokenIsElevated != 0
+    }
+}
+
+/// The command line a relaunch carries: what this copy was started with,
+/// quoted where the shell would otherwise split it. Usually there is nothing.
+fn launch_parameters(args: impl Iterator<Item = String>) -> String {
+    args.map(|a| {
+        if a.contains(' ') {
+            format!("\"{}\"", a)
+        } else {
+            a
+        }
+    })
+    .collect::<Vec<_>>()
+    .join(" ")
+}
+
+/// Starts Jokbet again with the `runas` verb — the shell's way for an app to
+/// ask for an administrator's token from within itself: its consent dialog
+/// goes up, and when the answer is no, an error comes back and this copy
+/// carries on untouched. `Ok` once the new copy has been started; the caller
+/// then ends this one.
+pub fn relaunch_elevated() -> Result<(), String> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows::core::HSTRING;
+    use windows::Win32::UI::Shell::ShellExecuteW;
+    use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let parameters = launch_parameters(std::env::args().skip(1));
+    // Null for both is a plain start: no arguments, no working directory to
+    // carry over (portable copies find their data beside themselves).
+    let exe: Vec<u16> = exe.as_os_str().encode_wide().chain([0]).collect();
+    let parameters = if parameters.is_empty() {
+        None
+    } else {
+        Some(HSTRING::from(parameters))
+    };
+    let started = unsafe {
+        ShellExecuteW(
+            None,
+            w!("runas"),
+            PCWSTR::from_raw(exe.as_ptr()),
+            parameters
+                .as_ref()
+                .map_or(PCWSTR::null(), |p| PCWSTR::from_raw(p.as_ptr())),
+            PCWSTR::null(),
+            SW_SHOWNORMAL,
+        )
+    };
+    // The shell answers with the instance's handle, or a small failure code.
+    (started.0 as usize > 32)
+        .then_some(())
+        .ok_or_else(|| "the shell did not start Jokbet again".into())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -745,5 +831,30 @@ mod tests {
         assert!(!read, "the desktop is not read again");
         // The first panel of a run has nothing to wear, so that one is read.
         assert_eq!(shown_tone(None, || 0.25), 0.25);
+    }
+
+    #[test]
+    fn the_tokens_question_is_answerable_wherever_the_answer_falls() {
+        // Whatever rights the runner has, asking costs nothing and answers.
+        let _ = is_elevated();
+    }
+
+    #[test]
+    fn arguments_go_to_the_next_copy_as_they_came_in() {
+        let none: std::vec::IntoIter<String> = Vec::new().into_iter();
+        assert_eq!(launch_parameters(none), "");
+        assert_eq!(
+            launch_parameters(["--flag".to_string()].into_iter()),
+            "--flag"
+        );
+        // One that would split is wrapped, the way a shell would have had to.
+        assert_eq!(
+            launch_parameters(["a b".to_string()].into_iter()),
+            "\"a b\""
+        );
+        assert_eq!(
+            launch_parameters(["--first".to_string(), "the second".to_string()].into_iter()),
+            "--first \"the second\""
+        );
     }
 }

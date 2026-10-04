@@ -159,7 +159,9 @@ Folder** opens it, which is the file to attach to a bug report.
   keys still are.
 - **Windows** — input going to a window running as administrator is not seen
   unless Jokbet also runs as administrator, and the pet stays on the virtual
-  desktop it was started on.
+  desktop it was started on. The menu's **Restart as Administrator** brings
+  the two in line, with one system consent dialog; the rights are not
+  remembered, so the next ordinary launch is ordinary again.
 - **Linux** — X11 only.
 - It stays above other windows. It steps aside for full-screen apps and
   presentations unless that setting is off; anything else it covers, hide it

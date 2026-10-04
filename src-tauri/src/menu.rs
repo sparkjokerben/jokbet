@@ -15,6 +15,7 @@ const ID_TOGGLE: &str = "toggle-pet";
 const ID_STATS: &str = "stats";
 const ID_SETTINGS: &str = "settings";
 const ID_PAUSE: &str = "pause";
+const ID_ADMIN: &str = "restart-as-admin";
 const ID_RESET_POSITION: &str = "reset-position";
 const ID_QUIT: &str = "quit";
 
@@ -25,6 +26,10 @@ pub struct AppMenu<R: Runtime> {
     toggle: MenuItem<R>,
     reset_position: MenuItem<R>,
     pause: CheckMenuItem<R>,
+    /// The item that asks for an administrator's token, where the platform
+    /// could and the process does not have it. `None` once there is nothing
+    /// left to ask for (elevated, or everywhere but Windows).
+    admin: Option<MenuItem<R>>,
     quit: MenuItem<R>,
     lang: Mutex<Lang>,
     /// What the toggle item says: "Hide" while the pet is shown.
@@ -49,20 +54,30 @@ impl<R: Runtime> AppMenu<R> {
             current.paused,
             None::<&str>,
         )?;
+        let admin = match crate::platform::is_elevated() {
+            true => None,
+            false => Some(item(ID_ADMIN, Text::RestartAsAdmin)?),
+        };
         let quit = item(ID_QUIT, Text::Quit)?;
-        let menu = Menu::with_items(
-            app,
-            &[
-                &stats,
-                &settings,
-                &PredefinedMenuItem::separator(app)?,
-                &toggle,
-                &reset_position,
-                &pause,
-                &PredefinedMenuItem::separator(app)?,
-                &quit,
-            ],
-        )?;
+        let above_panels = PredefinedMenuItem::separator(app)?;
+        let above_quit = PredefinedMenuItem::separator(app)?;
+        let mut items: Vec<&dyn tauri::menu::IsMenuItem<R>> = vec![
+            &stats,
+            &settings,
+            &above_panels,
+            &toggle,
+            &reset_position,
+            &pause,
+        ];
+        match &admin {
+            Some(admin) => {
+                items.push(&above_quit);
+                items.push(admin);
+            }
+            None => items.push(&above_quit),
+        }
+        items.push(&quit);
+        let menu = Menu::with_items(app, &items)?;
         Ok(Self {
             menu,
             stats,
@@ -70,6 +85,7 @@ impl<R: Runtime> AppMenu<R> {
             toggle,
             reset_position,
             pause,
+            admin,
             quit,
             lang: Mutex::new(lang),
             pet_shown: AtomicBool::new(true),
@@ -87,6 +103,9 @@ impl<R: Runtime> AppMenu<R> {
         let _ = self.settings.set_text(t(lang, Text::Settings));
         let _ = self.reset_position.set_text(t(lang, Text::ResetPosition));
         let _ = self.pause.set_text(t(lang, Text::PauseCounting));
+        if let Some(admin) = &self.admin {
+            let _ = admin.set_text(t(lang, Text::RestartAsAdmin));
+        }
         let _ = self.quit.set_text(t(lang, Text::Quit));
         self.sync_toggle(self.pet_shown.load(Ordering::Relaxed));
     }
@@ -155,6 +174,12 @@ pub fn handle_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
         ID_STATS => open_panel(app, Panel::Stats),
         ID_SETTINGS => open_panel(app, Panel::Settings),
         ID_PAUSE => toggle_pause(app),
+        ID_ADMIN => match crate::platform::relaunch_elevated() {
+            // The next copy is up and asking for nothing; this one goes, and
+            // the counts it still holds pending are written out as always.
+            Ok(()) => app.exit(0),
+            Err(e) => log::warn!("the relaunched copy was not started: {e}"),
+        },
         ID_QUIT => {
             crate::updater::install_pending(app);
             app.exit(0);

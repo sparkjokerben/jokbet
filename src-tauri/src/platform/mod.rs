@@ -237,6 +237,27 @@ pub fn fullscreen_covers(x: f64, y: f64, scale: f64) -> bool {
     false
 }
 
+/// Whether the process's token is an administrator's (`"run as"`), which is
+/// what lets it see input aimed at windows that have one. Only Windows can
+/// have started short of the token, so the answer is always yes elsewhere.
+pub fn is_elevated() -> bool {
+    #[cfg(windows)]
+    return windows::is_elevated();
+    #[allow(unreachable_code)]
+    true
+}
+
+/// Starts a copy of the app with an administrator's token, the way the
+/// platform can from within the app — on Windows, the shell's consent dialog —
+/// or `Err` where that did not happen (consent turned down included); the copy
+/// that asked carries on. The caller ends its own copy once this is `Ok`.
+pub fn relaunch_elevated() -> Result<(), String> {
+    #[cfg(windows)]
+    return windows::relaunch_elevated();
+    #[allow(unreachable_code)]
+    Err("only Windows can ask for the token from within the app".into())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -39,6 +39,7 @@ pub enum Text {
     Stats,
     Settings,
     PauseCounting,
+    RestartAsAdmin,
     Quit,
 }
 
@@ -50,6 +51,7 @@ pub fn t(lang: Lang, text: Text) -> &'static str {
         (Lang::Zh, Text::Stats) => "统计…",
         (Lang::Zh, Text::Settings) => "设置…",
         (Lang::Zh, Text::PauseCounting) => "暂停计数",
+        (Lang::Zh, Text::RestartAsAdmin) => "以管理员身份重新启动",
         (Lang::Zh, Text::Quit) => "退出",
         (Lang::En, Text::ShowPet) => "Show Pet",
         (Lang::En, Text::HidePet) => "Hide Pet",
@@ -57,6 +59,7 @@ pub fn t(lang: Lang, text: Text) -> &'static str {
         (Lang::En, Text::Stats) => "Stats…",
         (Lang::En, Text::Settings) => "Settings…",
         (Lang::En, Text::PauseCounting) => "Pause Counting",
+        (Lang::En, Text::RestartAsAdmin) => "Restart as Administrator",
         (Lang::En, Text::Quit) => "Quit",
     }
 }

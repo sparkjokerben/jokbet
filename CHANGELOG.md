@@ -13,6 +13,17 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Restart as Administrator (Windows).** Input aimed at a window running as
+  administrator is invisible to an app without the token, so anything started
+  elevated went uncounted. The menu now has the item for it: one consent
+  dialog, and the pet comes back with the rights — where the item no longer
+  is. The rights are not remembered, so the next ordinary launch is ordinary
+  again; restarts the app itself makes (an update's restart included) keep
+  whatever the current copy had, and turning the consent dialog down restarts
+  without the token.
+
 ### Fixed
 
 - **Windows counts full-screen games again.** The keyboard and mouse were read
