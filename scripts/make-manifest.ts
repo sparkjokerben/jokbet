@@ -28,7 +28,7 @@
 // download that is silently missing.
 
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, readSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   changelogFrom,
@@ -39,8 +39,8 @@ import {
   updaterForMirror,
   validateChangelog,
   withPortable,
-  validateManifest,
   withReleaseNotes,
+  validateManifest,
   type GithubRelease,
   type Manifest,
   type UpdaterManifest,
@@ -125,10 +125,28 @@ function portable(): UpdaterManifest {
   return withPortable(source, tag, name, readFileSync(join(dir, `${name}.sig`), "utf8"));
 }
 
+/** stdin's bytes, read one chunk at a time until the pipe is empty.
+ *
+ * `readFileSync(0)` asks the system for a length first, which a pipe does not
+ * have, and on the release job's runner that read has been seen to walk past
+ * its buffer and abort node with a heap error as the releases list grows. The
+ * chunks say their own length, so the loop has nothing to get wrong.
+ */
+function stdinText(): string {
+  const buf = Buffer.allocUnsafe(32768);
+  const chunks: Buffer[] = [];
+  for (;;) {
+    // An end of file arrives as a short or empty read, not an error.
+    const bytes = readSync(0, buf, 0, buf.length, null);
+    if (bytes <= 0) return Buffer.concat(chunks).toString("utf8");
+    chunks.push(Buffer.from(buf.subarray(0, bytes)));
+  }
+}
+
 /** The releases API's answer, from `--releases-json` or piped in with `--stdin`. */
 function releasesFromApi(): GithubRelease[] {
   const from = flag("releases-json");
-  const raw = from ? readFileSync(from, "utf8") : readFileSync(0, "utf8");
+  const raw = from ? readFileSync(from, "utf8") : stdinText();
   const releases = JSON.parse(raw) as GithubRelease[];
   if (!Array.isArray(releases)) throw new Error("expected the releases API's array of releases");
   return releases;
