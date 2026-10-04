@@ -368,6 +368,14 @@ impl<R: Runtime> Worker<R> {
     /// Once a second: (re)start the hook, report status, roll the day over.
     fn housekeeping(&mut self) {
         let permission = input::permission();
+        // A hook that says it is not delivering is let go of, so the start
+        // below makes a fresh one: the OS can turn a listener off behind the
+        // app's back, and one left in place would never be asked for again.
+        if self.hook.as_ref().is_some_and(|h| !h.check_health()) {
+            if let Some(h) = self.hook.take() {
+                h.stop();
+            }
+        }
         if self.hook.is_none() && permission != Permission::Denied {
             self.hook = input::start(self.sink.clone()).ok();
         }

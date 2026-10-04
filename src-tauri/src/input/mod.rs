@@ -1,7 +1,9 @@
-//! Listen-only global keyboard and mouse hooks behind one interface.
+//! Listen-only global keyboard and mouse listeners behind one interface: input
+//! hooks on macOS and X11, raw input on Windows.
 //!
-//! Hook callbacks only normalize the event and `try_send` it: they never block,
-//! lock, allocate or touch keyboard-layout APIs. Counting happens elsewhere.
+//! What the platform calls back runs on a thread of its own and only
+//! normalizes the event and `try_send`s it: it never blocks, locks, allocates
+//! or touches keyboard-layout APIs. Counting happens elsewhere.
 
 pub mod keymap;
 #[cfg(target_os = "macos")]

@@ -15,6 +15,15 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Windows counts full-screen games again.** The keyboard and mouse were read
+  through low-level hooks, which Windows silently removes when one of them
+  runs late, and which a game's own hook can hide events from; while a game
+  owned the screen nothing was counted, where a full-screen video never had
+  the trouble. Input now arrives as raw input — the mechanism the platform
+  recommends for watching input that is going to another window — so keys,
+  clicks and scrolling keep counting while a game has the screen. Input sent
+  by other software, such as an automation tool, is counted too now: the
+  hooks' injected mark is what used to exclude it, and raw input has none.
 - A database left by a pre-release build that measured scrolling in
   millimetres could no longer be read or saved to ("no such column:
   scroll_lines"); it now gets the column it is missing when it is opened, and
