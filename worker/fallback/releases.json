@@ -1,7 +1,72 @@
 {
  "schema": 1,
- "generatedAt": "2026-10-02T16:27:26.908Z",
+ "generatedAt": "2026-10-04T16:06:22.998Z",
  "releases": [
+  {
+   "version": "0.4.3",
+   "tag": "v0.4.3",
+   "name": "Jokbet v0.4.3",
+   "pubDate": "2026-10-04T16:00:26Z",
+   "prerelease": false,
+   "notes": "这一版修的是 Windows 上一处大问题，再加一个菜单项。\n\n- **全屏打游戏也能计数了。** 之前按键和鼠标走的是 Windows 低级钩子，它靠不住：回调晚了一步，系统会把它悄悄摘掉；而且别的程序先装上的钩子要是一口吃掉事件（有的游戏正是这么做），排在后面的钩子就一个也收不到——所以全屏游戏常常什么都不计数，全屏看视频却没事。现在改用系统自己推荐的 Raw Input（后台照样收）：按键、点击、滚动全屏游戏里照常统计。带来一个小变化：其他软件发出的合成输入（比如自动化工具）现在也会被计数，原先靠钩子的「注入」标记来排除，Raw Input 里没有这个标记。\n\n- **菜单里多了「以管理员身份重新启动」。** 管理员权限窗口里的输入，只有同样以管理员运行的程序才看得到。托盘菜单和宠物右键菜单里都有这一项：系统授权框确认一次，桌宠就带着权限回来，菜单里这项也随之消失。授权不会被记住，下次正常启动恢复原样；应用自己重启时（「重启并更新」也在内）会保住当前权限，把授权框取消掉则按普通方式重启。\n\n- **早期 pre-release 的数据库能打开了。** 以前 pre-release 版留下、把滚动按毫米记的数据库，读写都会报 \"no such column: scroll_lines\"；现在打开时自动补上缺的列，那个版本做出来的备份在恢复时也一样处理。\n\n---\n\nThis release fixes one big thing on Windows and adds a menu item.\n\n- **Full-screen games are counted again.** The keyboard and mouse were read through low-level hooks, which Windows quietly removes when one of them runs late, and which a hook installed before it — some games install their own — can hide events from; that is why a full-screen game went uncounted while a video in full screen did not. Input now arrives as raw input, the way the platform recommends for watching input that is going to another window, so keys, clicks and scrolling keep counting in full-screen games. Software-sent input, such as an automation tool's, is counted too now: the hooks' injected flag is what used to exclude it, and raw input has none.\n\n- **Restart as Administrator, in the menu.** Input aimed at a window running as administrator is invisible to an app without the token. The tray and pet menus have the item for it: one consent dialog, and the pet comes back with the rights, the item gone from the menu after. The rights are not remembered — the next ordinary launch is ordinary again — and the restarts the app makes itself, an update's included, keep whatever the current copy had; turning the consent dialog down restarts without the token.\n\n- **A pre-release database opens again.** A database left by a pre-release build that measured scrolling in millimetres could no longer be read or saved to (\"no such column: scroll_lines\"); it now gets the column it is missing when it is opened, and so does a backup made by that build when it is restored.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+   "url": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.3",
+   "files": [
+    {
+     "platform": "macos-aarch64-zip",
+     "name": "Jokbet_0.4.3_aarch64.app.zip",
+     "size": 4071384,
+     "sha256": "c2d237be481f02653102df34e2ca83a690c76e0d840c15775e15b4352296c503"
+    },
+    {
+     "platform": "macos-aarch64",
+     "name": "Jokbet_0.4.3_aarch64.dmg",
+     "size": 4105637,
+     "sha256": "f83ffb6e32eec79253a84082bef4dc0ee0bee8c17539ab1d3bd9e3d4f06479a7"
+    },
+    {
+     "platform": "macos-x64-zip",
+     "name": "Jokbet_0.4.3_x64.app.zip",
+     "size": 4406684,
+     "sha256": "7ccb059abce27d54252be30c64a6826b70cecd703d3442a61b42e6129c228ff8"
+    },
+    {
+     "platform": "macos-x64",
+     "name": "Jokbet_0.4.3_x64.dmg",
+     "size": 4438564,
+     "sha256": "b4acdad0b345049a4f29a0773326e7ee2b78b65f85a463a716c8cbfa74165496"
+    },
+    {
+     "platform": "windows-x64",
+     "name": "Jokbet_0.4.3_x64-setup.exe",
+     "size": 3483664,
+     "sha256": "4760db077ba949ca74477025608caa42069926f1a1cb8a8b56301fe43bff4731"
+    },
+    {
+     "platform": "windows-x64-msi",
+     "name": "Jokbet_0.4.3_x64_en-US.msi",
+     "size": 4784128,
+     "sha256": "80453dd05462e31973abc513f628ebb63b1c48be9714bd11d695460aa34730df"
+    },
+    {
+     "platform": "windows-x64-portable",
+     "name": "Jokbet_0.4.3_x64-portable.zip",
+     "size": 4363056,
+     "sha256": "3f121ab163be8353db2e025260802148469ec64d47c263b673e9365dfda8811e"
+    },
+    {
+     "platform": "linux-appimage",
+     "name": "Jokbet_0.4.3_amd64.AppImage",
+     "size": 83163640,
+     "sha256": "ee397cddf71d137fbd3aaba0c367d25dee7cf76ba9c64c90ccd80444b12b50db"
+    },
+    {
+     "platform": "linux-deb",
+     "name": "Jokbet_0.4.3_amd64.deb",
+     "size": 4874846,
+     "sha256": "ee05bbf02e57ab9b1610c345fbfe06779e265c9d076f9f059fdbcd977eb7522a"
+    }
+   ]
+  },
   {
    "version": "0.4.2",
    "tag": "v0.4.2",
