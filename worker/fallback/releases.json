@@ -1,7 +1,72 @@
 {
  "schema": 1,
- "generatedAt": "2026-10-04T16:06:22.998Z",
+ "generatedAt": "2026-10-05T13:52:13.204Z",
  "releases": [
+  {
+   "version": "0.4.4",
+   "tag": "v0.4.4",
+   "name": "Jokbet v0.4.4",
+   "pubDate": "2026-10-05T13:50:45Z",
+   "prerelease": false,
+   "notes": "这一版修的是一次全代码库审查找到的问题,大多在边角上,但头两件直接对着你的数据。\n\n- **重启和更新不再丢计数。** 应用自己发起的重启(macOS 重新申请「输入监控」、安装更新)走的是一条不经过退出事件的路径,而计数是攒到 30 秒才落一次盘——每按一次「重启并更新」,最后半分钟的按键、点击和鼠标行程就留在内存里没了。现在所有主动结束进程的路径都先把计数写出去;写不进去,更新就先不装,不拿数据换自己。\n\n- **慢盘上的恢复不再说谎。** 恢复、快照、导出、清空这些要扫整个数据库的事,原来有个 10 秒死线:磁盘一卡,页面报「失败」,可替换随后照样完成了——你说失败,数据却已经换了。现在等它做完为止,页面说什么,数据库就是什么。\n\n- **打开不了的数据库有交代了。** 数据库文件坏掉(放进同步盘、磁盘损坏都可能这样,settings.json 却早有抢救机制),原版会一声不吭地变成「看起来还在计数、实际什么都没存」,退出即丢。现在坏文件改名成 `stats.bad-<时间>.sqlite` 留在原地,开一个新库接着记。\n\n- 跨过午夜时,如果当天有一批计数因为写盘失败还在等着重试,原版会把它们连同日期一起扔掉;现在按本来的一天再试一次,失败了也会说出来说明。\n\n- 双屏上,另一台显示器在放映幻灯片或跑独占全屏游戏时,这台显示器上的桌宠不再跟着消失:Windows 现在按前台窗口在哪台显示器上判断,和 macOS 一样。\n\n- **恢复备份的对话框搬到应用里侧。** 设置和统计页上的几个文件对话框(备份存到哪、恢复哪个文件、CSV 导出到哪)现在由应用自己打开:网页这一侧从此报不出一个路径让应用去写去读;「恢复」也只认应用自己列表里或对话框给出的文件。日常用起来没有任何变化。\n\n- 修了一串小问题,详见 changelog:settings.json 现在先落盘再改名,断电写不出空文件(和备份的做法一致);没有公布 SHA-256 的版本,安装脚本会停下来,不会装一个没校验过的包,下载页也会把这一点写出来;macOS 的「输入监控」授权被更新弄丢时,应用自己打开设置页,而不是只靠宠物一脸无辜;趋势图切区间时提示框不再失灵;连胜一天显示 \"1 day\" 而不是 \"1 days\"。\n\n---\n\nThis release fixes what a full-codebase review found — most of it in the corners, but the first two items reach for your data.\n\n- **Restarts and updates stop losing counts.** A restart the app makes for itself — macOS's permission relaunch, an update — ends the process outside the exit event that writes the pending counts, and an installer closes the copy itself the same way; counts go to disk every 30 seconds, so every \"Restart to Update\" quietly dropped the last half a minute of keys, clicks and travel. Every path that ends on purpose now writes its counts first, and if they cannot be written, the update stays uninstalled — it does not trade counts for itself.\n- **A restore on a slow disk answers honestly.** Restore, snapshot, export and clear scanned the whole database behind a fixed 10-second deadline: after a disk stall the page said \"failed\" while the replacement completed anyway. That work now waits as long as it takes — what the page says is what the database is.\n- **A database that will not open is given a word.** A damaged `stats.sqlite` (cloud-synced folders and disk damage both do this) used to leave the app looking like it was counting while nothing was saved, gone at exit. The unreadable file is now set aside as `stats.bad-<time>.sqlite` and a fresh one is started — the way a damaged `settings.json` already was.\n- Counts a failed write was keeping for a retry used to go over the edge at midnight with the date; they get one more try under the day they belong to.\n- On Windows, a slideshow or an exclusive-mode game on *one* monitor left the pet hiding from both; the answer is the foreground window's own monitor now, as on macOS.\n- The backup dialogs belong to the app now (the webview never names where a backup goes or where CSVs are written), and a restore is refused unless the file is one the app itself offered — its dialog's choice, or one of its own backup folders'. Nothing about the everyday flow changes.\n- Smaller fixes, the changelog has them all: `settings.json` is on disk before its rename (a power cut cannot leave it empty); installers stop when a release publishes no SHA-256 instead of installing unchecked, and the download page says so; on macOS a lost Input Monitoring grant opens the settings on its own; the trend chart's tooltip survives a shorter range; a one-day streak says \"1 day\", not \"1 days\".\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品,与 Anthropic 无关。安装包未经官方签名,首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+   "url": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.4",
+   "files": [
+    {
+     "platform": "macos-aarch64-zip",
+     "name": "Jokbet_0.4.4_aarch64.app.zip",
+     "size": 4075798,
+     "sha256": "54f7f5ff2e5b49c8462823be50c73401212c1874c97b4249ed1290eb62b5f7c1"
+    },
+    {
+     "platform": "macos-aarch64",
+     "name": "Jokbet_0.4.4_aarch64.dmg",
+     "size": 4109358,
+     "sha256": "58becc7dff549c099d61a07fd918e3f4ea246dee4112c6ad3a821dab91dc8115"
+    },
+    {
+     "platform": "macos-x64-zip",
+     "name": "Jokbet_0.4.4_x64.app.zip",
+     "size": 4417133,
+     "sha256": "2594271741d161bb315c821ba84005c8f81972c83ff1ae2b8f797377eec4737b"
+    },
+    {
+     "platform": "macos-x64",
+     "name": "Jokbet_0.4.4_x64.dmg",
+     "size": 4446869,
+     "sha256": "a61af6de531f374eaefb875b8c9551d1d1840eb5c53118e409e525853e246f3e"
+    },
+    {
+     "platform": "windows-x64",
+     "name": "Jokbet_0.4.4_x64-setup.exe",
+     "size": 3489131,
+     "sha256": "ff2f668f7e3b35371c9fccc774475c1039097d5810be880ed86a2191a9772139"
+    },
+    {
+     "platform": "windows-x64-msi",
+     "name": "Jokbet_0.4.4_x64_en-US.msi",
+     "size": 4792320,
+     "sha256": "9fef88cc200dde994f9a5439bf11b1f6d0eb732162404a66bac821e0290f71f3"
+    },
+    {
+     "platform": "windows-x64-portable",
+     "name": "Jokbet_0.4.4_x64-portable.zip",
+     "size": 4369652,
+     "sha256": "48f1030b0aa3f0959fb247d9c2508d0e69a454ac1160d102f25653c46b7fa461"
+    },
+    {
+     "platform": "linux-appimage",
+     "name": "Jokbet_0.4.4_amd64.AppImage",
+     "size": 83171832,
+     "sha256": "f1b6165eab633ef51474ed9d3df85647a5d335e568629f880a374df7f528e453"
+    },
+    {
+     "platform": "linux-deb",
+     "name": "Jokbet_0.4.4_amd64.deb",
+     "size": 4880732,
+     "sha256": "45c162dc6f798ea0928acc467d85a4e25861d1ee437601933b903e5d6173011b"
+    }
+   ]
+  },
   {
    "version": "0.4.3",
    "tag": "v0.4.3",
