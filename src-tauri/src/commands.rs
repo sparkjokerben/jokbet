@@ -210,10 +210,15 @@ pub async fn get_stats(days: u32, runtime: State<'_, RuntimeHandle>) -> Result<S
     off_main(move || rt.stats(days)).await
 }
 
+/// Writes daily.csv and keys.csv into a folder this side's dialog picks;
+/// the folder when written, `None` when cancelled.
 #[tauri::command]
-pub async fn export_csv(dir: PathBuf, runtime: State<'_, RuntimeHandle>) -> Result<(), String> {
+pub async fn export_csv(
+    app: AppHandle,
+    runtime: State<'_, RuntimeHandle>,
+) -> Result<Option<PathBuf>, String> {
     let rt = runtime.inner().clone();
-    off_main(move || rt.export_csv(dir)).await
+    off_main(move || crate::backup::export_csv_dialog(&app, &rt)).await
 }
 
 #[tauri::command]
@@ -222,10 +227,12 @@ pub async fn clear_data(runtime: State<'_, RuntimeHandle>) -> Result<(), String>
     off_main(move || rt.clear()).await
 }
 
-/// A backup of every count and the settings, to `path`.
+/// A backup of every count and the settings, to a place a dialog on this
+/// side asks for: the IPC surface carries no paths, since a compromised
+/// window is not the origin of where its files live.
 #[tauri::command]
-pub async fn backup_create(app: AppHandle, path: PathBuf) -> Result<(), String> {
-    off_main(move || crate::backup::create(&app, &path)).await
+pub async fn backup_create(app: AppHandle) -> Result<Option<PathBuf>, String> {
+    off_main(move || crate::backup::create_dialog(&app)).await
 }
 
 /// The backups in the backup folders, newest first, and where those are.
@@ -234,16 +241,15 @@ pub async fn list_backups(app: AppHandle) -> Result<crate::backup::BackupList, S
     off_main(move || crate::backup::list_all(&app)).await
 }
 
-/// What a backup the user picked is, or why it cannot be restored.
+/// What a backup the user picked in this side's dialog is, or why it cannot
+/// be restored. `None` when the dialog was cancelled.
 #[tauri::command]
-pub async fn inspect_backup(
-    app: AppHandle,
-    path: PathBuf,
-) -> Result<crate::backup::BackupInfo, String> {
-    off_main(move || crate::backup::inspect_file(&app, &path)).await
+pub async fn inspect_backup(app: AppHandle) -> Result<Option<crate::backup::BackupInfo>, String> {
+    off_main(move || crate::backup::inspect_dialog(&app)).await
 }
 
-/// Replaces every count with a backup's, and the settings too if asked.
+/// Replaces every count with a backup's, and the settings too if asked. The
+/// path must be one this side offered: the dialog's, or the app's own.
 #[tauri::command]
 pub async fn restore_backup(
     app: AppHandle,
@@ -292,6 +298,14 @@ pub fn restart_app(app: AppHandle) {
     restart(&app);
 }
 
+/// `AppHandle::restart` re-execs the app and skips the exit event, so the
+/// counts still pending would die with the process; write them out first.
+fn flush_counts(app: &AppHandle) {
+    if let Err(e) = app.state::<RuntimeHandle>().flush() {
+        log::error!("flushing counts before the restart failed: {e}");
+    }
+}
+
 /// Restarts the app, and where it can, keeps going with what it had: a copy
 /// running as administrator (Windows) asks for the token again, which an
 /// ordinary restart would quietly drop along with the input it was watching
@@ -303,12 +317,14 @@ pub fn restart(app: &AppHandle) {
         app.exit(0);
         return;
     }
+    flush_counts(app);
     app.restart();
 }
 
 /// Restarts the app; no platform here but Windows has a token to carry over.
 #[cfg(not(windows))]
 pub fn restart(app: &AppHandle) {
+    flush_counts(app);
     app.restart();
 }
 

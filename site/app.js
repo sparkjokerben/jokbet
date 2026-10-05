@@ -59,6 +59,7 @@ const T = {
     emptyHint: "第一个版本发布后，这里会自动列出每个版本的改动和安装包。",
     github: "GitHub 下载",
     checksum: "SHA-256 校验值",
+    checksumNone: "未公布校验值",
     prerelease: "预发布",
     macos: {
       "macos-aarch64-zip": "macOS · Apple 芯片（aarch64）",
@@ -97,6 +98,7 @@ const T = {
     emptyHint: "The first release will list itself here, with its notes and its installers.",
     github: "On GitHub",
     checksum: "SHA-256",
+    checksumNone: "no published checksum",
     prerelease: "prerelease",
     macos: {
       "macos-aarch64-zip": "macOS · Apple silicon (aarch64)",
@@ -267,12 +269,13 @@ function fileRow(platform, file, href, github) {
   from.className = "file-mirror";
   from.href = github;
   item.append(link, from);
-  if (file.sha256) {
-    const sha = el("details");
-    sha.className = "file-sha";
-    sha.append(el("summary", T[lang()].checksum), el("code", file.sha256));
-    item.append(sha);
-  }
+  // Shown even when nothing was published: a release without a checksum is
+  // worth saying, not hiding — for an un-signed build that value is the only
+  // published integrity anchor.
+  const sha = el("details");
+  sha.className = "file-sha";
+  sha.append(el("summary", T[lang()].checksum), el("code", file.sha256 || T[lang()].checksumNone));
+  item.append(sha);
   return item;
 }
 

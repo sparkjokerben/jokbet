@@ -8,8 +8,10 @@
 // card. The pet itself is not a picture: the page runs the app's own animation
 // code (src/pet/web.ts, bundled by scripts/build-site-pet.ts).
 //
-// `check` re-renders in memory and compares pixel digests against the JSON, so
-// a sprite change that was not regenerated fails CI instead of shipping.
+// `check` re-renders in memory and compares pixel digests against the JSON,
+// so a sprite change that was not regenerated fails CI instead of shipping;
+// it also compares the committed files' own bytes against the per-file
+// digests the JSON carries, so a hand-edited or half-committed copy fails.
 
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -67,11 +69,14 @@ function wordmarkSvg(rows: string[]): string {
 }
 
 /** What the page reads about the pictures beside it. */
-function spriteData(digests: Record<string, string>) {
+function spriteData(digests: Record<string, string>, fileDigests: Record<string, string>) {
   return {
     grid: [GRID_W, GRID_H],
     cell: [GRID_W * SCALE, GRID_H * SCALE],
     digests,
+    // The sha-256 of every generated file's own bytes, so check can tell a
+    // hand-edited or half-committed copy from the real one.
+    fileDigests,
   };
 }
 
@@ -153,7 +158,14 @@ function render(): { files: Record<string, Buffer>; digests: Record<string, stri
   add("icon-512.png", iconTile(512));
   files["favicon.ico"] = ico(files["favicon-32.png"], 32);
   files["wordmark.svg"] = Buffer.from(wordmarkSvg(mark));
-  files["jokbet.json"] = Buffer.from(JSON.stringify(spriteData(digests), null, 1) + "\n");
+  // The ledger cannot hold a hash of itself, so it hashes every file but the
+  // one it goes into.
+  const fileDigests: Record<string, string> = Object.fromEntries(
+    Object.entries(files)
+      .filter(([name]) => name !== "jokbet.json")
+      .map(([name, bytes]) => [name, createHash("sha256").update(bytes).digest("hex")]),
+  );
+  files["jokbet.json"] = Buffer.from(JSON.stringify(spriteData(digests, fileDigests), null, 1) + "\n");
   return { files, digests };
 }
 
@@ -162,6 +174,7 @@ function main(mode: string, outDir: string) {
   if (mode === "check") {
     const want = JSON.parse(readFileSync(join(outDir, "jokbet.json"), "utf8")) as {
       digests: Record<string, string>;
+      fileDigests?: Record<string, string>;
     };
     let bad = 0;
     for (const [name, digest] of Object.entries(digests)) {
@@ -170,11 +183,20 @@ function main(mode: string, outDir: string) {
         bad++;
       }
     }
-    for (const name of Object.keys(files)) {
+    // Pixels re-drawn from the current sprites cannot tell a hand-edited or
+    // half-committed copy from the real thing; the files' own bytes can, so
+    // they are compared against the digests of the bytes committed with them.
+    for (const [name, digest] of Object.entries(want.fileDigests ?? {})) {
+      let have: string;
       try {
-        statSync(join(outDir, name));
+        have = createHash("sha256").update(readFileSync(join(outDir, name))).digest("hex");
       } catch {
         console.error(`missing ${join(outDir, name)} — run: npm run site:assets`);
+        bad++;
+        continue;
+      }
+      if (have !== digest) {
+        console.error(`${name} has drifted or was edited by hand — run: npm run site:assets`);
         bad++;
       }
     }

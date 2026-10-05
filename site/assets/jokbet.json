@@ -14,5 +14,15 @@
   "apple-touch-icon.png": "b6de84304324cce6befdddf5883db4b2ee8d06921c6de0865030a93d68bab090",
   "favicon-192.png": "572f3691b24d801e32673a606a4cd4d6d4dc5f27f4bb01770fb4fe133fa1b282",
   "icon-512.png": "a1bfecce1e6e2c687ed351c258985dc51cc05890da0451f89a78a0d7a514132a"
+ },
+ "fileDigests": {
+  "jokbet-poster.png": "4cb209423a665cfba4415acfdeae26e207787aa82f98c49822dd5d18350dc58d",
+  "og.png": "8464bb24e6307608f1e00a7c128b6a7bea664fc7c5848608e379789d54fc2aad",
+  "favicon-32.png": "b13f02c3a083523cac63a68cbc5b72057fcd5cc5ec9580b89ed139b5680c7464",
+  "apple-touch-icon.png": "f2944bfb0ce8936bba5c3e4c58a98914f3e233b81ecc8a27bc38e5cadce896fe",
+  "favicon-192.png": "c6ef82983ba14e185290a33d07710cfe4da582cf3cd3a851c05abcec6d02cc2e",
+  "icon-512.png": "696182dd18a3ac7ba3b814e24e6dfdf2ce6d00b790cf22ed33e3ea3f4a6f2579",
+  "favicon.ico": "16e79de6345d5dfdc21ab1c522a891eada3cba0c617a607cbc431cdeafbf48df",
+  "wordmark.svg": "eb862e8b8f47ce1b50b2b70b79a468858b9ba11b8206cf797c8c4400d6fed7eb"
  }
 }

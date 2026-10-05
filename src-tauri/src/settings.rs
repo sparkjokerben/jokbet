@@ -1,6 +1,7 @@
 //! Typed user settings persisted as `settings.json` in the app config dir.
 
 use serde::{Deserialize, Serialize};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
@@ -242,6 +243,11 @@ pub struct Settings {
     pub paused: bool,
     /// The first-run onboarding has been completed.
     pub onboarded: bool,
+    /// Input Monitoring was granted on a past start, at least once. A start
+    /// without it after that is a grant an update has taken away (the
+    /// signature it was attached to changed), not a prompt turned down, and
+    /// the app speaks up about that one.
+    pub input_granted_once: bool,
     pub language: Language,
     /// Take the pet off screen while another app is full screen or presenting.
     pub hide_in_fullscreen: bool,
@@ -269,6 +275,7 @@ impl Default for Settings {
             sleep_after_min: 1,
             paused: false,
             onboarded: false,
+            input_granted_once: false,
             language: Language::System,
             hide_in_fullscreen: true,
             shortcuts: Shortcuts::default(),
@@ -541,8 +548,14 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
         std::fs::create_dir_all(dir)?;
     }
     let tmp = path.with_extension("json.tmp");
-    std::fs::write(&tmp, bytes)?;
-    std::fs::rename(tmp, path)
+    let mut file = std::fs::File::create(&tmp)?;
+    file.write_all(bytes)?;
+    // Flush the data before the rename hands the path over: the filesystem
+    // can make a rename durable before the renamed file's data is, and a
+    // power cut in between would leave settings.json empty — the backup
+    // writer's fsync already guards against the same thing.
+    file.sync_all()?;
+    std::fs::rename(&tmp, path)
 }
 
 #[cfg(test)]

@@ -2,9 +2,9 @@
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
-  import { message, open, save } from "@tauri-apps/plugin-dialog";
+  import { message, open } from "@tauri-apps/plugin-dialog";
   import { onMount } from "svelte";
-  import { backupFileName, formatWhen } from "../../lib/format";
+  import { formatWhen } from "../../lib/format";
   import { t, type MessageKey } from "../../lib/i18n";
   import {
     BACKUP_KEEP_MAX,
@@ -119,15 +119,9 @@
   }
 
   async function backupNow() {
-    const dir = backups?.dir;
-    const name = backupFileName();
-    const path = await save({
-      defaultPath: dir ? `${dir}/${name}` : name,
-      filters: [{ name: t("backupFilter"), extensions: ["zip"] }],
-    });
-    if (!path) return;
     try {
-      await invoke("backup_create", { path });
+      const path = await invoke<string | null>("backup_create");
+      if (!path) return;
       await message(t("backupDone", { path }));
     } catch (e) {
       await message(t("backupFailed", { error: String(e) }), { kind: "error" });

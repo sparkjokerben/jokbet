@@ -7,7 +7,7 @@ use crate::engine::milestones::{Reached, LIFETIME};
 use chrono::NaiveDate;
 use rusqlite::{params, Connection, OptionalExtension};
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 const DATE_FMT: &str = "%Y-%m-%d";
 
@@ -122,6 +122,57 @@ impl Db {
             let _ = std::fs::create_dir_all(dir);
         }
         Self::init(Connection::open(path)?)
+    }
+
+    /// Opens the database, and when it will not open, the way the settings
+    /// treat a damaged file: the old one is set aside as
+    /// `stats.bad-<time>.sqlite` — with its sidecars, so a fresh pair does
+    /// not adopt them — and a fresh one is tried. `None` when even that will
+    /// not open, and the engine goes on counting in memory; a damaged file
+    /// should not quietly turn into an app that keeps no counts at all.
+    pub fn open_salvaging(path: &Path) -> Option<Db> {
+        match Db::open(path) {
+            Ok(db) => Some(db),
+            Err(e) => {
+                log::error!("opening {} failed: {e}", path.display());
+                let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
+                let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("stats");
+                let aside = path.with_file_name(format!("{stem}.bad-{stamp}.sqlite"));
+                match std::fs::rename(path, &aside) {
+                    Ok(()) => {
+                        // The sidecars belong to the file just set aside; a
+                        // leftover pair would be adopted by the fresh one as
+                        // its own, and what holds committed-but-unmerged data
+                        // goes with the file it belongs to.
+                        for suffix in ["-wal", "-shm"] {
+                            let from = path.with_file_name(format!("{stem}.sqlite{suffix}"));
+                            let to = PathBuf::from(format!("{}{}", aside.display(), suffix));
+                            if std::fs::rename(&from, &to).is_err() {
+                                let _ = std::fs::remove_file(&from);
+                            }
+                        }
+                    }
+                    // The rename failing usually means another process has
+                    // the file open; starting a second database beside it
+                    // would split the truth, so carry on without storage.
+                    Err(e) => {
+                        log::error!("setting {} aside failed: {e}", path.display());
+                        return None;
+                    }
+                }
+                log::warn!("set the unreadable database aside as {}", aside.display());
+                match Db::open(path) {
+                    Ok(db) => Some(db),
+                    Err(e) => {
+                        log::error!(
+                            "opening {} after setting the old one aside failed: {e}",
+                            path.display()
+                        );
+                        None
+                    }
+                }
+            }
+        }
     }
 
     #[cfg(test)]
@@ -701,6 +752,31 @@ mod tests {
         let d = day(2026, 9, 23);
         Db::open(&path).unwrap().add_day(d, &delta(7, &[])).unwrap();
         assert_eq!(Db::open(&path).unwrap().load_day(d).unwrap().totals.keys, 7);
+    }
+
+    #[test]
+    fn a_database_that_will_not_open_is_set_aside() {
+        let dir = std::env::temp_dir().join(format!("jdp-db-salvage-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let path = dir.join("stats.sqlite");
+        // Not a database: the open has to fail, not the salvage.
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(&path, b"this is not a database").unwrap();
+        let d = day(2026, 9, 23);
+        {
+            let mut db =
+                Db::open_salvaging(&path).expect("a fresh database goes where the bad one was");
+            db.add_day(d, &delta(7, &[])).unwrap();
+        } // The fresh connection closes before the file is read again below.
+        assert_eq!(Db::open(&path).unwrap().load_day(d).unwrap().totals.keys, 7);
+        // The old file is there to be read, not gone.
+        let kept = std::fs::read_dir(&dir)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .find(|e| e.file_name().to_string_lossy().contains(".bad-"))
+            .expect("the damaged file is kept beside the fresh one");
+        assert!(kept.file_name().to_string_lossy().ends_with(".sqlite"));
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

@@ -110,9 +110,10 @@ pub fn run() {
             app.manage(walker::WalkState::default());
 
             let db_path = data_dir.join("stats.sqlite");
-            let db = db::Db::open(&db_path)
-                .inspect_err(|e| log::error!("opening {} failed: {e}", db_path.display()))
-                .ok();
+            // A database that will not open is set aside and a fresh one is
+            // started; going on without storage quietly is the one thing this
+            // must not do.
+            let db = db::Db::open_salvaging(&db_path);
             app.manage(engine::runtime::spawn(app.handle().clone(), db, &initial));
 
             let menu = AppMenu::build(app.handle())?;
@@ -126,6 +127,31 @@ pub fn run() {
             let _ = pet;
             if !initial.onboarded {
                 menu::open_panel(app.handle(), panels::Panel::Onboarding);
+            }
+            #[cfg(target_os = "macos")]
+            {
+                match input::permission() {
+                    input::Permission::Granted => {
+                        // Remembered so that the grant a future update takes
+                        // away is recognizable as one that was there.
+                        if !initial.input_granted_once {
+                            let _ = app
+                                .state::<SettingsStore>()
+                                .patch(&serde_json::json!({"inputGrantedOnce": true}));
+                        }
+                    }
+                    // A grant that was there and is gone now — an update that
+                    // changed the signature, most often — leaves the app
+                    // counting nothing, and macOS will not say so again; the
+                    // settings page is where the fix is.
+                    input::Permission::Denied
+                        if initial.onboarded && initial.input_granted_once =>
+                    {
+                        log::warn!("input monitoring was granted before and is not now; opening the settings");
+                        menu::open_panel(app.handle(), panels::Panel::Settings);
+                    }
+                    _ => {}
+                }
             }
             hover::spawn(app.handle().clone());
             visibility::spawn(app.handle().clone());

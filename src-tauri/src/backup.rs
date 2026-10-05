@@ -12,9 +12,11 @@
 
 use crate::db::{Db, SCHEMA_VERSION};
 use crate::engine::runtime::{RuntimeHandle, Snapshot};
+use crate::i18n;
 use crate::settings::{self, SettingsStore};
 use chrono::{Local, NaiveDate};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -42,6 +44,9 @@ const MANUAL_PREFIX: &str = "jokbet-backup-";
 /// at all, or one from a newer version than this.
 pub const INVALID: &str = "backup-invalid";
 pub const TOO_NEW: &str = "backup-too-new";
+/// A path the app never offered to restore: the pages may only name a file a
+/// dialog here has handed out, or one of the app's own backup folders'.
+pub const UNOFFERED: &str = "backup-unoffered";
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -88,6 +93,10 @@ pub struct BackupInfo {
 #[derive(Default)]
 pub struct BackupState {
     pub last_error: Mutex<Option<String>>,
+    /// Paths the app's own dialogs have handed out for a restore, and that a
+    /// restore may therefore name. Files in the app's own backup folders are
+    /// always allowed; this is for the one a dialog picked somewhere else.
+    admitted: Mutex<HashSet<PathBuf>>,
 }
 
 // --- files ------------------------------------------------------------------
@@ -498,6 +507,107 @@ pub fn inspect_file<R: Runtime>(app: &AppHandle<R>, path: &Path) -> Result<Backu
     inspect(path, &device_id(&data_dir(app)?))
 }
 
+/// Whether a restore may name this path: a file in one of the app's own
+/// backup folders, or one a dialog on this side has handed out. The IPC
+/// surface carries no such trust by itself — a webview is only ever a
+/// dialog's client, not the origin of where its files live.
+fn is_admitted<R: Runtime>(app: &AppHandle<R>, path: &Path) -> bool {
+    if let Ok(dir) = auto_dir(app) {
+        if path.starts_with(dir) {
+            return true;
+        }
+    }
+    if let Ok(dir) = default_dir(app) {
+        if path.starts_with(dir) {
+            return true;
+        }
+    }
+    app.state::<BackupState>()
+        .admitted
+        .lock()
+        .unwrap()
+        .contains(path)
+}
+
+/// Marks a path a dialog on this side has handed out.
+fn admit<R: Runtime>(app: &AppHandle<R>, path: &Path) {
+    app.state::<BackupState>()
+        .admitted
+        .lock()
+        .unwrap()
+        .insert(path.to_path_buf());
+}
+
+/// Asks where the backup goes, then makes one there. `None` when cancelled.
+pub fn create_dialog<R: Runtime>(app: &AppHandle<R>) -> Result<Option<PathBuf>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let dir = auto_dir(app)?;
+    let filter_name = i18n::t(
+        i18n::Lang::resolve(app.state::<SettingsStore>().get().language),
+        i18n::Text::BackupFilter,
+    );
+    let name = format!("{}.zip", Local::now().format("jokbet-backup-%Y%m%d-%H%M"));
+    let picked = app
+        .dialog()
+        .file()
+        .add_filter(filter_name, &["zip"])
+        .set_file_name(name)
+        .set_directory(&dir)
+        .blocking_save_file();
+    let Some(picked) = picked else {
+        return Ok(None);
+    };
+    let dest = picked.into_path().map_err(io_err)?;
+    create(app, &dest)?;
+    Ok(Some(dest))
+}
+
+/// Asks which backup file to inspect, then says what it is. `None` when
+/// cancelled.
+pub fn inspect_dialog<R: Runtime>(app: &AppHandle<R>) -> Result<Option<BackupInfo>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let filter_name = i18n::t(
+        i18n::Lang::resolve(app.state::<SettingsStore>().get().language),
+        i18n::Text::BackupFilter,
+    );
+    let picked = app
+        .dialog()
+        .file()
+        .add_filter(filter_name, &["zip"])
+        .blocking_pick_file();
+    let Some(picked) = picked else {
+        return Ok(None);
+    };
+    let path = picked.into_path().map_err(io_err)?;
+    let info = inspect_file(app, &path)?;
+    admit(app, &path);
+    Ok(Some(info))
+}
+
+/// Asks which folder the CSVs go to, then writes them there. `None` when
+/// cancelled.
+pub fn export_csv_dialog<R: Runtime>(
+    app: &AppHandle<R>,
+    runtime: &RuntimeHandle,
+) -> Result<Option<PathBuf>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let default = data_dir(app)?;
+    let Some(picked) = app
+        .dialog()
+        .file()
+        .set_directory(&default)
+        .blocking_pick_folder()
+    else {
+        return Ok(None);
+    };
+    let dir = picked.into_path().map_err(io_err)?;
+    runtime.export_csv(dir.clone())?;
+    Ok(Some(dir))
+}
+
 /// What a restore could not bring back.
 #[derive(Serialize, Clone, Debug, Default)]
 #[serde(rename_all = "camelCase")]
@@ -515,6 +625,9 @@ pub fn restore<R: Runtime>(
     with_settings: bool,
 ) -> Result<RestoreReport, String> {
     let data = data_dir(app)?;
+    if !is_admitted(app, path) {
+        return Err(format!("{UNOFFERED}: {}", path.display()));
+    }
     inspect(path, &device_id(&data))?;
     let staged = data.join(".restore.sqlite");
     remove_db_files(&staged);

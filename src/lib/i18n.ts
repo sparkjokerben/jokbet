@@ -39,6 +39,7 @@ const zh = {
   insightStreakLongest: "最长连续",
   insightWeek: "最近 7 天",
   daysUnit: "{n} 天",
+  restoreNotOffered: "只能恢复本应用列表或对话框给出的备份。",
   vsLastWeek: "上周 {value}",
   heatmapTitle: "按键热力图",
   heatmapLess: "少",
@@ -239,6 +240,7 @@ const en: Record<MessageKey, string> = {
   insightStreakLongest: "Longest streak",
   insightWeek: "Last 7 days",
   daysUnit: "{n} days",
+  restoreNotOffered: "Only a backup this app's list or its dialog has offered can be restored.",
   vsLastWeek: "Last week {value}",
   heatmapTitle: "Key heatmap",
   heatmapLess: "Less",
@@ -421,4 +423,10 @@ export function setLang(next: Lang) {
 
 export function t(key: MessageKey, vars: Record<string, string | number> = {}, l: Lang = lang): string {
   return messages[l][key].replace(/\{(\w+)\}/g, (_, v: string) => String(vars[v] ?? `{${v}}`));
+}
+
+/** "{n} days", with English's singular one back: "1 day", not "1 days".
+ * Chinese needs no singular, so only English takes the branch. */
+export function tDays(n: number): string {
+  return lang === "en" && n === 1 ? "1 day" : t("daysUnit", { n });
 }

@@ -226,7 +226,11 @@ EOF
       fail "下载的文件和发布的校验值对不上，已停止安装。" \
         "The download does not match its published SHA-256; nothing was installed."
   else
-    say "（这个版本没有公布校验值，跳过校验。）" "(This release lists no SHA-256; not checked.)"
+    # For an un-signed build the manifest's SHA-256 is the only published
+    # anchor: a release without one is checked against nothing, so it stops
+    # here instead of quietly installing whatever came off the network.
+    fail "这个版本没有公布校验值，已停止安装；请稍后再试，或到 ${GITHUB%/releases/download} 下载。" \
+      "This release publishes no SHA-256; nothing was installed. Try again later, or download from https://github.com/sparkjokerben/jokbet/releases."
   fi
 
   place

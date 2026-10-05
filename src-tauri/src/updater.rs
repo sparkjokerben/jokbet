@@ -196,6 +196,14 @@ fn is_tag_and_name(rest: &str) -> bool {
 
 /// Installs a downloaded update; returns true if one was installed.
 pub fn install_pending<R: Runtime>(app: &AppHandle<R>) -> bool {
+    // Installing ends the process on paths the exit event never reaches (NSIS
+    // exits itself; the portable swap is followed by a restart without one),
+    // so the pending counts have to be on disk first. Keeping the update
+    // pending is the cheaper loss.
+    if let Err(e) = app.state::<crate::engine::runtime::RuntimeHandle>().flush() {
+        log::error!("flushing counts before the install failed: {e}");
+        return false;
+    }
     let Some((update, bytes)) = app.state::<Updates>().pending.lock().unwrap().take() else {
         return false;
     };

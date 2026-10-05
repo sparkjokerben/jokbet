@@ -33,6 +33,15 @@
 
   const shortDate = (d: string) => d.slice(5);
 
+  // The parent can swap to a shorter range while the pointer rests on the
+  // chart; a stale index would then read past `points` and throw in the
+  // middle of rendering, so let it go.
+  $effect(() => {
+    if (hover !== null && hover >= points.length) {
+      hover = null;
+    }
+  });
+
   function onMove(e: PointerEvent) {
     // The handler is on the hit rectangle, so its own left edge is the first
     // column: measuring from it needs no margin of its own.

@@ -52,7 +52,11 @@ const code = await bundle();
 
 if (mode === "check") {
   const want = readFileSync(out, "utf8");
-  if (want !== code) {
+  // A Windows checkout hands pages CRLF while the bundle is LF — the pages'
+  // check normalizes for exactly this, and so does this one: what matters is
+  // the lines, not the endings.
+  const eol = (s: string) => s.replace(/\r\n/g, "\n");
+  if (eol(want) !== eol(code)) {
     console.error(`${out} has drifted from ${ENTRY} — run: npm run site:assets`);
     process.exit(1);
   }

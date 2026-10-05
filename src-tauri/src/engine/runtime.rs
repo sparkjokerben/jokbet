@@ -55,6 +55,13 @@ pub enum Control {
     GetStatus(Sender<Result<Status, String>>),
     /// The pet was clicked: a break reminder, if one is up, has been seen.
     RestAck,
+    /// Saves pending counts now and acknowledges once the flush ran. The
+    /// paths that end the process without the exit event (`app.restart`,
+    /// an installer's own exit) have to call this first.
+    ///
+    /// The reply is always `Ok`: a failed write keeps the batch pending and
+    /// is logged by the flush itself, and nothing the caller can do helps.
+    Flush(Sender<Result<(), String>>),
     /// Stop the hook and acknowledge once everything is saved.
     Shutdown(Sender<()>),
 }
@@ -76,24 +83,45 @@ impl RuntimeHandle {
             .map_err(|e| e.to_string())?
     }
 
+    /// `ask` without a deadline, for the whole-database work: a restore on a
+    /// slow disk can outlast any fixed timeout, and the caller reporting
+    /// failure while the worker carries it out leaves the two sides holding
+    /// different truths about what the counts are.
+    fn ask_open<T>(
+        &self,
+        make: impl FnOnce(Sender<Result<T, String>>) -> Control,
+    ) -> Result<T, String> {
+        let (tx, rx) = bounded(1);
+        self.ctrl.send(make(tx)).map_err(|e| e.to_string())?;
+        rx.recv().map_err(|e| e.to_string())?
+    }
+
     pub fn stats(&self, days: u32) -> Result<Stats, String> {
         self.ask(|reply| Control::Stats { days, reply })
     }
 
     pub fn export_csv(&self, dir: PathBuf) -> Result<(), String> {
-        self.ask(|reply| Control::ExportCsv { dir, reply })
+        self.ask_open(|reply| Control::ExportCsv { dir, reply })
     }
 
     pub fn clear(&self) -> Result<(), String> {
-        self.ask(Control::Clear)
+        self.ask_open(Control::Clear)
     }
 
     pub fn snapshot(&self, to: PathBuf) -> Result<Snapshot, String> {
-        self.ask(|reply| Control::Snapshot { to, reply })
+        self.ask_open(|reply| Control::Snapshot { to, reply })
     }
 
     pub fn restore(&self, from: PathBuf) -> Result<(), String> {
-        self.ask(|reply| Control::Restore { from, reply })
+        self.ask_open(|reply| Control::Restore { from, reply })
+    }
+
+    /// Writes the pending counts to the database now. Everything that ends
+    /// the process without the exit event — `AppHandle::restart`, the
+    /// updater's own exits — must call this first, or the last stretch of
+    /// counts dies with the process.
+    pub fn flush(&self) -> Result<(), String> {
+        self.ask(Control::Flush)
     }
 
     pub fn status(&self) -> Result<Status, String> {
@@ -334,6 +362,10 @@ impl<R: Runtime> Worker<R> {
                         let _ = reply.send(self.restore(&from));
                         let _ = self.app.emit("app://data-changed", ());
                     }
+                    Ok(Control::Flush(reply)) => {
+                        self.flush();
+                        let _ = reply.send(Ok(()));
+                    }
                     Ok(Control::Shutdown(ack)) => {
                         if let Some(h) = self.hook.take() {
                             h.stop();
@@ -403,8 +435,21 @@ impl<R: Runtime> Worker<R> {
         let today = now.date_naive();
         if today != self.date {
             self.flush();
+            // roll_over hands back whatever that flush could not save: a
+            // failed write keeps the batch pending, and dropping it here
+            // would lose the day along with the date. One last direct try
+            // under the old date, so a late save still lands where it
+            // belongs.
+            let old_date = self.date;
             self.date = today;
-            self.agg.roll_over();
+            let unsaved = self.agg.roll_over();
+            if !unsaved.is_empty() {
+                match self.db.as_mut().map(|db| db.add_day(old_date, &unsaved)) {
+                    Some(Ok(())) => self.lifetime_saved.add(&unsaved.totals),
+                    Some(Err(e)) => log::error!("saving counts for {old_date} failed: {e}"),
+                    None => log::error!("counts for {old_date} had nowhere to go: no database"),
+                }
+            }
             self.last_tick = None;
             if let Some(db) = self.db.as_mut() {
                 let _ = db.prune_reached(today);

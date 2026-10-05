@@ -41,6 +41,7 @@ pub enum Text {
     PauseCounting,
     RestartAsAdmin,
     Quit,
+    BackupFilter,
 }
 
 pub fn t(lang: Lang, text: Text) -> &'static str {
@@ -53,6 +54,7 @@ pub fn t(lang: Lang, text: Text) -> &'static str {
         (Lang::Zh, Text::PauseCounting) => "暂停计数",
         (Lang::Zh, Text::RestartAsAdmin) => "以管理员身份重新启动",
         (Lang::Zh, Text::Quit) => "退出",
+        (Lang::Zh, Text::BackupFilter) => "Jokbet 备份",
         (Lang::En, Text::ShowPet) => "Show Pet",
         (Lang::En, Text::HidePet) => "Hide Pet",
         (Lang::En, Text::ResetPosition) => "Move Pet Back to Corner",
@@ -61,6 +63,7 @@ pub fn t(lang: Lang, text: Text) -> &'static str {
         (Lang::En, Text::PauseCounting) => "Pause Counting",
         (Lang::En, Text::RestartAsAdmin) => "Restart as Administrator",
         (Lang::En, Text::Quit) => "Quit",
+        (Lang::En, Text::BackupFilter) => "Jokbet backup",
     }
 }
 

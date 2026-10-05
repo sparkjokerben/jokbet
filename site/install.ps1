@@ -29,7 +29,14 @@ if ((Get-UICulture).TwoLetterISOLanguageName -eq 'zh') { $zh = $true }
 
 function Say {
   param([string]$Zh, [string]$En)
-  if ($zh) { Write-Host $Zh } else { Write-Host $En }
+  # What is said, as a value and not printed: a throw needs a message to
+  # hand on, and only the things worth showing as they happen print.
+  if ($zh) { $Zh } else { $En }
+}
+
+function Note {
+  param([string]$Zh, [string]$En)
+  Write-Host (Say $Zh $En)
 }
 
 function Install-Jokbet {
@@ -52,7 +59,7 @@ function Install-Jokbet {
     $name = $file.name
     $exe = Join-Path $tmp $name
 
-    Say "正在下载 Jokbet $($manifest.version)……" "Downloading Jokbet $($manifest.version)…"
+    Note "正在下载 Jokbet $($manifest.version)……" "Downloading Jokbet $($manifest.version)…"
     try {
       Invoke-WebRequest "$site/dl/$($manifest.tag)/$name" -OutFile $exe -UseBasicParsing
     } catch {
@@ -67,7 +74,11 @@ function Install-Jokbet {
           'The download does not match its published SHA-256; nothing was installed.')
       }
     } else {
-      Say '（这个版本没有公布校验值，跳过校验。）' '(This release lists no SHA-256; not checked.)'
+      # For an un-signed build the manifest's SHA-256 is the only published
+      # anchor: a release without one is checked against nothing, so it stops
+      # here instead of quietly installing whatever came off the network.
+      throw (Say '这个版本没有公布校验值，已停止安装；请稍后再试。' `
+        'This release publishes no SHA-256; nothing was installed. Try again later.')
     }
 
     # /S is what the app's own updater passes: the installer closes a running
@@ -77,7 +88,7 @@ function Install-Jokbet {
       throw (Say "安装程序返回了 $($install.ExitCode)，安装没有完成。" "The installer exited with $($install.ExitCode); nothing was installed.")
     }
 
-    Say "Jokbet $($manifest.version) 已安装。" "Installed Jokbet $($manifest.version)."
+    Note "Jokbet $($manifest.version) 已安装。" "Installed Jokbet $($manifest.version)."
     if ($env:JOKBET_OPEN -ne '0') {
       $app = @(
         (Join-Path $env:LOCALAPPDATA 'Jokbet\Jokbet.exe'),
@@ -88,7 +99,7 @@ function Install-Jokbet {
         # watch the keyboard, so there is no note to leave here.
         Start-Process $app
       } else {
-        Say '安装完成，但没有找到 Jokbet.exe，请从开始菜单打开它。' `
+        Note '安装完成，但没有找到 Jokbet.exe，请从开始菜单打开它。' `
           'Installed, but Jokbet.exe was not where it was expected; open it from the Start menu.'
       }
     }

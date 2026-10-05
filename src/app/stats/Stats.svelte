@@ -1,9 +1,9 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
-  import { ask, message, open } from "@tauri-apps/plugin-dialog";
+  import { ask, message } from "@tauri-apps/plugin-dialog";
   import { onMount } from "svelte";
   import { formatCount, formatDistance } from "../../lib/format";
-  import { t } from "../../lib/i18n";
+  import { t, tDays } from "../../lib/i18n";
   import { listen } from "@tauri-apps/api/event";
   import type { HeatmapPalette, Metric, Settings, Stats, Status } from "../../lib/types";
   import Segmented from "../ui/Segmented.svelte";
@@ -69,10 +69,10 @@
             value: insights.best ? fmt(valueOf(insights.best, metric)) : "—",
             sub: insights.best?.date ?? "",
           },
-          { label: t("insightStreak"), value: t("daysUnit", { n: insights.streak.current }), sub: "" },
+          { label: t("insightStreak"), value: tDays(insights.streak.current), sub: "" },
           {
             label: t("insightStreakLongest"),
-            value: t("daysUnit", { n: insights.streak.longest }),
+            value: tDays(insights.streak.longest),
             sub: "",
           },
           {
@@ -100,14 +100,17 @@
   }
 
   async function exportCsv() {
-    const dir = await open({ directory: true });
-    if (typeof dir !== "string") return;
+    let dir: string | null;
     try {
-      await invoke("export_csv", { dir });
-      await message(t("exported", { dir }));
+      // The dialog belongs to the app itself here, so the webview never
+      // names a folder.
+      dir = await invoke<string | null>("export_csv");
     } catch (e) {
       await message(String(e), { kind: "error" });
+      return;
     }
+    if (!dir) return;
+    await message(t("exported", { dir }));
   }
 
   async function clearData() {

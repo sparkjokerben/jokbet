@@ -599,19 +599,15 @@ pub fn primary_button_pressed() -> bool {
 pub fn fullscreen_covers(x: f64, y: f64) -> bool {
     use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_EXTENDED_FRAME_BOUNDS};
     use windows::Win32::Graphics::Gdi::{MonitorFromWindow, MONITOR_DEFAULTTONULL};
-    use windows::Win32::UI::Shell::{
-        SHQueryUserNotificationState, QUNS_PRESENTATION_MODE, QUNS_RUNNING_D3D_FULL_SCREEN,
-    };
     use windows::Win32::UI::WindowsAndMessaging::{
         GetClassNameW, GetDesktopWindow, GetForegroundWindow, GetShellWindow, GetWindowRect,
     };
     unsafe {
-        // Exclusive-mode games and presentation mode say so outright.
-        if let Ok(state) = SHQueryUserNotificationState() {
-            if state == QUNS_RUNNING_D3D_FULL_SCREEN || state == QUNS_PRESENTATION_MODE {
-                return true;
-            }
-        }
+        // Presentation mode and exclusive games set QUNS, but that state is
+        // session-wide: a slideshow on one monitor says nothing about the
+        // one the pet stands on. The foreground window below says which
+        // monitor it covers, so the answer stays per-display — as the
+        // function's word above has it, and as macOS does it.
         let window = GetForegroundWindow();
         if window.is_invalid() || window == GetShellWindow() || window == GetDesktopWindow() {
             return false;

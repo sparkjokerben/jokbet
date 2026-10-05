@@ -1,9 +1,9 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
-  import { message, open } from "@tauri-apps/plugin-dialog";
+  import { message } from "@tauri-apps/plugin-dialog";
   import { onMount } from "svelte";
   import { formatWhen } from "../../lib/format";
-  import { t, type MessageKey } from "../../lib/i18n";
+  import { t, tDays, type MessageKey } from "../../lib/i18n";
   import type { BackupInfo, BackupKind, BackupList, RestoreReport } from "../../lib/types";
 
   let { onclose }: { onclose: () => void } = $props();
@@ -27,20 +27,24 @@
     const text = String(e);
     if (text.startsWith("backup-invalid")) return t("backupInvalid");
     if (text.startsWith("backup-too-new")) return t("backupTooNew");
+    if (text.startsWith("backup-unoffered")) return t("restoreNotOffered");
     return text;
   }
 
   async function chooseFile() {
-    const path = await open({ filters: [{ name: t("backupFilter"), extensions: ["zip"] }] });
-    if (typeof path !== "string") return;
+    let info: BackupInfo | null;
     try {
-      const info = await invoke<BackupInfo>("inspect_backup", { path });
-      items = [info, ...items.filter((i) => i.path !== info.path)];
-      chosen = info.path;
-      error = "";
+      // The dialog belongs to the app itself here, so the webview never
+      // names a file.
+      info = await invoke<BackupInfo | null>("inspect_backup");
     } catch (e) {
       error = why(e);
+      return;
     }
+    if (!info) return;
+    items = [info, ...items.filter((i) => i.path !== info.path)];
+    chosen = info.path;
+    error = "";
   }
 
   async function restore() {
@@ -89,7 +93,7 @@
             <input type="radio" name="backup" value={item.path} bind:group={chosen} />
             <span class="when">{formatWhen(item.createdAt)}</span>
             <span class="muted">
-              {t(KIND[item.kind])} · {t("daysUnit", { n: item.days })}{#if item.otherDevice}
+              {t(KIND[item.kind])} · {tDays(item.days)}{#if item.otherDevice}
                 · {t("restoreOtherDevice")}{/if}
             </span>
           </label>
