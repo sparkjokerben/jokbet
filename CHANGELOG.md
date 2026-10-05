@@ -11,6 +11,52 @@ the fuller entries elsewhere:
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] — 2026-10-05
+
+### Fixed
+
+- **Counts keep up through every way the app ends itself.** A restart the app
+  makes for itself (a permission's relaunch, an update's) ended the process
+  outside the exit event that writes the pending counts, and an installer
+  closes the copy itself the same way — so the last stretch of keys, clicks
+  and travel went unsaved, every update. Everything that leaves on purpose
+  now writes its counts first, and an update is not installed until they are
+  on disk, so it cannot trade counts for itself.
+- **A restore answers honestly on a slow disk.** A restore, snapshot, export
+  or reset that outlasted the fixed wait could report failed while the
+  replace went ahead of it; whole-database work now waits as long as it
+  takes, so what the page says is what the counts are.
+- **The day's last counts survive the day.** At midnight, the counts a failed
+  write had kept waiting to retry went over the edge with the date; they get
+  one more try under the day they belong to.
+- **A database that will not open is set aside.** As `stats.bad-<time>.sqlite`,
+  the way a damaged `settings.json` already is, with a fresh database after
+  it. Before, the app went on counting without storage — in memory only, and
+  lost at exit, without a word about it.
+- **`settings.json` is on the disk before the rename**, so a power cut in
+  between cannot leave the file empty and every setting at its default.
+- **The pet leaves only the monitor a full-screen app is actually on
+  (Windows).** Presentation mode and a game in exclusive mode reported their
+  state for the whole session, and the pet left both monitors when one
+  monitor had a slideshow; the foreground window's own bounds now decide, as
+  macOS does it.
+- **A backup can only be restored from where the app showed it.** The
+  settings and stats pages' dialogs run inside the app itself now — the
+  webview never names where a backup goes or where CSVs are written — and a
+  restore refuses any file that is neither the app's dialog's choice nor one
+  of the app's own backup folders'. Nothing else about the flow changes.
+- **The installers stop when no SHA-256 is published** instead of installing
+  whatever the network handed over; the download page then says so where it
+  used to hide the checksum, and the PowerShell one-liner carries its
+  reasons in the error text it prints.
+- **On macOS, a grant an update took away is not silent.** A copy that was
+  granted Input Monitoring before and starts without it opens the settings,
+  where the fix is.
+- The trend chart's tooltip works after switching to a shorter range with
+  the pointer still over the chart.
+- English says "1 day" for a one-day streak and a one-day backup, not
+  "1 days".
+
 ## [0.4.3] — 2026-10-04
 
 ### Added
