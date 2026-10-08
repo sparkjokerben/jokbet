@@ -314,7 +314,11 @@ impl<R: Runtime> Worker<R> {
                                 self.activity = Some(a);
                             }
                             self.rest.activity(t, self.agg.paused);
-                            crate::walker::stop(&self.app, crate::walker::Stop::Now);
+                            // Only a key or a click needs the pet where it is, so
+                            // only those end a stroll; a scroll leaves it be.
+                            if a != Activity::Scroll {
+                                crate::walker::stop(&self.app, crate::walker::Stop::Now);
+                            }
                         }
                     }
                 }

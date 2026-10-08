@@ -11,6 +11,14 @@ the fuller entries elsewhere:
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Scrolling no longer ends a stroll.** The pet keeps walking while you scroll
+  a page, as it does in the web version; typing and clicking still stop it, and
+  a scroll still keeps it awake without changing what it is doing.
+
 ## [0.4.4] — 2026-10-05
 
 ### Fixed

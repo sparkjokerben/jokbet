@@ -181,6 +181,17 @@ describe("PetController", () => {
       expect(last()).toEqual(ANIMS.typing.frames[0].rows);
     });
 
+    it("keeps walking through a scroll, which asks nothing of the pet", () => {
+      pet.setIdleChoices(["walk"]);
+      advance(IDLE_GAP);
+      pet.walkPhase(1, "walk", 1, 88);
+      advance(44);
+      pet.input("scroll");
+      advance(44);
+      expect(driver.stop).not.toHaveBeenCalled();
+      expect(last()).toEqual(compose({ ...ANIMS.walk.frames[1].pose, gaze: [1, 0] }));
+    });
+
     it("breathes again when the walk is over", () => {
       pet.setIdleChoices(["walk"]);
       advance(IDLE_GAP);
