@@ -696,7 +696,13 @@ mod tests {
         let next = store
             .patch(&serde_json::json!({"restReminder": {"gapMin": 16}}))
             .unwrap();
-        assert_eq!(next.rest_reminder, RestReminder { enabled: true, after_min: 90 });
+        assert_eq!(
+            next.rest_reminder,
+            RestReminder {
+                enabled: true,
+                after_min: 90
+            }
+        );
     }
 
     #[test]
