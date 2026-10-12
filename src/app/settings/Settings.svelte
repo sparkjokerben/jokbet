@@ -12,7 +12,6 @@
     PET_SCALE_MAX,
     PET_SCALE_MIN,
     REST_AFTER_MIN,
-    REST_GAP_MIN,
     type ActionAnim,
     type BackupList,
     type IdleAnim,
@@ -206,20 +205,6 @@
           }}
         />
       </label>
-      <label class="field" class:off={!s.restReminder.enabled}>
-        <span>{t("restGap")}</span>
-        <input
-          type="number"
-          min={REST_GAP_MIN[0]}
-          max={REST_GAP_MIN[1]}
-          value={s.restReminder.gapMin}
-          onchange={(e) => {
-            const n = minutes(e.currentTarget.value, REST_GAP_MIN);
-            if (n !== null) update({ restReminder: { gapMin: n } });
-          }}
-        />
-      </label>
-      <p class="muted small">{t("restHint")}</p>
     </section>
 
     <section class="card">

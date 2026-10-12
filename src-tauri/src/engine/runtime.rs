@@ -289,7 +289,7 @@ impl<R: Runtime> Worker<R> {
             activity: None,
             auto_backup: settings.auto_backup.clone(),
             auto_backup_day: None,
-            rest: RestTracker::new(settings.rest_reminder.into()),
+            rest: RestTracker::new((&settings.rest_reminder, settings.sleep_after_min).into()),
         }
     }
 
@@ -333,7 +333,8 @@ impl<R: Runtime> Worker<R> {
                         self.agg.paused = s.paused;
                         self.milestones_on = s.milestones;
                         self.milestone_defs = milestones::definitions(&s.custom_milestones, &s.head_counter);
-                        self.rest.configure(s.rest_reminder.into());
+                        self.rest
+                            .configure((&s.rest_reminder, s.sleep_after_min).into());
                         if s.auto_backup != self.auto_backup {
                             // Switched on, or pointed at another folder: that
                             // folder may not have today's yet.

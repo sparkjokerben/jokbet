@@ -2,9 +2,10 @@
 //! when the pet should say so. Pure; the runtime hands it the clock.
 //!
 //! A stretch is unbroken as long as no gap between one key, click or scroll
-//! and the next is longer than the configured gap; a longer gap is a rest, and
-//! the next input starts a new stretch. Once a stretch is long enough the pet
-//! reminds, and then again every so often until there is a rest.
+//! and the next is longer than the gap — the same idle stretch that puts the
+//! pet to sleep; a longer gap is a rest, and the next input starts a new
+//! stretch. Once a stretch is long enough the pet reminds, and then again
+//! every so often until there is a rest.
 
 /// How long after a reminder, or after the user waves it away, the next one
 /// comes if they keep going.
@@ -19,11 +20,13 @@ pub struct RestConfig {
     pub after_ms: u64,
 }
 
-impl From<crate::settings::RestReminder> for RestConfig {
-    fn from(r: crate::settings::RestReminder) -> Self {
+impl From<(&crate::settings::RestReminder, u32)> for RestConfig {
+    /// A rest is the same pause that puts the pet to sleep: the gap is the
+    /// sleep-after setting, in minutes.
+    fn from((r, sleep_min): (&crate::settings::RestReminder, u32)) -> Self {
         Self {
             enabled: r.enabled,
-            gap_ms: u64::from(r.gap_min) * 60_000,
+            gap_ms: u64::from(sleep_min) * 60_000,
             after_ms: u64::from(r.after_min) * 60_000,
         }
     }

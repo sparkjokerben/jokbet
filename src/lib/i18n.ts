@@ -194,8 +194,6 @@ const zh = {
   sectionRest: "休息提醒",
   restEnabled: "连续操作太久时提醒我休息",
   restAfter: "连续操作多久后提醒（分钟）",
-  restGap: "停下多久算休息过（分钟）",
-  restHint: "按键、点击、滚动算操作，移动鼠标不算。没休息的话每 15 分钟再提醒一次；点一下桌宠表示知道了。暂停计数时不累计。",
   restBanner: "已经连续操作 {n} 分钟了，起来活动一下吧",
 } as const;
 
@@ -395,8 +393,6 @@ const en: Record<MessageKey, string> = {
   sectionRest: "Break reminder",
   restEnabled: "Remind me to take a break when I've been at it too long",
   restAfter: "Remind me after (minutes of activity)",
-  restGap: "A pause this long is a break (minutes)",
-  restHint: "Keys, clicks and scrolls count; moving the mouse doesn't. Until you take a break it reminds you again every 15 minutes; click the pet to say you've seen it. Nothing adds up while counting is paused.",
   restBanner: "{n} minutes without a break. Time to get up and stretch!",
 };
 

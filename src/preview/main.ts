@@ -105,7 +105,7 @@ let settings: Settings = {
   shortcuts: { togglePet: "Control+Alt+KeyJ", pause: null },
   heatmapPalette: params.get("palette") === "heat" ? "heat" : "brand",
   autoBackup: { enabled: true, dir: null, keep: 7 },
-  restReminder: { enabled: true, gapMin: 5, afterMin: 50 },
+  restReminder: { enabled: true, afterMin: 50 },
 };
 
 /** The backup folder as list_backups describes it. With ?nobackups, empty. */

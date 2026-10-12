@@ -44,13 +44,11 @@ export interface CustomMilestone {
 /** A nudge to take a break after a long stretch at the keyboard. */
 export interface RestReminder {
   enabled: boolean;
-  /** Minutes without a key, click or scroll that count as a rest. */
-  gapMin: number;
   /** Minutes of unbroken activity before the reminder. */
   afterMin: number;
+  /** How long a pause counts as having rested: `sleepAfterMin`. */
 }
 /** The ranges offered for RestReminder; they match REST_* in Rust. */
-export const REST_GAP_MIN = [1, 15] as const;
 export const REST_AFTER_MIN = [15, 120] as const;
 
 /** The backup the app makes by itself once a day. */

@@ -117,24 +117,22 @@ pub enum IdleAnim {
 #[serde(default, rename_all = "camelCase")]
 pub struct RestReminder {
     pub enabled: bool,
-    /// Minutes without a key, click or scroll that count as having rested.
-    pub gap_min: u32,
     /// Minutes of unbroken activity before the pet says something.
     pub after_min: u32,
+    // How long a pause counts as having rested is the sleep-after setting;
+    // there was once a gap of its own here.
 }
 
 impl Default for RestReminder {
     fn default() -> Self {
         Self {
             enabled: true,
-            gap_min: 5,
             after_min: 50,
         }
     }
 }
 
 /// The ranges the settings window offers for `RestReminder`.
-pub const REST_GAP_MIN: std::ops::RangeInclusive<u32> = 1..=15;
 pub const REST_AFTER_MIN: std::ops::RangeInclusive<u32> = 15..=120;
 
 /// A one-off reaction the user can assign to a click or a double click.
@@ -296,9 +294,6 @@ impl Settings {
             if self.idle_anims[..i].contains(anim) {
                 return Err("idleAnims lists an animation twice".into());
             }
-        }
-        if !REST_GAP_MIN.contains(&self.rest_reminder.gap_min) {
-            return Err("restReminder.gapMin must be between 1 and 15".into());
         }
         if !REST_AFTER_MIN.contains(&self.rest_reminder.after_min) {
             return Err("restReminder.afterMin must be between 15 and 120".into());
@@ -681,7 +676,6 @@ mod tests {
             Settings::default().rest_reminder,
             RestReminder {
                 enabled: true,
-                gap_min: 5,
                 after_min: 50
             }
         );
@@ -690,16 +684,19 @@ mod tests {
             .patch(&serde_json::json!({"restReminder": {"afterMin": 90}}))
             .unwrap();
         assert!(next.rest_reminder.enabled);
-        assert_eq!(next.rest_reminder.gap_min, 5);
         assert_eq!(next.rest_reminder.after_min, 90);
         for bad in [
-            serde_json::json!({"restReminder": {"gapMin": 0}}),
-            serde_json::json!({"restReminder": {"gapMin": 16}}),
             serde_json::json!({"restReminder": {"afterMin": 14}}),
             serde_json::json!({"restReminder": {"afterMin": 121}}),
         ] {
             assert!(store.patch(&bad).is_err(), "{bad}");
         }
+        // The gap is gone as a setting: an old file's value is ignored, and
+        // the rest now ends where the pet falls asleep.
+        let next = store
+            .patch(&serde_json::json!({"restReminder": {"gapMin": 16}}))
+            .unwrap();
+        assert_eq!(next.rest_reminder, RestReminder { enabled: true, after_min: 90 });
     }
 
     #[test]
