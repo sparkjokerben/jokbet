@@ -11,6 +11,17 @@ the fuller entries elsewhere:
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6] — 2026-10-12
+
+### Changed
+
+- **One setting fewer: a break is now what sends the pet to sleep.** The break
+  reminder used to ask separately how long a pause counts as having rested;
+  now it borrows the sleep-after setting, so the same idle stretch that puts
+  the pet down for a nap ends a stretch of activity. The old "how long a
+  pause is a break" setting is gone, and an old settings file's value is
+  ignored.
+
 ## [0.4.5] — 2026-10-08
 
 ### Fixed
@@ -340,6 +351,7 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the tray; milestones; a stats window with a trend and a keyboard heatmap; and
   an interface in English and Simplified Chinese.
 
+[0.4.6]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.6
 [0.4.5]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.5
 [0.4.4]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.4
 [0.4.3]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.3
