@@ -1,7 +1,72 @@
 {
  "schema": 1,
- "generatedAt": "2026-10-08T01:23:00.151Z",
+ "generatedAt": "2026-10-12T04:40:45.955Z",
  "releases": [
+  {
+   "version": "0.4.6",
+   "tag": "v0.4.6",
+   "name": "Jokbet v0.4.6",
+   "pubDate": "2026-10-12T04:38:53Z",
+   "prerelease": false,
+   "notes": "这一版把休息提醒和睡觉合并成一件事：让宠物睡着的那段不操作，同时也算休息过了，设置里少了一项。\n\n- **「停下多久算休息过」不再需要单独设置。** 休息提醒现在借用「多久不操作后睡觉」的时长：停下超过这个时间，既算休息过，宠物也会睡着。旧设置文件里留下的那个值会被忽略。\n\n---\n\nThis release folds the break reminder and sleep into one thing: the same idle stretch that sends the pet to sleep now counts as having rested, and one setting fewer.\n\n- **\"How long a pause is a break\" is no longer its own setting.** The break reminder now borrows the sleep-after duration: stop for longer than that, and you have rested — and the pet is asleep. A value left behind in an old settings file is ignored.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+   "url": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.6",
+   "files": [
+    {
+     "platform": "macos-aarch64-zip",
+     "name": "Jokbet_0.4.6_aarch64.app.zip",
+     "size": 4075458,
+     "sha256": "48f0dbb485a1ee90f275d119e9ec966699e0a42d5c323d5fb24351798a7464d0"
+    },
+    {
+     "platform": "macos-aarch64",
+     "name": "Jokbet_0.4.6_aarch64.dmg",
+     "size": 4109797,
+     "sha256": "a013f7cb24015a120cafa299c3e337249ab0d38aeca73cde574b938dc7860eb9"
+    },
+    {
+     "platform": "macos-x64-zip",
+     "name": "Jokbet_0.4.6_x64.app.zip",
+     "size": 4416166,
+     "sha256": "59fe82ce466a12fc843be61c0ec94f956f672bb519ea5bef6433902375e08e4a"
+    },
+    {
+     "platform": "macos-x64",
+     "name": "Jokbet_0.4.6_x64.dmg",
+     "size": 4446336,
+     "sha256": "82b784f63feaf7db3452d39dbb917d7e982eca81c1bf8cc42d75f78d5ea8338a"
+    },
+    {
+     "platform": "windows-x64",
+     "name": "Jokbet_0.4.6_x64-setup.exe",
+     "size": 3487048,
+     "sha256": "9584cd82e4cfe0ed69548005f9442114458b8d1e846498213016dacb9b1141b5"
+    },
+    {
+     "platform": "windows-x64-msi",
+     "name": "Jokbet_0.4.6_x64_en-US.msi",
+     "size": 4792320,
+     "sha256": "047e6bb0999e9cd0568c6e783610e64a0bd2c5d1afec8cf0ea9b24c0521cd404"
+    },
+    {
+     "platform": "windows-x64-portable",
+     "name": "Jokbet_0.4.6_x64-portable.zip",
+     "size": 4369202,
+     "sha256": "0a2b8ba1f520d2da352d6e0a26bec856ee4b0c39ad834385b7b2384525c91fb3"
+    },
+    {
+     "platform": "linux-appimage",
+     "name": "Jokbet_0.4.6_amd64.AppImage",
+     "size": 83171832,
+     "sha256": "82789b9d916f24056a349b34e2648cefa9c06140eab15e30061fe6d4cafa03c2"
+    },
+    {
+     "platform": "linux-deb",
+     "name": "Jokbet_0.4.6_amd64.deb",
+     "size": 4880702,
+     "sha256": "cad0c42251822d92ed93803ad98a83648680bc79de61ee19bf1dbf2675870905"
+    }
+   ]
+  },
   {
    "version": "0.4.5",
    "tag": "v0.4.5",
