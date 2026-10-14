@@ -1,57 +1,57 @@
 {
  "schema": 1,
- "version": "0.4.6",
- "tag": "v0.4.6",
- "pubDate": "2026-10-12T04:38:53Z",
+ "version": "0.4.7",
+ "tag": "v0.4.7",
+ "pubDate": "2026-10-14T08:57:40Z",
  "draft": false,
- "notes": "这一版把休息提醒和睡觉合并成一件事：让宠物睡着的那段不操作，同时也算休息过了，设置里少了一项。\n\n- **「停下多久算休息过」不再需要单独设置。** 休息提醒现在借用「多久不操作后睡觉」的时长：停下超过这个时间，既算休息过，宠物也会睡着。旧设置文件里留下的那个值会被忽略。\n\n---\n\nThis release folds the break reminder and sleep into one thing: the same idle stretch that sends the pet to sleep now counts as having rested, and one setting fewer.\n\n- **\"How long a pause is a break\" is no longer its own setting.** The break reminder now borrows the sleep-after duration: stop for longer than that, and you have rested — and the pet is asleep. A value left behind in an old settings file is ignored.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
- "releaseUrl": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.6",
- "downloadBase": "https://github.com/sparkjokerben/jokbet/releases/download/v0.4.6",
+ "notes": "这一版拖动桌宠时，脚靠近屏幕底边就会吸上去。\n\n- **拖动会贴住屏幕底边。** 把脚拖到 Dock 或任务栏附近，它就会站上去，和散步走的是同一条线。再往上拖过这条线，就重新跟着光标；在更高的地方松开，它还是停在原地，也不会自己散步。拖的时候按住 Shift，可以放到光标所在的任何位置，包括 Dock 或任务栏上；松开 Shift 会重新吸附。\n\n---\n\nThis release sticks a drag to the bottom of the screen.\n\n- **A drag sticks to the bottom of the screen.** Bring the pet's feet close to the Dock or the taskbar and they sit on it, the same line it strolls along. Pull it up past that line and it follows the cursor again; let go higher up and it stays where it was put, and still does not stroll. Hold Shift while dragging to set it down wherever the cursor is, including on the Dock or the taskbar, and let Shift go to stick again.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+ "releaseUrl": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.7",
+ "downloadBase": "https://github.com/sparkjokerben/jokbet/releases/download/v0.4.7",
  "files": {
   "macos-aarch64-zip": {
-   "name": "Jokbet_0.4.6_aarch64.app.zip",
-   "size": 4075458,
-   "sha256": "48f0dbb485a1ee90f275d119e9ec966699e0a42d5c323d5fb24351798a7464d0"
+   "name": "Jokbet_0.4.7_aarch64.app.zip",
+   "size": 4076537,
+   "sha256": "fbb95e036f07b6e20ff421fd5fb1cce28735d493b85ef6927f147b21e783ba97"
   },
   "macos-aarch64": {
-   "name": "Jokbet_0.4.6_aarch64.dmg",
-   "size": 4109797,
-   "sha256": "a013f7cb24015a120cafa299c3e337249ab0d38aeca73cde574b938dc7860eb9"
+   "name": "Jokbet_0.4.7_aarch64.dmg",
+   "size": 4110437,
+   "sha256": "2296798e3463ebf4a18647fb23ac31b4abbb6d089dcfed4a9d5b53483e694655"
   },
   "macos-x64-zip": {
-   "name": "Jokbet_0.4.6_x64.app.zip",
-   "size": 4416166,
-   "sha256": "59fe82ce466a12fc843be61c0ec94f956f672bb519ea5bef6433902375e08e4a"
+   "name": "Jokbet_0.4.7_x64.app.zip",
+   "size": 4417742,
+   "sha256": "fd60c8b2c4a6b8f71a0a08f4356200cc1e64e01dedd90ea0f943007db3babddc"
   },
   "macos-x64": {
-   "name": "Jokbet_0.4.6_x64.dmg",
-   "size": 4446336,
-   "sha256": "82b784f63feaf7db3452d39dbb917d7e982eca81c1bf8cc42d75f78d5ea8338a"
+   "name": "Jokbet_0.4.7_x64.dmg",
+   "size": 4447564,
+   "sha256": "5a3518c1eee0f40db1315348728c803017fbd373e87ebf927d39072ef2f7067f"
   },
   "windows-x64": {
-   "name": "Jokbet_0.4.6_x64-setup.exe",
-   "size": 3487048,
-   "sha256": "9584cd82e4cfe0ed69548005f9442114458b8d1e846498213016dacb9b1141b5"
+   "name": "Jokbet_0.4.7_x64-setup.exe",
+   "size": 3485768,
+   "sha256": "2598bea1ec9dd8cefc8dd307b6e3ac1c415d9a359d8e02532ec3060022b94c42"
   },
   "windows-x64-msi": {
-   "name": "Jokbet_0.4.6_x64_en-US.msi",
+   "name": "Jokbet_0.4.7_x64_en-US.msi",
    "size": 4792320,
-   "sha256": "047e6bb0999e9cd0568c6e783610e64a0bd2c5d1afec8cf0ea9b24c0521cd404"
+   "sha256": "4cef22807d0a13b69e0fbc09a350496db09a45ea0c5c1877fb5cf79dc36ce43f"
   },
   "windows-x64-portable": {
-   "name": "Jokbet_0.4.6_x64-portable.zip",
-   "size": 4369202,
-   "sha256": "0a2b8ba1f520d2da352d6e0a26bec856ee4b0c39ad834385b7b2384525c91fb3"
+   "name": "Jokbet_0.4.7_x64-portable.zip",
+   "size": 4370371,
+   "sha256": "6b338133c9005b2ba9f6cc32fbedafe7bd28c5a606822efd3a6d812bfe267cb0"
   },
   "linux-appimage": {
-   "name": "Jokbet_0.4.6_amd64.AppImage",
+   "name": "Jokbet_0.4.7_amd64.AppImage",
    "size": 83171832,
-   "sha256": "82789b9d916f24056a349b34e2648cefa9c06140eab15e30061fe6d4cafa03c2"
+   "sha256": "33ec973a635cc9ef56f6718d150cdb05b3c848c443788d5dcfe79ea6d33dbfb9"
   },
   "linux-deb": {
-   "name": "Jokbet_0.4.6_amd64.deb",
-   "size": 4880702,
-   "sha256": "cad0c42251822d92ed93803ad98a83648680bc79de61ee19bf1dbf2675870905"
+   "name": "Jokbet_0.4.7_amd64.deb",
+   "size": 4881766,
+   "sha256": "34925962d6d3d364de61acc24cce5875f2925d82d4d33808741aebda22b0ba95"
   }
  }
 }

@@ -1,7 +1,72 @@
 {
  "schema": 1,
- "generatedAt": "2026-10-12T04:40:45.955Z",
+ "generatedAt": "2026-10-14T08:59:36.316Z",
  "releases": [
+  {
+   "version": "0.4.7",
+   "tag": "v0.4.7",
+   "name": "Jokbet v0.4.7",
+   "pubDate": "2026-10-14T08:57:40Z",
+   "prerelease": false,
+   "notes": "这一版拖动桌宠时，脚靠近屏幕底边就会吸上去。\n\n- **拖动会贴住屏幕底边。** 把脚拖到 Dock 或任务栏附近，它就会站上去，和散步走的是同一条线。再往上拖过这条线，就重新跟着光标；在更高的地方松开，它还是停在原地，也不会自己散步。拖的时候按住 Shift，可以放到光标所在的任何位置，包括 Dock 或任务栏上；松开 Shift 会重新吸附。\n\n---\n\nThis release sticks a drag to the bottom of the screen.\n\n- **A drag sticks to the bottom of the screen.** Bring the pet's feet close to the Dock or the taskbar and they sit on it, the same line it strolls along. Pull it up past that line and it follows the cursor again; let go higher up and it stays where it was put, and still does not stroll. Hold Shift while dragging to set it down wherever the cursor is, including on the Dock or the taskbar, and let Shift go to stick again.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+   "url": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.7",
+   "files": [
+    {
+     "platform": "macos-aarch64-zip",
+     "name": "Jokbet_0.4.7_aarch64.app.zip",
+     "size": 4076537,
+     "sha256": "fbb95e036f07b6e20ff421fd5fb1cce28735d493b85ef6927f147b21e783ba97"
+    },
+    {
+     "platform": "macos-aarch64",
+     "name": "Jokbet_0.4.7_aarch64.dmg",
+     "size": 4110437,
+     "sha256": "2296798e3463ebf4a18647fb23ac31b4abbb6d089dcfed4a9d5b53483e694655"
+    },
+    {
+     "platform": "macos-x64-zip",
+     "name": "Jokbet_0.4.7_x64.app.zip",
+     "size": 4417742,
+     "sha256": "fd60c8b2c4a6b8f71a0a08f4356200cc1e64e01dedd90ea0f943007db3babddc"
+    },
+    {
+     "platform": "macos-x64",
+     "name": "Jokbet_0.4.7_x64.dmg",
+     "size": 4447564,
+     "sha256": "5a3518c1eee0f40db1315348728c803017fbd373e87ebf927d39072ef2f7067f"
+    },
+    {
+     "platform": "windows-x64",
+     "name": "Jokbet_0.4.7_x64-setup.exe",
+     "size": 3485768,
+     "sha256": "2598bea1ec9dd8cefc8dd307b6e3ac1c415d9a359d8e02532ec3060022b94c42"
+    },
+    {
+     "platform": "windows-x64-msi",
+     "name": "Jokbet_0.4.7_x64_en-US.msi",
+     "size": 4792320,
+     "sha256": "4cef22807d0a13b69e0fbc09a350496db09a45ea0c5c1877fb5cf79dc36ce43f"
+    },
+    {
+     "platform": "windows-x64-portable",
+     "name": "Jokbet_0.4.7_x64-portable.zip",
+     "size": 4370371,
+     "sha256": "6b338133c9005b2ba9f6cc32fbedafe7bd28c5a606822efd3a6d812bfe267cb0"
+    },
+    {
+     "platform": "linux-appimage",
+     "name": "Jokbet_0.4.7_amd64.AppImage",
+     "size": 83171832,
+     "sha256": "33ec973a635cc9ef56f6718d150cdb05b3c848c443788d5dcfe79ea6d33dbfb9"
+    },
+    {
+     "platform": "linux-deb",
+     "name": "Jokbet_0.4.7_amd64.deb",
+     "size": 4881766,
+     "sha256": "34925962d6d3d364de61acc24cce5875f2925d82d4d33808741aebda22b0ba95"
+    }
+   ]
+  },
   {
    "version": "0.4.6",
    "tag": "v0.4.6",
