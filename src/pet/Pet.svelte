@@ -1,7 +1,6 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
-  import { getCurrentWindow } from "@tauri-apps/api/window";
   import { onMount, untrack } from "svelte";
   import { celebrationText, headValue } from "../lib/format";
   import { t } from "../lib/i18n";
@@ -249,7 +248,6 @@
   }
 
   onMount(() => {
-    const win = getCurrentWindow();
     // A new pet size resizes the window after the new scale is drawn; measure
     // the hit rect again once the page has the window's new size.
     const onResize = () => {
@@ -268,10 +266,9 @@
       doubleClick: () => react(settings?.doubleClickAnim),
       dragStart: async () => {
         pet.setDragging(true);
-        // Rust watches the mouse button and sends pet://drag-end on release,
+        // Rust carries the window and sends pet://drag-end on release,
         // however long the pointer rests mid-drag.
         await invoke("pet_drag_start");
-        await win.startDragging();
       },
       context: async () => {
         await invoke("show_context_menu");

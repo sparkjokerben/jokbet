@@ -19,8 +19,6 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, Runtime, WebviewWindow};
 
-/// How near the bottom of the work area its feet must be, in logical pixels.
-const NEAR_BOTTOM: f64 = 24.0;
 /// How often the window moves: about 30 times a second.
 const STEP: Duration = Duration::from_millis(33);
 /// The look in the direction of travel before setting off.
@@ -75,10 +73,11 @@ pub struct WalkEvent {
     pub speed: f64,
 }
 
-/// Whether feet at `feet_y` stand on the bottom of `work_area`.
+/// Whether feet at `feet_y` stand on the bottom of `work_area`. The margin is
+/// [`crate::pet_window::GROUND_SNAP_LOGICAL`], the same line a drag sticks to.
 pub fn near_bottom(feet_y: i32, work_area: Rect, scale_factor: f64) -> bool {
     let bottom = work_area.y + work_area.h;
-    f64::from((feet_y - bottom).abs()) <= (NEAR_BOTTOM * scale_factor).round()
+    f64::from((feet_y - bottom).abs()) <= (pet_window::GROUND_SNAP_LOGICAL * scale_factor).round()
 }
 
 /// Where the window's left edge may go, so the whole window stays on the work
@@ -104,26 +103,6 @@ pub fn pace(distance: f64, seconds: f64) -> f64 {
     (distance / seconds.clamp(SECONDS.0, SECONDS.1)).clamp(SPEED.0, SPEED.1)
 }
 
-/// The work area of the monitor the point is on.
-fn work_area_at<R: Runtime>(window: &WebviewWindow<R>, (x, y): (i32, i32)) -> Option<Rect> {
-    window.available_monitors().ok()?.iter().find_map(|m| {
-        let (pos, size) = (m.position(), m.size());
-        let on = x >= pos.x
-            && x < pos.x + size.width as i32
-            && y >= pos.y
-            && y < pos.y + size.height as i32;
-        on.then(|| {
-            let wa = m.work_area();
-            Rect {
-                x: wa.position.x,
-                y: wa.position.y,
-                w: wa.size.width as i32,
-                h: wa.size.height as i32,
-            }
-        })
-    })
-}
-
 fn dragging<R: Runtime>(app: &AppHandle<R>) -> bool {
     app.state::<HoverState>().dragging.load(Ordering::Acquire)
 }
@@ -143,7 +122,7 @@ pub fn start<R: Runtime>(app: &AppHandle<R>, target: f64, seconds: f64) -> Optio
     let pos = window.outer_position().ok()?;
     let size = window.outer_size().ok()?;
     let (win_w, win_h) = (size.width as i32, size.height as i32);
-    let work_area = work_area_at(&window, (pos.x + win_w / 2, pos.y + win_h - 1))?;
+    let work_area = pet_window::work_area_at(&window, (pos.x + win_w / 2, pos.y + win_h - 1))?;
     if !near_bottom(pos.y + win_h, work_area, sf) {
         return None;
     }

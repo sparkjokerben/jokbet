@@ -147,9 +147,20 @@ pub fn set_glass_bubble(app: AppHandle, rect: Option<[f64; 4]>, radius: f64, sys
     });
 }
 
-/// The pet starts a native window drag; the hover thread reports its end.
+/// The pet is picked up. The hover thread carries it, and reports the end.
 #[tauri::command]
 pub fn pet_drag_start(app: AppHandle, hover: State<'_, HoverState>) {
+    let grab = app
+        .get_webview_window(pet_window::PET_LABEL)
+        .and_then(|window| {
+            let cursor = app.cursor_position().ok()?;
+            let pos = window.outer_position().ok()?;
+            Some((
+                cursor.x.round() as i32 - pos.x,
+                cursor.y.round() as i32 - pos.y,
+            ))
+        });
+    *hover.grab.lock().unwrap() = grab;
     hover
         .dragging
         .store(true, std::sync::atomic::Ordering::Release);

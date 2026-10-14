@@ -21,6 +21,10 @@ const PET_CENTER_X: f64 = 18.0;
 const TOP_PAD: f64 = 180.0;
 const MIN_WIDTH: f64 = 220.0;
 const EDGE_MARGIN: f64 = 16.0;
+/// How near the bottom of the work area the feet must be, in logical pixels,
+/// to count as standing on it. A stroll sets off from here, and a drag sticks
+/// to the same line.
+pub const GROUND_SNAP_LOGICAL: f64 = 24.0;
 
 /// Logical window size for a scale (pixels per sprite cell).
 pub fn window_size(scale: f64) -> (f64, f64) {
@@ -65,6 +69,22 @@ pub fn clamp_position(
     Some((x, y))
 }
 
+/// Where a dragged window's top sits. `y` is where the cursor would put it.
+/// Once the feet are within [`GROUND_SNAP_LOGICAL`] of the work-area bottom,
+/// or lower — pushed down onto the Dock or the taskbar — they sit on that
+/// bottom. Anything higher is left where the cursor put it, so pulling up
+/// lets go at that same line. Compared against the cursor's `y`, not wherever
+/// a previous sample stuck the window, so the two do not flicker.
+pub fn snap_drag_y(y: i32, win_h: i32, work_area: Rect, scale_factor: f64) -> i32 {
+    let ground = work_area.y + work_area.h - win_h;
+    let threshold = (GROUND_SNAP_LOGICAL * scale_factor).round() as i32;
+    if y >= ground - threshold {
+        ground
+    } else {
+        y
+    }
+}
+
 /// Bottom-right corner of a monitor's work area.
 pub fn default_position(win: (i32, i32), work_area: Rect, margin: i32) -> (i32, i32) {
     (
@@ -96,6 +116,29 @@ pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>>
     place(&window)?;
     window.show()?;
     Ok(window)
+}
+
+/// The work area of the monitor the point is on.
+pub(crate) fn work_area_at<R: Runtime>(
+    window: &WebviewWindow<R>,
+    (x, y): (i32, i32),
+) -> Option<Rect> {
+    window.available_monitors().ok()?.iter().find_map(|m| {
+        let (pos, size) = (m.position(), m.size());
+        let on = x >= pos.x
+            && x < pos.x + size.width as i32
+            && y >= pos.y
+            && y < pos.y + size.height as i32;
+        on.then(|| {
+            let wa = m.work_area();
+            Rect {
+                x: wa.position.x,
+                y: wa.position.y,
+                w: wa.size.width as i32,
+                h: wa.size.height as i32,
+            }
+        })
+    })
 }
 
 fn monitor_rects<R: Runtime>(window: &WebviewWindow<R>) -> tauri::Result<Vec<Rect>> {
@@ -167,6 +210,32 @@ pub fn apply_size<R: Runtime>(window: &WebviewWindow<R>, from: f64, to: f64) -> 
     // The window may move asynchronously: remember where it is going, not
     // where it still is.
     remember_position(window, (x, y), to)
+}
+
+/// Follows the cursor while the pet is dragged, and sticks to the ground when
+/// [`snap_drag_y`] says so. `grab` is where the cursor sat inside the window
+/// when the drag began, in physical pixels, so the window does not jump under
+/// the pointer. Nothing is saved here; that waits until the button comes up.
+pub fn drag_follow<R: Runtime>(window: &WebviewWindow<R>, grab: (i32, i32)) -> tauri::Result<()> {
+    let cursor = window.app_handle().cursor_position()?;
+    let size = window.outer_size()?;
+    let sf = window.scale_factor()?;
+    let (win_w, win_h) = (size.width as i32, size.height as i32);
+    let x = cursor.x.round() as i32 - grab.0;
+    let mut y = cursor.y.round() as i32 - grab.1;
+    if let Some(work) = work_area_at(window, (x + win_w / 2, y + win_h - 1)) {
+        y = snap_drag_y(y, win_h, work, sf);
+    }
+    let scale = window.app_handle().state::<SettingsStore>().get().pet_scale;
+    let (w, h) = window_size(scale);
+    let win = ((w * sf).round() as i32, (h * sf).round() as i32);
+    let top_pad = ((h - GRID_H * scale) * sf).round() as i32;
+    let (x, y) = clamp_position((x, y), win, top_pad, &monitor_rects(window)?).unwrap_or((x, y));
+    let pos = window.outer_position()?;
+    if (x, y) != (pos.x, pos.y) {
+        window.set_position(PhysicalPosition::new(x, y))?;
+    }
+    Ok(())
 }
 
 /// Clamps the window after a drag and remembers where it ended up.
@@ -286,5 +355,42 @@ mod tests {
             h: 1000,
         };
         assert_eq!(default_position((220, 246), wa, 16), (1684, 779));
+    }
+
+    /// A 1440x900 screen with a 70 px Dock and the menu bar, the pet's window
+    /// 200 px tall, so the ground is y = 630.
+    const WORK: Rect = Rect {
+        x: 0,
+        y: 25,
+        w: 1440,
+        h: 805,
+    };
+    const WIN_H: i32 = 200;
+    const GROUND: i32 = 630;
+
+    #[test]
+    fn drag_above_the_line_stays_where_the_cursor_put_it() {
+        // One physical pixel past the snap line: held up, as a stroll would see it.
+        assert_eq!(snap_drag_y(GROUND - 25, WIN_H, WORK, 1.0), GROUND - 25);
+        assert_eq!(snap_drag_y(100, WIN_H, WORK, 1.0), 100);
+    }
+
+    #[test]
+    fn drag_within_the_line_sits_on_the_work_area_bottom() {
+        assert_eq!(snap_drag_y(GROUND - 24, WIN_H, WORK, 1.0), GROUND);
+        assert_eq!(snap_drag_y(GROUND, WIN_H, WORK, 1.0), GROUND);
+    }
+
+    #[test]
+    fn drag_into_the_dock_stays_on_the_work_area_bottom() {
+        // Feet would be at y = 900, behind the Dock. The ground is not the
+        // monitor's bottom.
+        assert_eq!(snap_drag_y(700, WIN_H, WORK, 1.0), GROUND);
+    }
+
+    #[test]
+    fn drag_snap_line_is_in_logical_pixels() {
+        assert_eq!(snap_drag_y(GROUND - 48, WIN_H, WORK, 2.0), GROUND);
+        assert_eq!(snap_drag_y(GROUND - 49, WIN_H, WORK, 2.0), GROUND - 49);
     }
 }
