@@ -25,6 +25,7 @@ struct CGRect {
 #[link(name = "ApplicationServices", kind = "framework")]
 extern "C" {
     fn CGEventSourceButtonState(state_id: i32, button: u32) -> bool;
+    fn CGEventSourceFlagsState(state_id: i32) -> u64;
     fn CGGetActiveDisplayList(max: u32, displays: *mut u32, count: *mut u32) -> i32;
     fn CGDisplayBounds(display: u32) -> CGRect;
     fn CGDisplayScreenSize(display: u32) -> CGSize;
@@ -482,9 +483,17 @@ pub fn keyboard_kind() -> &'static str {
 
 const COMBINED_SESSION_STATE: i32 = 0;
 const LEFT_BUTTON: u32 = 0;
+/// `kCGEventFlagMaskShift`: either Shift key.
+const SHIFT_FLAG: u64 = 0x0002_0000;
 
 pub fn primary_button_pressed() -> bool {
     unsafe { CGEventSourceButtonState(COMBINED_SESSION_STATE, LEFT_BUTTON) }
+}
+
+/// Either Shift key, read the same way as the button: no extra permission,
+/// and the pet window does not have to be the one in front.
+pub fn shift_held() -> bool {
+    unsafe { CGEventSourceFlagsState(COMBINED_SESSION_STATE) & SHIFT_FLAG != 0 }
 }
 
 #[cfg(test)]

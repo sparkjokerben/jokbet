@@ -48,7 +48,7 @@ fn query() -> Option<Vec<Display>> {
     Some(out)
 }
 
-/// Reads the pointer's button mask from the X server.
+/// Reads the pointer's button and modifier mask from the X server.
 #[derive(Default)]
 pub struct PointerX11 {
     conn: Option<(RustConnection, u32)>,
@@ -56,6 +56,17 @@ pub struct PointerX11 {
 
 impl PointerX11 {
     pub fn primary_pressed(&mut self) -> bool {
+        self.mask()
+            .is_some_and(|mask| mask & u16::from(KeyButMask::BUTTON1) != 0)
+    }
+
+    /// Either Shift key, from the same pointer query as the button.
+    pub fn shift_held(&mut self) -> bool {
+        self.mask()
+            .is_some_and(|mask| mask & u16::from(KeyButMask::SHIFT) != 0)
+    }
+
+    fn mask(&mut self) -> Option<u16> {
         if self.conn.is_none() {
             self.conn = x11rb::connect(None).ok().and_then(|(conn, screen)| {
                 let root = conn.setup().roots.get(screen)?.root;
@@ -63,13 +74,13 @@ impl PointerX11 {
             });
         }
         let Some((conn, root)) = &self.conn else {
-            return false;
+            return None;
         };
         match conn.query_pointer(*root).ok().and_then(|c| c.reply().ok()) {
-            Some(r) => u16::from(r.mask) & u16::from(KeyButMask::BUTTON1) != 0,
+            Some(r) => Some(u16::from(r.mask)),
             None => {
                 self.conn = None; // reconnect next time
-                false
+                None
             }
         }
     }

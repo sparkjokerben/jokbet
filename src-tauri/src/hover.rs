@@ -155,7 +155,9 @@ fn run<R: Runtime>(app: AppHandle<R>) {
                     }
                     grab.unwrap()
                 };
-                let _ = pet_window::drag_follow(&window, grab);
+                // Shift lets the feet go where the cursor puts them, the
+                // ground included. Letting go of it sticks again next sample.
+                let _ = pet_window::drag_follow(&window, grab, !button.shift_held());
             } else {
                 released_polls += 1;
                 if released_polls >= RELEASE_POLLS {

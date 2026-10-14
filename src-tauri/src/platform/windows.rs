@@ -8,7 +8,9 @@ use windows::Win32::Graphics::Gdi::{
 };
 use windows::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress};
 use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_RAW_DPI};
-use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_RBUTTON};
+use windows::Win32::UI::Input::KeyboardAndMouse::{
+    GetAsyncKeyState, VK_LBUTTON, VK_RBUTTON, VK_SHIFT,
+};
 use windows::Win32::UI::Shell::{DefSubclassProc, SetWindowSubclass};
 use windows::Win32::UI::WindowsAndMessaging::{
     DefWindowProcW, GetSystemMetrics, GetWindowRect, IsWindowVisible, PostMessageW, SetWindowPos,
@@ -591,6 +593,12 @@ pub fn primary_button_pressed() -> bool {
         };
         GetAsyncKeyState(i32::from(vk.0)) as u16 & 0x8000 != 0
     }
+}
+
+/// Either Shift key. `VK_SHIFT` is both of them, and like the button it does
+/// not need the pet's window to be in front.
+pub fn shift_held() -> bool {
+    unsafe { GetAsyncKeyState(i32::from(VK_SHIFT.0)) as u16 & 0x8000 != 0 }
 }
 
 /// Whether the foreground window belongs to a full-screen app (or a

@@ -46,6 +46,19 @@ impl PrimaryButton {
         #[allow(unreachable_code)]
         false
     }
+
+    /// Either Shift key. A drag asks so it can let go of the ground; the pet
+    /// window is not focused, so it cannot hear the key itself.
+    pub fn shift_held(&mut self) -> bool {
+        #[cfg(target_os = "macos")]
+        return macos::shift_held();
+        #[cfg(windows)]
+        return windows::shift_held();
+        #[cfg(target_os = "linux")]
+        return self.x11.shift_held();
+        #[allow(unreachable_code)]
+        false
+    }
 }
 
 /// The system material the platform can put behind the hover bubble.

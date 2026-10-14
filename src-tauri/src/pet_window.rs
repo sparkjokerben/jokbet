@@ -85,6 +85,16 @@ pub fn snap_drag_y(y: i32, win_h: i32, work_area: Rect, scale_factor: f64) -> i3
     }
 }
 
+/// Cursor height for one drag sample. `snap` is false while Shift is held,
+/// and then `y` is kept even on or below the ground.
+pub fn placed_drag_y(y: i32, win_h: i32, work_area: Rect, scale_factor: f64, snap: bool) -> i32 {
+    if snap {
+        snap_drag_y(y, win_h, work_area, scale_factor)
+    } else {
+        y
+    }
+}
+
 /// Bottom-right corner of a monitor's work area.
 pub fn default_position(win: (i32, i32), work_area: Rect, margin: i32) -> (i32, i32) {
     (
@@ -215,8 +225,14 @@ pub fn apply_size<R: Runtime>(window: &WebviewWindow<R>, from: f64, to: f64) -> 
 /// Follows the cursor while the pet is dragged, and sticks to the ground when
 /// [`snap_drag_y`] says so. `grab` is where the cursor sat inside the window
 /// when the drag began, in physical pixels, so the window does not jump under
-/// the pointer. Nothing is saved here; that waits until the button comes up.
-pub fn drag_follow<R: Runtime>(window: &WebviewWindow<R>, grab: (i32, i32)) -> tauri::Result<()> {
+/// the pointer. `snap` is false while Shift is held: the cursor's height is
+/// kept, including down on the Dock or the taskbar. Nothing is saved here;
+/// that waits until the button comes up.
+pub fn drag_follow<R: Runtime>(
+    window: &WebviewWindow<R>,
+    grab: (i32, i32),
+    snap: bool,
+) -> tauri::Result<()> {
     let cursor = window.app_handle().cursor_position()?;
     let size = window.outer_size()?;
     let sf = window.scale_factor()?;
@@ -224,7 +240,7 @@ pub fn drag_follow<R: Runtime>(window: &WebviewWindow<R>, grab: (i32, i32)) -> t
     let x = cursor.x.round() as i32 - grab.0;
     let mut y = cursor.y.round() as i32 - grab.1;
     if let Some(work) = work_area_at(window, (x + win_w / 2, y + win_h - 1)) {
-        y = snap_drag_y(y, win_h, work, sf);
+        y = placed_drag_y(y, win_h, work, sf, snap);
     }
     let scale = window.app_handle().state::<SettingsStore>().get().pet_scale;
     let (w, h) = window_size(scale);
@@ -392,5 +408,17 @@ mod tests {
     fn drag_snap_line_is_in_logical_pixels() {
         assert_eq!(snap_drag_y(GROUND - 48, WIN_H, WORK, 2.0), GROUND);
         assert_eq!(snap_drag_y(GROUND - 49, WIN_H, WORK, 2.0), GROUND - 49);
+    }
+
+    #[test]
+    fn shift_keeps_the_cursor_height() {
+        // On the line, and down in the Dock: either would stick, and neither
+        // does while Shift is held.
+        assert_eq!(
+            placed_drag_y(GROUND - 24, WIN_H, WORK, 1.0, false),
+            GROUND - 24
+        );
+        assert_eq!(placed_drag_y(700, WIN_H, WORK, 1.0, false), 700);
+        assert_eq!(placed_drag_y(GROUND - 24, WIN_H, WORK, 1.0, true), GROUND);
     }
 }
