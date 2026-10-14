@@ -11,6 +11,17 @@ the fuller entries elsewhere:
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.7] — 2026-10-14
+
+### Added
+
+- **A drag sticks to the bottom of the screen.** Bring the pet's feet close to
+  the Dock or the taskbar and they sit on it — the same line it strolls along.
+  Pull it up past that line and it follows the cursor again; let go higher up
+  and it stays where it was put, and still does not stroll. Hold Shift while
+  dragging to set it down wherever the cursor is, including on the Dock or the
+  taskbar, and let Shift go to stick again.
+
 ## [0.4.6] — 2026-10-12
 
 ### Changed
@@ -351,6 +362,7 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the tray; milestones; a stats window with a trend and a keyboard heatmap; and
   an interface in English and Simplified Chinese.
 
+[0.4.7]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.7
 [0.4.6]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.6
 [0.4.5]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.5
 [0.4.4]: https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.4
