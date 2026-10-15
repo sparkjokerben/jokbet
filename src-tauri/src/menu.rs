@@ -16,6 +16,7 @@ const ID_STATS: &str = "stats";
 const ID_SETTINGS: &str = "settings";
 const ID_PAUSE: &str = "pause";
 const ID_ADMIN: &str = "restart-as-admin";
+const ID_RESTART_UPDATE: &str = "restart-update";
 const ID_RESET_POSITION: &str = "reset-position";
 const ID_QUIT: &str = "quit";
 
@@ -26,6 +27,13 @@ pub struct AppMenu<R: Runtime> {
     toggle: MenuItem<R>,
     reset_position: MenuItem<R>,
     pause: CheckMenuItem<R>,
+    /// "Restart and Update", in the menu for good — the structure never
+    /// changes again, the lesson of the crash of 0.2.0 — and greyed out until
+    /// an update is downloaded, lit with its version after.
+    update: MenuItem<R>,
+    /// The version the update item is lit for, so a language change can
+    /// retitle it to match.
+    update_version: Mutex<Option<String>>,
     /// The item that asks for an administrator's token, where the platform
     /// could and the process does not have it. `None` once there is nothing
     /// left to ask for (elevated, or everywhere but Windows).
@@ -54,6 +62,15 @@ impl<R: Runtime> AppMenu<R> {
             current.paused,
             None::<&str>,
         )?;
+        // Greyed to start, on its own: the item closure above lights every
+        // item up, and nothing else in the menu has a reason to be dark.
+        let update = MenuItem::with_id(
+            app,
+            ID_RESTART_UPDATE,
+            t(lang, Text::RestartToUpdate),
+            false,
+            None::<&str>,
+        )?;
         let admin = match crate::platform::is_elevated() {
             true => None,
             false => Some(item(ID_ADMIN, Text::RestartAsAdmin)?),
@@ -76,6 +93,7 @@ impl<R: Runtime> AppMenu<R> {
             }
             None => items.push(&above_quit),
         }
+        items.push(&update);
         items.push(&quit);
         let menu = Menu::with_items(app, &items)?;
         Ok(Self {
@@ -85,6 +103,8 @@ impl<R: Runtime> AppMenu<R> {
             toggle,
             reset_position,
             pause,
+            update,
+            update_version: Mutex::new(None),
             admin,
             quit,
             lang: Mutex::new(lang),
@@ -107,7 +127,21 @@ impl<R: Runtime> AppMenu<R> {
             let _ = admin.set_text(t(lang, Text::RestartAsAdmin));
         }
         let _ = self.quit.set_text(t(lang, Text::Quit));
+        // The version the item is lit for, if it is lit: read before the
+        // retitle, whose way home runs over the main thread again.
+        let lit_for = self.update_version.lock().unwrap().clone();
+        self.sync_update(lit_for.as_deref());
         self.sync_toggle(self.pet_shown.load(Ordering::Relaxed));
+    }
+
+    /// Says what the update item should: grey without an update downloaded,
+    /// lit with its version when there is one. Like the pause tick and the
+    /// toggle's title, a change to an item the menu already has — and so
+    /// main-thread work, on the terms the crash of 0.2.0 set down.
+    pub fn sync_update(&self, version: Option<&str>) {
+        *self.update_version.lock().unwrap() = version.map(str::to_owned);
+        let _ = self.update.set_enabled(version.is_some());
+        let _ = self.update.set_text(update_label(self.lang(), version));
     }
 
     pub fn sync_paused(&self, paused: bool) {
@@ -127,7 +161,7 @@ impl<R: Runtime> AppMenu<R> {
 
 /// Where a menu change has to happen.
 ///
-/// Items are retitled, ticked and shown from whichever thread noticed the
+/// Items are retitled, ticked, enabled and shown from whichever thread noticed the
 /// change — the updater, the full-screen watcher — and AppKit takes a change to
 /// a menu it is currently displaying as a reason to abort the process. Nothing
 /// here adds to or removes from `menu` any more: it is built once, so the only
@@ -140,6 +174,14 @@ pub fn on_main<R: Runtime>(app: &AppHandle<R>, change: impl FnOnce(&AppMenu<R>) 
             change(&menu);
         }
     });
+}
+
+/// Shapes the update item from off the main thread, where the updater tends
+/// to notice its status. The version is copied in, a borrow cannot cross into
+/// the closure.
+pub fn sync_update<R: Runtime>(app: &AppHandle<R>, version: Option<&str>) {
+    let version = version.map(str::to_owned);
+    on_main(app, move |menu| menu.sync_update(version.as_deref()));
 }
 
 pub fn create_tray<R: Runtime>(app: &AppHandle<R>, menu: &AppMenu<R>) -> tauri::Result<()> {
@@ -180,6 +222,14 @@ pub fn handle_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
             Ok(()) => app.exit(0),
             Err(e) => log::warn!("the relaunched copy was not started: {e}"),
         },
+        ID_RESTART_UPDATE => {
+            // install_pending writes the counts it holds out before going on.
+            if crate::updater::install_pending(app) {
+                crate::commands::restart(app);
+            } else {
+                log::warn!("the pending update could not be installed");
+            }
+        }
         ID_QUIT => {
             crate::updater::install_pending(app);
             app.exit(0);
@@ -220,5 +270,27 @@ pub fn retitle_panels<R: Runtime>(app: &AppHandle<R>, lang: Lang) {
         if let Some(window) = app.get_webview_window(panel.label()) {
             let _ = window.set_title(&panel_title(lang, panel));
         }
+    }
+}
+
+/// What the update item says: the words the settings' own button uses, and
+/// the version once there is one waiting.
+fn update_label(lang: Lang, version: Option<&str>) -> String {
+    match version {
+        Some(v) => format!("{} v{v}", t(lang, Text::RestartToUpdate)),
+        None => t(lang, Text::RestartToUpdate).to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_update_item_names_the_version_when_one_waits() {
+        assert_eq!(update_label(Lang::Zh, None), "重启并更新");
+        assert_eq!(update_label(Lang::Zh, Some("0.4.8")), "重启并更新 v0.4.8");
+        assert_eq!(update_label(Lang::En, None), "Restart and Update");
+        assert_eq!(update_label(Lang::En, Some("0.4.8")), "Restart and Update v0.4.8");
     }
 }
