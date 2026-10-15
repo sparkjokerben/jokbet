@@ -75,9 +75,21 @@ pub fn status<R: Runtime>(app: &AppHandle<R>) -> UpdateStatus {
     app.state::<Updates>().status.lock().unwrap().clone()
 }
 
+/// The version the menu's update item should offer; the pet's bubble and the
+/// About section read their own out of the status they are sent.
+fn ready_version(status: &UpdateStatus) -> Option<&str> {
+    match status {
+        UpdateStatus::Ready { version, .. } => Some(version),
+        _ => None,
+    }
+}
+
 fn set_status<R: Runtime>(app: &AppHandle<R>, status: UpdateStatus) {
     *app.state::<Updates>().status.lock().unwrap() = status.clone();
-    let _ = app.emit("app://update", status);
+    let _ = app.emit("app://update", status.clone());
+    // The item is in the menu for good and this only turns it on or grey: an
+    // item-level change, on the main thread the way the pause tick is.
+    crate::menu::sync_update(app, ready_version(&status));
 }
 
 pub fn spawn<R: Runtime>(app: AppHandle<R>) {
@@ -108,9 +120,8 @@ pub async fn check_now<R: Runtime>(app: &AppHandle<R>) -> UpdateStatus {
     let next = match check(app).await {
         Ok(None) => UpdateStatus::UpToDate,
         Ok(Some((update, bytes))) => {
-            // The pet's bubble and the About section hear about this from the
-            // status below. The menu is not told: a menu on screen cannot be
-            // changed, and the crash that came of trying is why.
+            // The pet's bubble, the About section and the menu's update item
+            // hear about this from the status below.
             let ready = UpdateStatus::Ready {
                 version: update.version.clone(),
                 notes: update.body.clone().filter(|n| !n.trim().is_empty()),
@@ -207,6 +218,9 @@ pub fn install_pending<R: Runtime>(app: &AppHandle<R>) -> bool {
     let Some((update, bytes)) = app.state::<Updates>().pending.lock().unwrap().take() else {
         return false;
     };
+    // The item the menu lit for these very bytes goes grey again, before an
+    // install that ends the process on some paths (NSIS exits itself) runs.
+    crate::menu::sync_update(app, None);
     let installed = match crate::portable::root() {
         Some(_) => crate::portable::install(&bytes).map_err(|e| e.to_string()),
         None => update.install(bytes).map_err(|e| e.to_string()),
@@ -223,6 +237,23 @@ pub fn install_pending<R: Runtime>(app: &AppHandle<R>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_a_ready_status_gives_the_menu_item_a_version() {
+        assert_eq!(ready_version(&UpdateStatus::Idle), None);
+        assert_eq!(ready_version(&UpdateStatus::Checking), None);
+        assert_eq!(ready_version(&UpdateStatus::UpToDate), None);
+        let ready = UpdateStatus::Ready {
+            version: "0.4.8".into(),
+            notes: None,
+            date: None,
+        };
+        assert_eq!(ready_version(&ready), Some("0.4.8"));
+        let failed = UpdateStatus::Failed {
+            error: "boom".into(),
+        };
+        assert_eq!(ready_version(&failed), None);
+    }
 
     fn url(s: &str) -> Url {
         Url::parse(s).unwrap()
