@@ -311,7 +311,7 @@ pub fn restart_app(app: AppHandle) {
 
 /// `AppHandle::restart` re-execs the app and skips the exit event, so the
 /// counts still pending would die with the process; write them out first.
-fn flush_counts(app: &AppHandle) {
+fn flush_counts<R: Runtime>(app: &AppHandle<R>) {
     if let Err(e) = app.state::<RuntimeHandle>().flush() {
         log::error!("flushing counts before the restart failed: {e}");
     }
@@ -323,7 +323,7 @@ fn flush_counts(app: &AppHandle) {
 /// for. The consent dialog turned down, it restarts without the token — the
 /// restart was asked for, even if the rights were not.
 #[cfg(windows)]
-pub fn restart(app: &AppHandle) {
+pub fn restart<R: Runtime>(app: &AppHandle<R>) {
     if crate::platform::is_elevated() && crate::platform::relaunch_elevated().is_ok() {
         app.exit(0);
         return;
@@ -334,7 +334,7 @@ pub fn restart(app: &AppHandle) {
 
 /// Restarts the app; no platform here but Windows has a token to carry over.
 #[cfg(not(windows))]
-pub fn restart(app: &AppHandle) {
+pub fn restart<R: Runtime>(app: &AppHandle<R>) {
     flush_counts(app);
     app.restart();
 }
