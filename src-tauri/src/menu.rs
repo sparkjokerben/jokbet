@@ -291,6 +291,9 @@ mod tests {
         assert_eq!(update_label(Lang::Zh, None), "重启并更新");
         assert_eq!(update_label(Lang::Zh, Some("0.4.8")), "重启并更新 v0.4.8");
         assert_eq!(update_label(Lang::En, None), "Restart and Update");
-        assert_eq!(update_label(Lang::En, Some("0.4.8")), "Restart and Update v0.4.8");
+        assert_eq!(
+            update_label(Lang::En, Some("0.4.8")),
+            "Restart and Update v0.4.8"
+        );
     }
 }
