@@ -1,7 +1,72 @@
 {
  "schema": 1,
- "generatedAt": "2026-10-14T08:59:36.316Z",
+ "generatedAt": "2026-10-15T03:42:36.160Z",
  "releases": [
+  {
+   "version": "0.4.8",
+   "tag": "v0.4.8",
+   "name": "Jokbet v0.4.8",
+   "pubDate": "2026-10-15T03:42:27Z",
+   "prerelease": false,
+   "notes": "这一版兑现了悬浮横幅一直许下的承诺：新版本下载好，右键就能重启更新。\n\n- **「重启并更新」回到菜单里。** 宠物的横幅一直说右键可重启更新，可它指的那个菜单项在 0.2.0 年代就被删了——那时 macOS 把「从后台线程改动一个正在显示的菜单」当作让整个进程退出的理由，这是 0.2.0→0.3.0 发布时真实批量崩溃过的事故。这次把菜单项放回来，而且是以安全的方式：它常驻菜单、平时置灰，只有新版本下载好后才点亮成「重启并更新 vX.Y.Z」（若菜单正开着，收起后就能看到）。点它重启进新版本，与 设置›关于 里的按钮殊途同归；托盘菜单和右键是同一份菜单，那里也看得到。\n\n---\n\nThis release keeps the promise the pet's banner has been making all along: right-click, and a downloaded version can be restarted into.\n\n- **\"Restart and Update\" is back in the menu.** The pet's banner promises a\n  right-click restart as soon as a new version has downloaded, but the entry\n  it named has been missing since 0.2.0, when a macOS crash did away with the\n  menu being changed from off the main thread. The entry is back, made safely\n  this time: it is in the menu for good and is only ever turned on or greyed\n  out on the main thread — greyed out until an update has downloaded, then\n  lit as \"Restart and Update vX.Y.Z\" (while the menu is up, once it closes).\n  Picking it restarts into the new version the way Settings › About does, and\n  the tray menu is the same menu.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+   "url": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.8",
+   "files": [
+    {
+     "platform": "macos-aarch64-zip",
+     "name": "Jokbet_0.4.8_aarch64.app.zip",
+     "size": 4078031,
+     "sha256": "0e137731af25dbc7c58c233139c34eca707e97607c01691f3f10f52efc40bfb3"
+    },
+    {
+     "platform": "macos-aarch64",
+     "name": "Jokbet_0.4.8_aarch64.dmg",
+     "size": 4110767,
+     "sha256": "48877d9cefe4c1adaf10b98880605ed5487a78dd10aef06e42f5785c3cd4f931"
+    },
+    {
+     "platform": "macos-x64-zip",
+     "name": "Jokbet_0.4.8_x64.app.zip",
+     "size": 4419299,
+     "sha256": "bba91def54be032a799fe919965b5186f15f32fb7f55f9f7955e0e14792bd5a5"
+    },
+    {
+     "platform": "macos-x64",
+     "name": "Jokbet_0.4.8_x64.dmg",
+     "size": 4448368,
+     "sha256": "2634d77be4f81b2a7b8ce973eb5a9e0e6529266be92d09c1ceee69135501b253"
+    },
+    {
+     "platform": "windows-x64",
+     "name": "Jokbet_0.4.8_x64-setup.exe",
+     "size": 3490554,
+     "sha256": "ceef8741c8b33092d6660e2291e91b3cacda39dc7c4a2987e3231794d7ac1583"
+    },
+    {
+     "platform": "windows-x64-msi",
+     "name": "Jokbet_0.4.8_x64_en-US.msi",
+     "size": 4796416,
+     "sha256": "232655f5bc3b4f412052b359303d7b97d39fb9b6723671696de0c9a102cde862"
+    },
+    {
+     "platform": "windows-x64-portable",
+     "name": "Jokbet_0.4.8_x64-portable.zip",
+     "size": 4372034,
+     "sha256": "194200f59f130c4077d07584c1a3a2245e88a4a387559fb83a1afaf78c7d9659"
+    },
+    {
+     "platform": "linux-appimage",
+     "name": "Jokbet_0.4.8_amd64.AppImage",
+     "size": 83175928,
+     "sha256": "25778481f49d3a5894b322ba218b5c6825127bc292d3b128db844fbe7a6c24b0"
+    },
+    {
+     "platform": "linux-deb",
+     "name": "Jokbet_0.4.8_amd64.deb",
+     "size": 4885038,
+     "sha256": "3e6a8163bc3e4a3c082ac59dff70e42699dc0bd8887854ce7f514d8a12ab8ca8"
+    }
+   ]
+  },
   {
    "version": "0.4.7",
    "tag": "v0.4.7",
