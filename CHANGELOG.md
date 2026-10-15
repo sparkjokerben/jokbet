@@ -11,6 +11,20 @@ the fuller entries elsewhere:
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.8] — 2026-10-15
+
+### Added
+
+- **"Restart and Update" is back in the menu.** The pet's banner promises a
+  right-click restart as soon as a new version has downloaded, but the entry
+  it named has been missing since 0.2.0, when a macOS crash did away with the
+  menu being changed from off the main thread. The entry is back, made safely
+  this time: it is in the menu for good and is only ever turned on or greyed
+  out on the main thread — greyed out until an update has downloaded, then
+  lit as "Restart and Update vX.Y.Z" (while the menu is up, once it closes).
+  Picking it restarts into the new version the way Settings › About does, and
+  the tray menu is the same menu.
+
 ## [0.4.7] — 2026-10-14
 
 ### Added
