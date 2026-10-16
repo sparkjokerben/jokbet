@@ -51,7 +51,7 @@ only once CI has passed on it.
 | `src-tauri/src/` | the Rust side: the input hooks, the counting engine, the database, the tray and menus, the updater |
 | `src-tauri/src/input/` | one listen-only global hook per platform behind one interface |
 | `src-tauri/src/engine/` | what to do with the events: aggregate, rate, distance, milestones |
-| `worker/` | the Cloudflare Worker that serves the website's `/api/` and `/dl/` routes |
+| `worker/` | the Cloudflare Worker that serves the website's `/api/` and `/dl/` routes and counts the mirror's downloads |
 | `site/` | the website — see [`site/README.md`](site/README.md) |
 | `scripts/` | the generators: sprites, site assets, manifests, page partials |
 | `tools/extract-reference-frames/` | how the reference recordings became pixel frames |
@@ -117,7 +117,12 @@ Local work does not need Cloudflare credentials:
 
 ```sh
 npm run site:dev         # wrangler dev: real routes, headers and bindings, local R2
+npx wrangler d1 migrations apply jokbet-stats --local   # the download counter's table
 ```
+
+The counter's table is the one thing `wrangler dev` cannot make for itself:
+without it every download is still served, and the row behind it is quietly
+dropped.
 
 Test `/dl/` the way a browser asks for it, with
 `curl -H 'Sec-Fetch-Dest: document' -H 'Sec-Fetch-Mode: navigate'`; a plain

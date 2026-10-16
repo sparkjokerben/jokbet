@@ -114,7 +114,9 @@ Jokbet stores counts and nothing else:
 There is no telemetry and no account, and no network request other than the
 update check. Everything goes into a local SQLite file, and the app works
 offline. The website at `jokbet.jokerben.top` counts visits with Cloudflare Web
-Analytics, which sets no cookies and does not identify anyone.
+Analytics, and how many times each installer has been downloaded. Neither sets
+a cookie, keeps an address, or says who anyone is: a download is a file name, a
+count, and the kind of client that asked.
 
 ## Your data
 
@@ -205,9 +207,10 @@ tccutil reset ListenEvent io.github.sparkjokerben.jokbet
 
 [`CONTRIBUTING.md`](CONTRIBUTING.md) covers the project layout, the generated
 files that must be regenerated with their sources, and what a pull request
-should look like. The website in [`site/`](site/README.md) is four static pages
-served by a Cloudflare Worker that also mirrors every release file; the pet on
-those pages runs the app's own animation code, bundled for the browser.
+should look like. The website in [`site/`](site/README.md) is five static pages
+served by a Cloudflare Worker that also mirrors every release file and counts
+the downloads; the pet on those pages runs the app's own animation code,
+bundled for the browser.
 
 ## Releasing
 

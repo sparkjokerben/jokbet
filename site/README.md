@@ -1,6 +1,6 @@
 # The website
 
-[`jokbet.jokerben.top`](https://jokbet.jokerben.top) — four static pages, served
+[`jokbet.jokerben.top`](https://jokbet.jokerben.top) — five static pages, served
 by a Cloudflare Worker that also answers two namespaces: the manifests
 (`/api/`) and the release files (`/dl/`), both mirrored in an R2 bucket with
 GitHub behind them. There is no build step: what is in `site/` is what is
@@ -18,9 +18,11 @@ over this directory is in [CONTRIBUTING.md](../CONTRIBUTING.md).
 | `/download` | every installer of the newest release, checksums, install steps | `site/download.html` |
 | `/changelog` | every release: its notes and its installers | `site/changelog.html` |
 | `/about` | privacy, known limits, the licence, notices | `site/about.html` |
+| `/stats` | every number behind the download counts: unlisted, `noindex`, in no sitemap | `site/stats.html` |
 | `/api/latest.json` | the newest release, for the buttons and `/download` | R2 `manifests/latest.json`, else `worker/fallback/latest.json` |
 | `/api/releases.json` | every published release, for `/changelog` | R2 `manifests/releases.json`, else `worker/fallback/releases.json` |
 | `/api/update.json` | the app's updater manifest, its downloads pointed at `/dl/` | R2 `manifests/update.json`, else a redirect to GitHub's |
+| `/api/downloads.json` | the download counts: what the mirror served and what GitHub counted | D1 `jokbet-stats`, and R2 `manifests/downloads.json` for GitHub's half |
 | `/dl/<tag>/<name>` | one file of one release | R2 `releases/<tag>/<name>`, else a redirect to GitHub |
 | `/install.sh` | the one-line installer for macOS and Linux | `site/install.sh` |
 | `/install.ps1` | the one-line installer for Windows | `site/install.ps1` |
@@ -72,15 +74,17 @@ sections moved to.
 ## Files
 
 ```
-wrangler.toml            the Worker: name, entry point, assets, run_worker_first, the R2 binding
+wrangler.toml            the Worker: name, entry point, assets, run_worker_first, the R2 and D1 bindings
 worker/index.ts          the router: /api/*, /dl/*, then the assets
-worker/api.ts            the three manifests, each with its own fallback
-worker/download.ts       the release files: R2 first, then GitHub
+worker/api.ts            the manifests, each with its own fallback, and the download counts
+worker/download.ts       the release files: R2 first, then GitHub, and one row counted per download
+worker/stats.ts          those rows, and the sums /api/downloads.json serves
+worker/migrations/       the counter's table, for `wrangler d1 migrations apply`
 worker/fallback/         the manifests compiled into the Worker, for when R2 cannot answer
 worker/index.test.ts     vitest coverage of all of it, with a stub bucket
 
 site/
-  index.html download.html changelog.html about.html 404.html
+  index.html download.html changelog.html about.html stats.html 404.html
   partials/              what every page shares: head, header, rail (the pet), footer
   styles.css             the app's palette, the layout, the pet's own looks
   app.js                 the language switch, the pet, and what each page builds from /api/
@@ -157,10 +161,47 @@ pet as well, and CI notices if the generated files were not regenerated.
 The bucket stays private; the Worker is the only door to it, and it will only
 hand out names Tauri produces, under `releases/`.
 
+## The download counts
+
+The number on the home page and the download page is two counts added together,
+and `/stats` — linked from nowhere, `noindex`, in no sitemap — is where both are
+written out, under a statement of what is and is not in them.
+
+- **The mirror's half** is the Worker's own count. Every whole file `/dl/` serves
+  from the bucket writes a row into the D1 table (`worker/migrations/`), off the
+  response path: a download is never slowed down or broken by the database, and a
+  metadata probe, a resumed range or a failed lookup writes nothing. One query
+  sums those rows by day, platform, version, client class and country. Nothing
+  identifies anyone — no address, no cookie, and the user agent is reduced to one
+  of four words before it is stored.
+- **GitHub's half** is the counters on its own release assets, which everyone who
+  downloads from GitHub and the app's updater both feed. Only GitHub has those
+  numbers and only GitHub moves them, so the *Refresh the download counts*
+  workflow reads them once a day — and the release job once per release — into
+  `manifests/downloads.json` in the bucket. The Worker cannot do it itself: its
+  outbound addresses are shared with every other Worker, and GitHub's API allows
+  60 unauthenticated requests an hour per address.
+- **Neither half counts the other's downloads.** A request the bucket cannot
+  serve is redirected to GitHub, which counts it there, so the Worker does not
+  count the redirect. And GitHub's numbers carry the pipeline's own fetches —
+  publishing a release downloads the whole release once — so each file is
+  reduced by what publishing cost it before it is added up, and a signature file,
+  which is read out of the manifest rather than downloaded, counts for nothing.
+  `/stats` shows GitHub's raw number beside the corrected one.
+
+Read them by hand:
+
+```sh
+npx wrangler d1 execute jokbet-stats --remote --command \
+  "SELECT day, count(*) AS n FROM downloads GROUP BY day ORDER BY day DESC LIMIT 30"
+curl -s https://jokbet.jokerben.top/api/downloads.json
+```
+
 ## Working on it
 
 ```sh
 npm run site:dev       # the whole thing locally: assets, routes, headers and a local R2 bucket
+npx wrangler d1 migrations apply jokbet-stats --local    # …its counter's table (--remote for the real one)
 npm run site:deploy    # deploy it by hand (the Git build does this on every push to main)
 npm run site:pages     # copy site/partials/ into every page
 npm run site:assets    # regenerate site/assets from src/sprites and src/pet (pixel-exact)
@@ -180,7 +221,11 @@ npx wrangler r2 object put jokbet-downloads/manifests/latest.json --file worker/
 npx wrangler r2 object put jokbet-downloads/releases/v0.1.0/Jokbet_0.1.0_aarch64.dmg --file <the dmg> --local
 ```
 
-The Worker remembers what the bucket said for a minute, so give it one.
+The Worker remembers what the bucket said for a minute, so give it one. Its
+counter writes into the local D1 database; without the migration above, the
+download is served and the row is dropped — which is what a database that is
+down looks like from the outside, and is why no count is ever allowed to be the
+reason a download fails.
 
 The poster, the favicons and the Open Graph card are generated from the same
 sprite code the app draws, so the site can never drift from the pet. The Latin
@@ -194,8 +239,9 @@ system font, which is why the pixel face is scoped to `U+0000-00FF`.
   directives and an Open Graph set; the home page also carries JSON-LD
   (`WebSite` + `SoftwareApplication` + `SoftwareSourceCode`, the licence and the
   repository included), the other pages a `WebPage` and a `BreadcrumbList`.
-- `sitemap.xml` lists the four pages and `robots.txt` points at it, with `/api/`
-  and `/dl/` excluded — nothing under them is a page.
+- `sitemap.xml` lists the four published pages and `robots.txt` points at it,
+  with `/api/`, `/dl/` and `/stats` kept out — nothing under the first two is a
+  page, and the third is a page nobody is meant to find.
 - The `<title>` in the markup is bilingual, so it reads the same to a crawler as
   to a visitor who has not picked a language; the tab title follows the language
   only once someone switches it.
@@ -209,7 +255,8 @@ system font, which is why the pixel face is scoped to `U+0000-00FF`.
 | Worker | `jokbet-site` | the Git-connected build runs `npx wrangler deploy`; `wrangler.toml` is the source of truth for the name and the bindings |
 | Custom domain | `jokbet.jokerben.top` | attached to that Worker (Workers → `jokbet-site` → Settings → Domains & Routes) |
 | R2 bucket | `jokbet-downloads` | private; `/api/` and `/dl/` are the only way in |
-| GitHub secrets | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | used by the *Publish to R2* workflow |
+| D1 database | `jokbet-stats` | the download counter's rows, binding `STATS`; migrations in `worker/migrations/` |
+| GitHub secrets | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | used by the *Publish to R2* and *Refresh the download counts* workflows |
 
 The bucket name is written into `wrangler.toml` and the publish workflow, so it
 is not a secret; only the three secret values are.

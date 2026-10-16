@@ -60,7 +60,7 @@ curl -fsSL https://jokbet.jokerben.top/install.sh | sh
 - 各鼠标键点了几次
 - 滚动了多少行，以及鼠标移动了多远
 
-没有遥测，没有账号，除了检查更新之外没有任何网络请求。数据全部写进本机的 SQLite 文件，离线也能正常使用。网站 `jokbet.jokerben.top` 用 Cloudflare Web Analytics 统计访问量，不用 Cookie，也不记录你是谁。
+没有遥测，没有账号，除了检查更新之外没有任何网络请求。数据全部写进本机的 SQLite 文件，离线也能正常使用。网站 `jokbet.jokerben.top` 用 Cloudflare Web Analytics 统计访问量，也统计每个安装包被下载了多少次。两者都不用 Cookie、不存地址，也认不出你是谁：一次下载只留下文件名、次数，以及客户端的类型。
 
 ## 数据位置
 
@@ -122,7 +122,7 @@ npm run site:check       # 网站生成物与源文件不一致时报错
 tccutil reset ListenEvent io.github.sparkjokerben.jokbet
 ```
 
-[`CONTRIBUTING.md`](CONTRIBUTING.md) 里有项目结构、必须跟着源文件重新生成的产物，以及一个 PR 该有的样子。[`site/`](site/README.md) 里的网站是四个静态页面，由 Cloudflare Worker 提供，同时也镜像每个发布文件；那些页面上的桌宠跑的是应用自己的动画代码，为浏览器打包而成。
+[`CONTRIBUTING.md`](CONTRIBUTING.md) 里有项目结构、必须跟着源文件重新生成的产物，以及一个 PR 该有的样子。[`site/`](site/README.md) 里的网站是五个静态页面，由 Cloudflare Worker 提供，同时也镜像每个发布文件、统计下载次数；那些页面上的桌宠跑的是应用自己的动画代码，为浏览器打包而成。
 
 ## 发布
 
