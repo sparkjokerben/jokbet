@@ -147,7 +147,7 @@ export interface GithubRelease {
   body?: string | null;
   html_url?: string | null;
   /** `digest` is GitHub's own sha256 of the asset, when it has one. */
-  assets?: { name?: string; size?: number; digest?: string | null }[];
+  assets?: { name?: string; size?: number; digest?: string | null; download_count?: number }[];
 }
 
 /**
@@ -221,6 +221,130 @@ export function latestFrom(releases: GithubRelease[]): Manifest {
     downloadBase: downloadBase(tag),
     files,
   };
+}
+
+// --- GitHub's own download counts ---------------------------------------------
+
+/** The platforms the app's updater fetches, which Tauri names by target rather
+ * than by version — so they are not installers, and not in PLATFORMS. */
+const UPDATE_BUNDLES: [platform: string, pattern: RegExp][] = [
+  ["macos-aarch64", /^Jokbet_aarch64\.app\.tar\.gz(?:\.sig)?$/],
+  ["macos-x64", /^Jokbet_x64\.app\.tar\.gz(?:\.sig)?$/],
+];
+
+/** Every platform a downloaded file can belong to. */
+const DOWNLOAD_PLATFORMS = [...PLATFORM_IDS, ...UPDATE_BUNDLES.map(([id]) => id)];
+
+/** One file of one release, as GitHub counts it. */
+export interface DownloadFile {
+  /** A PLATFORMS id, the platform an update bundle updates, or null when
+   * nothing here knows the name. */
+  platform: string | null;
+  version: string;
+  tag: string;
+  name: string;
+  /** GitHub's number, less what publishing the release cost it. */
+  count: number;
+  /** GitHub's number as GitHub reports it. */
+  raw: number;
+}
+
+/** Every file of every published release that GitHub has counted downloads
+ * for, newest release first. */
+export interface Downloads {
+  schema: 1;
+  generatedAt: string | null;
+  /** The sum of `files[].count`: what is left after the pipeline's own fetches. */
+  total: number;
+  /** The sum of `files[].raw`: what GitHub itself reports, pipeline included. */
+  raw: number;
+  files: DownloadFile[];
+}
+
+/**
+ * What publishing a release costs each of its files in GitHub's counter, which
+ * counts the API as well as people: the publish job downloads the whole release
+ * once, and the release job's portable step fetches the updater manifest and the
+ * portable zip (its signature too) once more. A release whose publish job was
+ * run twice, or one published before that step existed, drifts from this by a
+ * count per file — which is why every file keeps its `raw` number as well.
+ */
+function publishingFetches(name: string): number {
+  return 1 + (name === "latest.json" || /_x64-portable\.zip(?:\.sig)?$/.test(name) ? 1 : 0);
+}
+
+/** @param name @param version */
+function platformOf(name: string, version: string): string | null {
+  const installer = PLATFORMS.find((p) => p.file(version) === name);
+  if (installer) return installer.id;
+  return UPDATE_BUNDLES.find(([, pattern]) => pattern.test(name))?.[0] ?? null;
+}
+
+/**
+ * GitHub's download counts, release by release and file by file. Drafts are
+ * left out: their assets are not reachable yet, so a count of them is not a
+ * count of downloads. Files GitHub has nothing for are listed at zero rather
+ * than dropped — a name the site serves with no count beside it would read as a
+ * missing file.
+ */
+export function downloadsFrom(releases: GithubRelease[], generatedAt = new Date().toISOString()): Downloads {
+  const files: DownloadFile[] = [];
+  for (const release of [...releases].sort((a, b) => compareVersions(b.tag_name ?? "", a.tag_name ?? ""))) {
+    const tag = release.tag_name;
+    if (!tag || release.draft) continue;
+    const version = tag.replace(/^v/, "");
+    for (const asset of release.assets ?? []) {
+      const name = asset.name;
+      if (!name) continue;
+      const raw = typeof asset.download_count === "number" ? asset.download_count : 0;
+      files.push({
+        platform: platformOf(name, version),
+        version,
+        tag,
+        name,
+        count: Math.max(0, raw - publishingFetches(name)),
+        raw,
+      });
+    }
+  }
+  return {
+    schema: 1,
+    generatedAt,
+    total: files.reduce((n, file) => n + file.count, 0),
+    raw: files.reduce((n, file) => n + file.raw, 0),
+    files,
+  };
+}
+
+/** Everything wrong with a downloads document, as messages; empty means it is usable. */
+export function validateDownloads(counts: unknown): string[] {
+  const bad: string[] = [];
+  const doc = counts as Partial<Downloads>;
+  if (doc?.schema !== 1) bad.push(`schema must be 1, got ${JSON.stringify(doc?.schema)}`);
+  if (!Array.isArray(doc.files)) return [...bad, "files must be an array"];
+  let total = 0;
+  let raw = 0;
+  for (const file of doc.files) {
+    const where = `files[${file?.name ?? "?"}]`;
+    for (const field of ["version", "tag", "name"] as const) {
+      if (typeof file?.[field] !== "string" || !file[field]) bad.push(`${where}: ${field} must be a string`);
+    }
+    const platform = file?.platform;
+    if (platform !== null && (typeof platform !== "string" || !DOWNLOAD_PLATFORMS.includes(platform))) {
+      bad.push(`${where}: ${JSON.stringify(platform)} is not a known platform`);
+    }
+    for (const field of ["count", "raw"] as const) {
+      const value = file?.[field];
+      if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+        bad.push(`${where}: ${field} must be a whole number, got ${JSON.stringify(value)}`);
+      }
+    }
+    if (typeof file?.count === "number") total += file.count;
+    if (typeof file?.raw === "number") raw += file.raw;
+  }
+  if (doc.total !== total) bad.push(`total must be the sum of the counts (${total}), got ${JSON.stringify(doc.total)}`);
+  if (doc.raw !== raw) bad.push(`raw must be the sum of what GitHub reports (${raw}), got ${JSON.stringify(doc.raw)}`);
+  return bad;
 }
 
 // --- the updater's manifest ---------------------------------------------------

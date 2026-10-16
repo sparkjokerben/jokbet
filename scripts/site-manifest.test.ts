@@ -7,11 +7,13 @@ import { describe, expect, it } from "vitest";
 import {
   changelogFrom,
   compareVersions,
+  downloadsFrom,
   emptyChangelog,
   latestFrom,
   platformsFor,
   updaterForMirror,
   validateChangelog,
+  validateDownloads,
   validateManifest,
   withPortable,
   withReleaseNotes,
@@ -189,6 +191,90 @@ describe("the installers of a version", () => {
     const manifest = latestFrom([release({ tag_name: "v0.1.1", assets: everything("0.1.1") })]);
     manifest.files["macos-aarch64-zip"] = { name: "Jokbet_0.1.1_aarch64.app.zip", size: 1, sha256: null };
     expect(validateManifest(manifest)).toContain("files.macos-aarch64-zip is not an installer of 0.1.1");
+  });
+});
+
+describe("GitHub's download counts", () => {
+  /** One asset with the number GitHub reports for it. */
+  const counted = (name: string, download_count: number) => ({ name, size: 1024, digest: null, download_count });
+  const counts = (assets: ReturnType<typeof counted>[]) =>
+    downloadsFrom([release({ tag_name: "v0.4.8", assets })], "2026-10-16T00:00:00Z");
+
+  it("takes off what publishing the release fetched, and keeps GitHub's own number beside it", () => {
+    // `gh release download` fetches the whole release when it is published, and
+    // GitHub counts that: an untouched file arrives here with a 1 on it.
+    const doc = counts([counted("Jokbet_0.4.8_aarch64.dmg", 1), counted("Jokbet_0.4.8_x64.dmg", 6)]);
+
+    expect(doc.files).toEqual([
+      expect.objectContaining({ name: "Jokbet_0.4.8_aarch64.dmg", platform: "macos-aarch64", count: 0, raw: 1 }),
+      expect.objectContaining({ name: "Jokbet_0.4.8_x64.dmg", platform: "macos-x64", count: 5, raw: 6 }),
+    ]);
+    expect([doc.total, doc.raw]).toEqual([5, 7]);
+  });
+
+  it("knows the three files the release job fetches a second time", () => {
+    // publish.yml downloads the release once; the portable step then downloads
+    // latest.json and the portable zip — its signature with it — once more.
+    const doc = counts([
+      counted("latest.json", 2),
+      counted("Jokbet_0.4.8_x64-portable.zip", 3),
+      counted("Jokbet_0.4.8_x64-portable.zip.sig", 1),
+      counted("Jokbet_0.4.8_amd64.deb", 1),
+    ]);
+
+    expect(doc.files.map((file) => file.count)).toEqual([0, 1, 0, 0]);
+    expect(doc.total).toBe(1);
+  });
+
+  it("labels the updater's own bundles, which are not installers", () => {
+    const doc = counts([counted("Jokbet_aarch64.app.tar.gz", 1), counted("Jokbet_x64.app.tar.gz.sig", 1)]);
+    expect(doc.files.map((file) => file.platform)).toEqual(["macos-aarch64", "macos-x64"]);
+  });
+
+  it("leaves a name it does not know unlabelled rather than guessing, and never drops it", () => {
+    const doc = counts([counted("Jokbet_0.4.8_haiku.bin", 4)]);
+    expect(doc.files[0]).toMatchObject({ platform: null, count: 3 });
+
+    // A file GitHub reports nothing for is still a file of the release.
+    const quiet = counts([counted("Jokbet_0.4.8_aarch64.app.zip", 0)]);
+    expect(quiet.files).toHaveLength(1);
+    expect(quiet.files[0]).toMatchObject({ count: 0, raw: 0 });
+  });
+
+  it("leaves out a draft, whose files nobody can download yet", () => {
+    const doc = downloadsFrom([release({ tag_name: "v0.4.9", draft: true, assets: [counted("Jokbet_0.4.9_x64.dmg", 9)] })]);
+    expect(doc.files).toEqual([]);
+    expect([doc.total, doc.raw]).toEqual([0, 0]);
+  });
+
+  it("lists the newest release's files first", () => {
+    const doc = downloadsFrom([
+      release({ tag_name: "v0.3.9", assets: [counted("Jokbet_0.3.9_x64.dmg", 2)] }),
+      release({ tag_name: "v0.4.10", assets: [counted("Jokbet_0.4.10_x64.dmg", 2)] }),
+    ]);
+    expect(doc.files.map((file) => file.tag)).toEqual(["v0.4.10", "v0.3.9"]);
+  });
+
+  it("writes a document that passes its own check", () => {
+    const doc = counts([counted("Jokbet_0.4.8_x64-setup.exe", 3), counted("Jokbet_aarch64.app.tar.gz", 1)]);
+    expect(validateDownloads(doc)).toEqual([]);
+    expect(doc.total).toBe(2);
+  });
+
+  it("refuses a document that does not add up, or one of the wrong shape", () => {
+    const doc = counts([counted("Jokbet_0.4.8_x64.dmg", 4)]);
+    expect(validateDownloads({ ...doc, total: 99 })).toContainEqual(expect.stringContaining("total must be the sum"));
+    expect(validateDownloads({ ...doc, raw: 99 })).toContainEqual(expect.stringContaining("raw must be the sum"));
+    expect(validateDownloads({ schema: 2, files: [] })).toContainEqual(expect.stringContaining("schema must be 1"));
+    expect(validateDownloads({ schema: 1, files: undefined })).toContainEqual(expect.stringContaining("files must be an array"));
+
+    const odd = { ...doc, files: [{ platform: "haiku", version: "0.4.8", tag: "v0.4.8", name: "x", count: -1, raw: 0 }] };
+    expect(validateDownloads(odd)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("is not a known platform"),
+        expect.stringContaining("count must be a whole number"),
+      ]),
+    );
   });
 });
 

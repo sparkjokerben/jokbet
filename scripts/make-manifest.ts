@@ -21,6 +21,12 @@
 //   gh api "repos/:owner/:repo/releases?per_page=100" \
 //     | node scripts/make-manifest.ts fallback --stdin --dir worker/fallback
 //
+// And in the release job and the daily "Refresh the download counts" workflow,
+// for GitHub's half of the site's download total:
+//
+//   gh api "repos/:owner/:repo/releases?per_page=100" \
+//     | node scripts/make-manifest.ts downloads --stdin --out manifests/downloads.json
+//
 // And in CI: node scripts/make-manifest.ts check [path…]
 //
 // `full` and `update` fail unless every file they name is really there — that
@@ -33,11 +39,13 @@ import { join } from "node:path";
 import {
   changelogFrom,
   downloadBase,
+  downloadsFrom,
   latestFrom,
   platformsFor,
   releaseUrl,
   updaterForMirror,
   validateChangelog,
+  validateDownloads,
   withPortable,
   withReleaseNotes,
   validateManifest,
@@ -174,6 +182,9 @@ switch (mode) {
   case "changelog":
     write(flag("out") ?? "releases.json", changelogFrom(releasesFromApi(), generatedAt), validateChangelog);
     break;
+  case "downloads":
+    write(flag("out") ?? "downloads.json", downloadsFrom(releasesFromApi(), generatedAt), validateDownloads);
+    break;
   case "update":
     write(flag("out") ?? "update.json", update(), () => []);
     break;
@@ -204,7 +215,7 @@ switch (mode) {
     break;
   }
   default:
-    console.error("usage: node scripts/make-manifest.ts full|changelog|update|portable|fallback|check …  (see the top of this file)");
+    console.error("usage: node scripts/make-manifest.ts full|changelog|downloads|update|portable|fallback|check …  (see the top of this file)");
     process.exit(1);
 }
 
@@ -219,10 +230,18 @@ function write<T>(out: string, value: T, validate: (value: T) => string[]) {
 }
 
 function summary(value: unknown): string {
-  const v = value as { version?: string | null; files?: object; releases?: { files: unknown[] }[]; platforms?: object };
+  const v = value as {
+    version?: string | null;
+    files?: object;
+    releases?: { files: unknown[] }[];
+    platforms?: object;
+    total?: number;
+    raw?: number;
+  };
   if (Array.isArray(v.releases)) {
     return `${v.releases.length} releases, ${v.releases.reduce((n, r) => n + r.files.length, 0)} installers`;
   }
   if (v.platforms) return `${v.version}, ${Object.keys(v.platforms).length} updater targets`;
+  if (typeof v.total === "number") return `${v.total} downloads (GitHub reports ${v.raw})`;
   return v.version ? `${v.version}, ${Object.keys(v.files ?? {}).length} installers` : "no release yet";
 }
