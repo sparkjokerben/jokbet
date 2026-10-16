@@ -36,3 +36,19 @@ run_worker_first = ["/api/*", "/dl/*"]
 [[r2_buckets]]
 binding = "DOWNLOADS"
 bucket_name = "jokbet-downloads"
+
+# The download counter: one row per download /dl/ served from the bucket
+# (worker/stats.ts, the schema in worker/migrations/), which /api/downloads.json
+# adds up. The other half of the site's download total is GitHub's own counter:
+# the "Refresh the download counts" workflow reads it daily into the bucket as
+# manifests/downloads.json.
+#
+# Do not add a `[cache]` block to this file. A /dl/ response is `immutable` — a
+# year — so a cache answering it would keep this Worker from running at all,
+# and the counter would quietly stop counting.
+[[d1_databases]]
+binding = "STATS"
+database_name = "jokbet-stats"
+database_id = "3612465c-ee6d-4a43-99c9-03a8da529845"
+# Where the migrations are; `wrangler d1 migrations apply` reads this.
+migrations_dir = "worker/migrations"
