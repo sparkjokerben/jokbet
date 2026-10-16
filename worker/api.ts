@@ -1,4 +1,5 @@
-// GET /api/<name>.json — the three manifests the site and the app read.
+// GET /api/<name>.json — the three manifests the site and the app read, and the
+// download counts the pages show.
 //
 // The release job writes each one into the bucket under manifests/. The bucket
 // is asked at most once a minute per isolate, and when it has nothing to give
@@ -11,6 +12,9 @@
 //                       → the copy compiled into this Worker
 //   /api/update.json    Tauri's updater manifest, its URLs pointed at /dl/
 //                       → GitHub's own copy of it, by redirect
+//   /api/downloads.json what the mirror served (the counter's rows) and what
+//                       GitHub counted, added up, for the badge and /stats
+//                       → the bucket's daily copy, else the mirror's half alone
 //
 // The two the page reads carry `source` ("r2" or "fallback"), so the page can
 // say where its numbers came from. The updater's is passed through untouched.
@@ -19,6 +23,7 @@
 
 import latestFallback from "./fallback/latest.json";
 import releasesFallback from "./fallback/releases.json";
+import { statistics } from "./stats.ts";
 
 export interface Env {
   /** The R2 bucket: releases/<tag>/<name> and manifests/<name>.json. */
@@ -97,6 +102,8 @@ export async function api(request: Request, env: Env, name: string): Promise<Res
         headers: { location: `${GITHUB_RELEASES}/latest/download/latest.json`, "cache-control": "no-store" },
       });
     }
+    case "downloads.json":
+      return json(await statistics(env, parsed(await fromBucket(env, "manifests/downloads.json"))));
     default:
       return new Response("Not found", { status: 404 });
   }

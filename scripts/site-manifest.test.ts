@@ -226,6 +226,16 @@ describe("GitHub's download counts", () => {
     expect(doc.total).toBe(1);
   });
 
+  it("counts nothing for a signature, which is never downloaded on its own", () => {
+    // The updater reads a signature out of the manifest it has; nobody fetches
+    // the file. Whatever GitHub counted for one is the pipeline.
+    const doc = counts([counted("Jokbet_0.4.8_aarch64.dmg.sig", 6), counted("Jokbet_aarch64.app.tar.gz.sig", 3)]);
+
+    expect(doc.files.map((file) => file.count)).toEqual([0, 0]);
+    expect(doc.files.map((file) => file.raw)).toEqual([6, 3]);
+    expect(doc).toMatchObject({ total: 0, raw: 9 });
+  });
+
   it("labels the updater's own bundles, which are not installers", () => {
     const doc = counts([counted("Jokbet_aarch64.app.tar.gz", 1), counted("Jokbet_x64.app.tar.gz.sig", 1)]);
     expect(doc.files.map((file) => file.platform)).toEqual(["macos-aarch64", "macos-x64"]);

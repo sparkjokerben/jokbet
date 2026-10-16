@@ -65,12 +65,16 @@ const assets = () => {
 };
 
 /** The download counter's database, standing in for the STATS binding: it
- * remembers every statement, and the values bound to it. */
-function d1(options: { fail?: boolean } = {}) {
+ * remembers every statement (and the values bound to it), and answers the
+ * aggregate query with the rows it was given. */
+function d1(options: { fail?: boolean; rows?: unknown[] } = {}) {
   const written: { sql: string; values: unknown[] }[] = [];
+  const asked: string[] = [];
   return {
     written,
+    asked,
     prepare(sql: string) {
+      asked.push(sql);
       const statement = {
         values: [] as unknown[],
         bind(...values: unknown[]) {
@@ -81,6 +85,10 @@ function d1(options: { fail?: boolean } = {}) {
           if (options.fail) throw new Error("D1 is down");
           written.push({ sql, values: statement.values });
           return { success: true, results: [], meta: {} };
+        },
+        async all() {
+          if (options.fail) throw new Error("D1 is down");
+          return { success: true, results: options.rows ?? [], meta: {} };
         },
       };
       return statement;
@@ -458,6 +466,154 @@ describe("/api/update.json", () => {
     }
   });
 });
+
+describe("/api/downloads.json", () => {
+  /** A UTC day, counted back from today: the days the page shows are the days
+   * the rows were counted on. */
+  const day = (back: number) => new Date(Date.now() - back * 86_400_000).toISOString().slice(0, 10);
+  const zip = "Jokbet_0.4.8_aarch64.app.zip";
+  const dmg = "Jokbet_0.4.7_x64.dmg";
+
+  /** The counter's rows, as the one aggregate query returns them. */
+  const rows = [
+    { day: day(0), tag: "v0.4.8", name: zip, client: "browser", country: "CN", n: 3 },
+    { day: day(0), tag: "v0.4.8", name: zip, client: "script", country: null, n: 1 },
+    { day: day(1), tag: "v0.4.7", name: dmg, client: "updater", country: "US", n: 2 },
+  ];
+  const mirrored = { DOWNLOADS: bucket(), ASSETS: assets(), STATS: d1({ rows }) };
+
+  /** GitHub's half, as the daily workflow leaves it in the bucket. */
+  const document = {
+    schema: 1,
+    generatedAt: "2026-10-16T03:17:00Z",
+    total: 9,
+    raw: 11,
+    files: [
+      { platform: "macos-aarch64-zip", version: "0.4.8", tag: "v0.4.8", name: zip, count: 5, raw: 6 },
+      { platform: "macos-x64", version: "0.4.7", tag: "v0.4.7", name: dmg, count: 4, raw: 5 },
+    ],
+  };
+  const published = { DOWNLOADS: bucket({ "manifests/downloads.json": JSON.stringify(document) }), ASSETS: assets() };
+
+  it("adds what the mirror served to what GitHub counted, and says where each came from", async () => {
+    const response = await call("/api/downloads.json", { ...published, STATS: d1({ rows }) });
+    const counts = await countsOf(response);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("application/json");
+    expect(counts.total).toBe(15);
+    expect(counts.mirror).toMatchObject({ total: 6, first: day(1), last: day(0) });
+    expect(counts.github).toEqual({ total: 9, raw: 11, updatedAt: "2026-10-16T03:17:00Z" });
+    expect(counts.sources).toEqual({ mirror: "d1", github: "r2" });
+    expect(counts.byPlatform).toEqual([
+      { platform: "macos-aarch64-zip", mirror: 4, github: 5, total: 9 },
+      { platform: "macos-x64", mirror: 2, github: 4, total: 6 },
+    ]);
+    expect(counts.byVersion.map((v) => v.version)).toEqual(["0.4.8", "0.4.7"]);
+    expect(counts.byFile[0]).toMatchObject({ name: zip, platform: "macos-aarch64-zip", version: "0.4.8", mirror: 4, github: 5, total: 9 });
+    expect(counts.mirror?.byClient.map((c) => c.client)).toEqual(["browser", "updater", "script"]);
+    expect(counts.mirror?.byCountry).toEqual([
+      { country: "CN", count: 3 },
+      { country: "US", count: 2 },
+    ]);
+  });
+
+  it("gives the chart three months of days, the empty ones included", async () => {
+    const counts = await countsOf(await call("/api/downloads.json", mirrored));
+    const days = counts.mirror?.byDay ?? [];
+
+    expect(days).toHaveLength(90);
+    expect(days[days.length - 1]).toEqual({ day: day(0), count: 4 });
+    expect(days[days.length - 2]).toEqual({ day: day(1), count: 2 });
+    expect(days[0].count).toBe(0);
+  });
+
+  it("names a file the document does not list, rather than dropping it", async () => {
+    // A release GitHub no longer has: the mirror still served its files.
+    const orphan = { day: day(2), tag: "v0.0.1", name: "Jokbet_0.0.1_x64.dmg", client: "browser", country: null, n: 7 };
+    const counts = await countsOf(await call("/api/downloads.json", { ...published, STATS: d1({ rows: [...rows, orphan] }) }));
+
+    expect(counts.byFile.find((file) => file.name === "Jokbet_0.0.1_x64.dmg")).toEqual({
+      name: "Jokbet_0.0.1_x64.dmg",
+      platform: null,
+      version: "0.0.1",
+      mirror: 7,
+      github: 0,
+      total: 7,
+    });
+  });
+
+  it("shows GitHub's half alone when the database cannot answer", async () => {
+    const counts = await countsOf(await call("/api/downloads.json", { ...published, STATS: d1({ fail: true }) }));
+
+    expect(counts.mirror).toBe(null);
+    expect(counts.total).toBe(9);
+    expect(counts.sources).toEqual({ mirror: "unavailable", github: "r2" });
+    // Nothing answered is not the same as nothing downloaded.
+    expect(counts.byPlatform[0]).toEqual({ platform: "macos-aarch64-zip", mirror: null, github: 5, total: 5 });
+  });
+
+  it("shows the mirror's half alone before the document has ever been written", async () => {
+    for (const store of [bucket(), bucket({ "manifests/downloads.json": "{ not json" })]) {
+      vi.resetModules();
+      worker = (await import("./index.ts")).default as unknown as Worker;
+      const counts = await countsOf(await call("/api/downloads.json", { DOWNLOADS: store, ASSETS: assets(), STATS: d1({ rows }) }));
+
+      expect(counts.github).toBe(null);
+      expect(counts.total).toBe(6);
+      expect(counts.sources.github).toBe("unavailable");
+      expect(counts.byPlatform[0].github).toBe(null);
+    }
+  });
+
+  it("says nothing rather than zero when neither half can answer", async () => {
+    const response = await call("/api/downloads.json", { DOWNLOADS: bucket({}, true), ASSETS: assets(), STATS: d1({ fail: true }) });
+    const counts = await countsOf(response);
+
+    expect(response.status).toBe(200);
+    expect([counts.mirror, counts.github, counts.total]).toEqual([null, null, null]);
+  });
+
+  it("asks the database once a minute, not once a request", async () => {
+    const stats = d1({ rows });
+    const env = { DOWNLOADS: bucket(), ASSETS: assets(), STATS: stats };
+    await call("/api/downloads.json", env);
+    await call("/api/downloads.json", env);
+
+    expect(stats.asked).toHaveLength(1);
+  });
+
+  it("refuses anything but GET and HEAD, like the manifests", async () => {
+    const response = await call("/api/downloads.json", { ...published, STATS: d1({ rows }) }, { method: "POST" });
+    expect(response.status).toBe(405);
+  });
+});
+
+interface Counts {
+  total: number | null;
+  mirror: {
+    total: number;
+    first: string | null;
+    last: string | null;
+    byDay: { day: string; count: number }[];
+    byClient: { client: string; count: number }[];
+    byCountry: { country: string; count: number }[];
+  } | null;
+  github: { total: number; raw: number; updatedAt: string | null } | null;
+  byPlatform: { platform: string | null; mirror: number | null; github: number | null; total: number }[];
+  byVersion: { version: string; mirror: number | null; github: number | null; total: number }[];
+  byFile: {
+    name: string;
+    platform: string | null;
+    version: string;
+    mirror: number | null;
+    github: number | null;
+    total: number;
+  }[];
+  sources: { mirror: string; github: string };
+}
+
+const countsOf = async (response: Response) => (await response.json()) as Counts;
 
 describe("everything else", () => {
   it("is the assets layer's, as it was asked for", async () => {

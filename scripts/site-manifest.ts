@@ -273,6 +273,17 @@ function publishingFetches(name: string): number {
   return 1 + (name === "latest.json" || /_x64-portable\.zip(?:\.sig)?$/.test(name) ? 1 : 0);
 }
 
+/**
+ * How many times GitHub counted a file being downloaded, less the pipeline's own
+ * fetches. A signature is never downloaded on its own — the app's updater reads
+ * it out of the manifest it already has — so whatever GitHub counted for one is
+ * the pipeline fetching the release, and none of it is a person.
+ */
+function countedFetches(name: string, raw: number): number {
+  if (name.endsWith(".sig")) return 0;
+  return Math.max(0, raw - publishingFetches(name));
+}
+
 /** @param name @param version */
 function platformOf(name: string, version: string): string | null {
   const installer = PLATFORMS.find((p) => p.file(version) === name);
@@ -302,7 +313,7 @@ export function downloadsFrom(releases: GithubRelease[], generatedAt = new Date(
         version,
         tag,
         name,
-        count: Math.max(0, raw - publishingFetches(name)),
+        count: countedFetches(name, raw),
         raw,
       });
     }
