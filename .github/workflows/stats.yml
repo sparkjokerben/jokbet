@@ -1,0 +1,65 @@
+name: Refresh the download counts
+
+# GitHub's half of the site's download total: what /api/downloads.json adds to
+# the mirror's own count (the counter's table, which the Worker reads live).
+# Only GitHub has these numbers, and only GitHub moves them, so once a day is
+# plenty.
+#
+#   https://jokbet.jokerben.top/api/downloads.json
+#   https://jokbet.jokerben.top/stats
+#
+# The Worker cannot do this itself: its outbound addresses are shared with every
+# other Worker on Cloudflare, and GitHub's API allows 60 unauthenticated requests
+# an hour per address — which they have long used up. Here there is a token.
+#
+# This writes one object and touches nothing else, so it may run while a release
+# is being published: the publish job writes manifests/ too, but not this file.
+#
+# GitHub disables a schedule in a repository that has been quiet for 60 days;
+# "Run workflow" is the way back, and this one takes no inputs.
+
+on:
+  schedule:
+    # 03:17 UTC — 11:17 in Beijing, past GitHub's busiest minute, and early
+    # enough that the day's number is there by the time anyone looks at it.
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  counts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BUCKET: jokbet-downloads
+      ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      # R2 answers with CRC-32 only; the v2 CLI's default checksums can upset it.
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # No npm ci: the script and the module it imports have no dependencies.
+      - name: Build the counts
+        run: |
+          mkdir -p manifests
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            | node scripts/make-manifest.ts downloads --stdin --out manifests/downloads.json
+
+      - name: Publish them
+        # Longer than the manifests' minute: these numbers are a day old
+        # whatever the cache says.
+        run: |
+          aws s3 cp manifests/downloads.json "s3://$BUCKET/manifests/downloads.json" \
+            --endpoint-url "$ENDPOINT" --content-type application/json \
+            --cache-control "public, max-age=300" --no-progress

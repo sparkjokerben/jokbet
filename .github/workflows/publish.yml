@@ -7,6 +7,10 @@ name: Publish to R2
 #   manifests/releases.json   every published release    → /api/releases.json
 #   manifests/latest.json     the newest release         → /api/latest.json
 #   manifests/update.json     the app's updater manifest → /api/update.json
+#   manifests/downloads.json  GitHub's own download counts, which the site adds
+#                             to the mirror's → /api/downloads.json
+#                             (the daily "Refresh the download counts" workflow
+#                             keeps this one fresh between releases)
 #
 # It runs on `release: published` rather than on the tag push, because a draft
 # release's assets are not reachable on GitHub yet — and every mirror address
@@ -16,6 +20,9 @@ name: Publish to R2
 # Re-runnable by hand: Actions → Publish to R2 → Run workflow, with the tag.
 # Re-running an older tag re-mirrors its files and the changelog, but leaves
 # latest.json and update.json alone: those only ever describe GitHub's latest.
+# downloads.json covers every release either way, so it is rebuilt whatever the
+# tag — and its numbers will be a count per file higher, having been fetched
+# once more.
 
 on:
   release:
@@ -75,6 +82,8 @@ jobs:
             --dir release-assets --release-json release.json --out manifests/latest.json
           gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
             | node scripts/make-manifest.ts changelog --stdin --out manifests/releases.json
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            | node scripts/make-manifest.ts downloads --stdin --out manifests/downloads.json
           node scripts/make-manifest.ts update --tag "${{ steps.tag.outputs.name }}" \
             --dir release-assets --release-json release.json --out manifests/update.json
 
@@ -95,6 +104,7 @@ jobs:
               --content-type application/json --cache-control "public, max-age=60" --no-progress
           }
           put releases.json
+          put downloads.json
           if [ "${{ steps.tag.outputs.latest }}" = "true" ]; then
             put latest.json
             put update.json
