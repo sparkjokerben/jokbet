@@ -117,8 +117,7 @@ interface Counted {
   files: CountedFile[];
 }
 
-/** What the counter's rows add up to. The maps are the material the tables
- * below are merged from; the arrays are already a page's. */
+/** What the counter's rows add up to, as the page is served it. */
 interface Mirror {
   total: number;
   first: string | null;
@@ -126,10 +125,18 @@ interface Mirror {
   byDay: { day: string; count: number }[];
   byClient: { client: string; count: number }[];
   byCountry: { country: string; count: number }[];
+}
+
+/** Those sums, and the tallies the merged tables are built from. The tallies
+ * stay in here: a Map reaches the page as an empty object. */
+interface Rows {
+  mirror: Mirror;
+  /** By platform id (the updater's bundles included)… */
   platforms: Map<string | null, number>;
+  /** …by version… */
   versions: Map<string, number>;
-  /** By "/dl/" address — a release and a file — because the updater's bundles
-   * are named without their version and belong to every release. */
+  /** …and by "/dl/" address — a release and a file — because the updater's
+   * bundles are named without their version and belong to every release. */
   files: Map<string, number>;
 }
 
@@ -169,7 +176,7 @@ function counted(counts: Record<string, unknown> | null | undefined): Counted | 
 }
 
 /** The counter's rows, added up, or null when the database cannot answer. */
-async function mirrored(env: Env, github: Counted | null): Promise<Mirror | null> {
+async function mirrored(env: Env, github: Counted | null): Promise<Rows | null> {
   let rows: Row[];
   try {
     const answer = await env.STATS.prepare(COUNTED).all<Row>();
@@ -215,12 +222,14 @@ async function mirrored(env: Env, github: Counted | null): Promise<Mirror | null
     [...tally].map(([key, count]) => each(key, count)).sort((a, b) => b.count - a.count);
 
   return {
-    total,
-    first,
-    last,
-    byDay: dense(days),
-    byClient: rank(clients, (client, count) => ({ client, count })),
-    byCountry: rank(countries, (country, count) => ({ country, count })).slice(0, COUNTRIES),
+    mirror: {
+      total,
+      first,
+      last,
+      byDay: dense(days),
+      byClient: rank(clients, (client, count) => ({ client, count })),
+      byCountry: rank(countries, (country, count) => ({ country, count })).slice(0, COUNTRIES),
+    },
     platforms,
     versions,
     files,
@@ -266,17 +275,18 @@ function tally<K>(files: CountedFile[], of: (file: CountedFile) => K): Map<K, nu
 export async function statistics(env: Env, counts: Record<string, unknown> | null | undefined): Promise<string> {
   if (remembered && Date.now() - remembered.at < TTL_MS) return remembered.body;
   const github = counted(counts);
-  const mirror = await mirrored(env, github);
+  const rows = await mirrored(env, github);
+  const mirror = rows?.mirror ?? null;
   const halves = [mirror?.total, github?.total].filter((n): n is number => typeof n === "number");
 
   const platforms = split(
-    [...(mirror?.platforms.keys() ?? []), ...tally(github?.files ?? [], (file) => file.platform).keys()],
-    mirror?.platforms ?? null,
+    [...(rows?.platforms.keys() ?? []), ...tally(github?.files ?? [], (file) => file.platform).keys()],
+    rows?.platforms ?? null,
     github ? tally(github.files, (file) => file.platform) : null,
   );
   const versions = split(
-    [...(mirror?.versions.keys() ?? []), ...tally(github?.files ?? [], (file) => file.version).keys()],
-    mirror?.versions ?? null,
+    [...(rows?.versions.keys() ?? []), ...tally(github?.files ?? [], (file) => file.version).keys()],
+    rows?.versions ?? null,
     github ? tally(github.files, (file) => file.version) : null,
   );
 
@@ -285,8 +295,8 @@ export async function statistics(env: Env, counts: Record<string, unknown> | nul
   // GitHub no longer has is still a file the mirror served.
   const labels = new Map((github?.files ?? []).map((file) => [`${file.tag}/${file.name}`, file]));
   const files = split(
-    [...(mirror?.files.keys() ?? []), ...labels.keys()],
-    mirror?.files ?? null,
+    [...(rows?.files.keys() ?? []), ...labels.keys()],
+    rows?.files ?? null,
     github ? tally(github.files, (file) => `${file.tag}/${file.name}`) : null,
   )
     .slice(0, FILES)

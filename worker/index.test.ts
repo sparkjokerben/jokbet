@@ -503,6 +503,9 @@ describe("/api/downloads.json", () => {
     expect(response.headers.get("content-type")).toContain("application/json");
     expect(counts.total).toBe(15);
     expect(counts.mirror).toMatchObject({ total: 6, first: day(1), last: day(0) });
+    // And nothing of the Worker's own: a Map would reach the page as an empty
+    // object, which is what the tallies behind the tables are.
+    expect(Object.keys(counts.mirror ?? {}).sort()).toEqual(["byClient", "byCountry", "byDay", "first", "last", "total"]);
     expect(counts.github).toEqual({ total: 9, raw: 11, updatedAt: "2026-10-16T03:17:00Z" });
     expect(counts.sources).toEqual({ mirror: "d1", github: "r2" });
     expect(counts.byPlatform).toEqual([
