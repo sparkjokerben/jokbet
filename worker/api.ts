@@ -25,6 +25,8 @@ export interface Env {
   DOWNLOADS: R2Bucket;
   /** The site's static files. */
   ASSETS: Fetcher;
+  /** The download counter's rows (worker/migrations/0001_downloads.sql). */
+  STATS: D1Database;
 }
 
 export const REPO = "sparkjokerben/jokbet";

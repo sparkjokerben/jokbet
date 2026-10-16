@@ -6,6 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import latestFallback from "./fallback/latest.json";
 import releasesFallback from "./fallback/releases.json";
+import { clientOf } from "./stats.ts";
 
 const GITHUB = "https://github.com/sparkjokerben/jokbet/releases";
 
@@ -63,13 +64,52 @@ const assets = () => {
   };
 };
 
+/** The download counter's database, standing in for the STATS binding: it
+ * remembers every statement, and the values bound to it. */
+function d1(options: { fail?: boolean } = {}) {
+  const written: { sql: string; values: unknown[] }[] = [];
+  return {
+    written,
+    prepare(sql: string) {
+      const statement = {
+        values: [] as unknown[],
+        bind(...values: unknown[]) {
+          statement.values = values;
+          return statement;
+        },
+        async run() {
+          if (options.fail) throw new Error("D1 is down");
+          written.push({ sql, values: statement.values });
+          return { success: true, results: [], meta: {} };
+        },
+      };
+      return statement;
+    },
+  };
+}
+
+/** The rest of the ExecutionContext, and the promises it was handed. */
+function context() {
+  const waiting: Promise<unknown>[] = [];
+  return {
+    waiting,
+    waitUntil(promise: Promise<unknown>) {
+      waiting.push(promise);
+    },
+    passThroughOnException() {},
+  };
+}
+
+type Ctx = ReturnType<typeof context>;
+
 interface Env {
   DOWNLOADS: unknown;
   ASSETS: unknown;
+  STATS?: unknown;
 }
 
 /** The Worker's export, as the platform calls it. */
-type Worker = { fetch: (request: Request, env: Env) => Promise<Response> };
+type Worker = { fetch: (request: Request, env: Env, ctx: Ctx) => Promise<Response> };
 
 let worker: Worker;
 
@@ -79,8 +119,17 @@ beforeEach(async () => {
   worker = (await import("./index.ts")).default as unknown as Worker;
 });
 
-const call = (path: string, env: Env, init?: RequestInit) =>
-  worker.fetch(new Request(`https://jokbet.jokerben.top${path}`, init), env);
+const call = (path: string, env: Env, init?: RequestInit, ctx: Ctx = context()) =>
+  worker.fetch(new Request(`https://jokbet.jokerben.top${path}`, init), env, ctx);
+
+/** A request with the background work it left behind waited out — what the
+ * platform does with waitUntil() once the response is on its way. */
+async function done(path: string, env: Env, init?: RequestInit): Promise<Response> {
+  const ctx = context();
+  const response = await call(path, env, init, ctx);
+  await Promise.all(ctx.waiting);
+  return response;
+}
 
 const installer = "Jokbet_0.1.0_x64.dmg";
 
@@ -210,6 +259,130 @@ describe("/dl/<name>, the 0.1.0 page's links", () => {
     const response = await call("/dl/evil.dmg?v=0.1.0", { DOWNLOADS: bucket(), ASSETS: assets() });
     expect(response.status).toBe(404);
   });
+});
+
+describe("the download counter", () => {
+  /** The bucket with one release file in it, and the browser that asks for it. */
+  const held = () => bucket({ [`releases/v0.1.0/${installer}`]: new Uint8Array(4096).fill(7) });
+  const browser = { "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/141.0 Safari/537.36" };
+
+  it("keeps one row for a whole file served from the bucket", async () => {
+    const stats = d1();
+    const response = await done(`/dl/v0.1.0/${installer}`, { DOWNLOADS: held(), ASSETS: assets(), STATS: stats }, { headers: browser });
+
+    expect(response.status).toBe(200);
+    expect((await response.arrayBuffer()).byteLength).toBe(4096);
+    expect(stats.written).toHaveLength(1);
+    expect(stats.written[0].sql).toContain("INSERT INTO downloads");
+    const [at, day, tag, name, client, country] = stats.written[0].values;
+    expect(typeof at).toBe("number");
+    // The day is the UTC date of `at`, the one date(at/1000,'unixepoch') gives.
+    expect(day).toBe(new Date(at as number).toISOString().slice(0, 10));
+    expect([tag, name, client]).toEqual(["v0.1.0", installer, "browser"]);
+    // Node's requests carry no Cloudflare country, and the row says so.
+    expect(country).toBe(null);
+  });
+
+  it("keeps nothing for a probe that asked for no file", async () => {
+    const stats = d1();
+    const response = await done(`/dl/v0.1.0/${installer}`, { DOWNLOADS: held(), ASSETS: assets(), STATS: stats }, { method: "HEAD" });
+
+    expect(response.status).toBe(200);
+    expect(stats.written).toEqual([]);
+  });
+
+  it("keeps nothing for a range, a resume included", async () => {
+    // A range is a piece of a download that is already being counted, or a
+    // probe for one: either way it is not a download of its own.
+    for (const range of ["bytes=100-199", "bytes=0-", "bytes=0-0"]) {
+      const stats = d1();
+      const response = await done(`/dl/v0.1.0/${installer}`, { DOWNLOADS: held(), ASSETS: assets(), STATS: stats }, { headers: { ...browser, range } });
+
+      expect(response.status, range).toBe(206);
+      expect(stats.written, range).toEqual([]);
+    }
+  });
+
+  it("keeps nothing for a file the bucket does not have, which GitHub counts", async () => {
+    // Counting this one too would count every fallback download twice: the
+    // browser goes on to fetch the same file from GitHub, which counts it.
+    const stats = d1();
+    const response = await done(`/dl/v0.1.0/${installer}`, { DOWNLOADS: bucket(), ASSETS: assets(), STATS: stats });
+
+    expect(response.status).toBe(302);
+    expect(stats.written).toEqual([]);
+  });
+
+  it("keeps nothing when R2 cannot answer either", async () => {
+    const stats = d1();
+    const response = await done(`/dl/v0.1.0/${installer}`, { DOWNLOADS: bucket({}, true), ASSETS: assets(), STATS: stats });
+
+    expect(response.status).toBe(302);
+    expect(stats.written).toEqual([]);
+  });
+
+  it("keeps nothing for a name no release has", async () => {
+    const stats = d1();
+    const response = await done("/dl/v0.1.0/evil.dmg", { DOWNLOADS: bucket(), ASSETS: assets(), STATS: stats });
+
+    expect(response.status).toBe(404);
+    expect(stats.written).toEqual([]);
+  });
+
+  it("serves the file even when the row cannot be written", async () => {
+    const stats = d1({ fail: true });
+    const response = await done(`/dl/v0.1.0/${installer}`, { DOWNLOADS: held(), ASSETS: assets(), STATS: stats });
+
+    expect(response.status).toBe(200);
+    expect((await response.arrayBuffer()).byteLength).toBe(4096);
+    expect(stats.written).toEqual([]);
+  });
+
+  it("serves the file when there is no counter at all", async () => {
+    // An older deploy, or a test: a missing binding is not a failed download.
+    const response = await done(`/dl/v0.1.0/${installer}`, { DOWNLOADS: held(), ASSETS: assets() });
+    expect(response.status).toBe(200);
+  });
+
+  it("keeps the country Cloudflare saw, and the class of client it was", async () => {
+    const stats = d1();
+    const ctx = context();
+    const request = new Request(`https://jokbet.jokerben.top/dl/v0.1.0/${installer}`, {
+      headers: { "user-agent": "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.19041.1" },
+    });
+    // What the platform puts on a request from the outside world.
+    Object.defineProperty(request, "cf", { value: { country: "CN" } });
+
+    const response = await worker.fetch(request, { DOWNLOADS: held(), ASSETS: assets(), STATS: stats }, ctx);
+    await Promise.all(ctx.waiting);
+
+    expect(response.status).toBe(200);
+    // PowerShell's user agent calls itself Mozilla/5.0 as well.
+    expect(stats.written[0].values.slice(4)).toEqual(["script", "CN"]);
+  });
+});
+
+describe("clientOf", () => {
+  const agents: [agent: string, client: string][] = [
+    ["", "other"],
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/141.0 Safari/537.36", "browser"],
+    ["Mozilla/5.0 (X11; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0", "browser"],
+    ["curl/8.5.0", "script"],
+    ["Wget/1.21.4", "script"],
+    ["Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.19041.1", "script"],
+    ["python-requests/2.32.3", "script"],
+    ["tauri-plugin-updater/2.6.0", "updater"],
+    ["Jokbet/0.4.8", "other"],
+  ];
+
+  for (const [agent, client] of agents) {
+    it(`calls ${JSON.stringify(agent || "no user agent")} ${client}`, () => {
+      const request = new Request("https://jokbet.jokerben.top/dl/v0.1.0/" + installer, {
+        headers: agent ? { "user-agent": agent } : {},
+      });
+      expect(clientOf(request)).toBe(client);
+    });
+  }
 });
 
 describe("/api/latest.json and /api/releases.json", () => {

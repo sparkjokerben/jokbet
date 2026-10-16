@@ -7,10 +7,16 @@
 // GitHub, and the app's updater does the same in the other direction when a
 // download fails (src-tauri/src/updater.rs). A link on the site cannot
 // dead-end, and a version in the path means a URL never changes what it serves.
+//
+// What this serves is also what the site counts: a whole file asked for as a
+// whole file is one download (worker/stats.ts). A metadata probe and a resumed
+// range are not downloads, and neither is the fallback — GitHub counts that one
+// itself, and the two halves are added up by /api/downloads.json.
 
 /// <reference types="@cloudflare/workers-types" />
 
 import { GITHUB_RELEASES, type Env } from "./api.ts";
+import { record } from "./stats.ts";
 
 const TAG = /^v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
 /** The names Tauri produces, and nothing else. */
@@ -47,7 +53,7 @@ const redirect = (location: string, status: 301 | 302) =>
     },
   });
 
-export async function download(request: Request, env: Env): Promise<Response> {
+export async function download(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   const parts = new URL(request.url).pathname.slice("/dl/".length).split("/");
   if (parts.length === 1) return legacy(request, parts[0]);
   const [tag, name] = parts;
@@ -64,7 +70,13 @@ export async function download(request: Request, env: Env): Promise<Response> {
     const key = `releases/${tag}/${name}`;
     // HEAD asks the bucket for the metadata only, so a probe costs nothing.
     const object = method === "HEAD" ? await env.DOWNLOADS.head(key) : await env.DOWNLOADS.get(key, { range: request.headers });
-    if (object && object.size > 0) return served(object, method, name, asked);
+    if (object && object.size > 0) {
+      // The whole file, asked for as a whole file: that is one download. (The
+      // mirror's own address is `immutable`, so a browser asking twice may only
+      // ever ask once — a count is what was served, not who wanted it.)
+      if (method === "GET" && !asked) record(request, env, ctx, tag, name);
+      return served(object, method, name, asked);
+    }
   } catch {
     // R2 unreachable, bucket gone: GitHub is the fallback.
   }

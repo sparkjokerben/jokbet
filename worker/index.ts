@@ -17,10 +17,10 @@ import { api, type Env } from "./api.ts";
 import { download } from "./download.ts";
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const { pathname } = new URL(request.url);
     if (pathname.startsWith("/api/")) return api(request, env, pathname.slice("/api/".length));
-    if (pathname.startsWith("/dl/")) return download(request, env);
+    if (pathname.startsWith("/dl/")) return download(request, env, ctx);
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;
