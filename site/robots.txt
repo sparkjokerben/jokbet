@@ -5,4 +5,8 @@ Allow: /
 Disallow: /api/
 Disallow: /dl/
 
+# The download counts: an unlisted page, linked from nowhere, and nothing a
+# search engine should be offering anyone.
+Disallow: /stats
+
 Sitemap: https://jokbet.jokerben.top/sitemap.xml

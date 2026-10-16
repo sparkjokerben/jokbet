@@ -2,6 +2,7 @@
 /download.html   /download   301
 /changelog.html  /changelog  301
 /about.html      /about      301
+/stats.html      /stats      301
 
 # Where the site's JSON lived before it had an /api/ (the 0.1.0 page read these).
 /latest          /api/latest.json    301

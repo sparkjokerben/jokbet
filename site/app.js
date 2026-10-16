@@ -12,6 +12,21 @@
 /** @typedef {{ version: string, tag: string, name: string | null, pubDate: string | null,
  *   prerelease: boolean, notes: string | null, url: string | null, files: ReleaseFile[] }} Release */
 /** @typedef {{ schema: number, generatedAt: string | null, releases: Release[], source?: string }} Changelog */
+/** @typedef {{ day: string, count: number }} CountedDay */
+/** One row of the download counts: what the mirror served, what GitHub
+ * counted, and their sum. A half nothing could read is null — which is not the
+ * same as a half that counted nothing. */
+/** @typedef {{ mirror: number | null, github: number | null, total: number }} Split */
+/** @typedef {{ platform: string | null } & Split} PlatformCount */
+/** @typedef {{ version: string } & Split} VersionCount */
+/** @typedef {{ name: string, platform: string | null, version: string } & Split} FileCount */
+/** @typedef {{ schema: number, generatedAt: string, total: number | null,
+ *   mirror: { total: number, first: string | null, last: string | null, byDay: CountedDay[],
+ *     byClient: { client: string, count: number }[],
+ *     byCountry: { country: string, count: number }[] } | null,
+ *   github: { total: number, raw: number, updatedAt: string | null } | null,
+ *   byPlatform: PlatformCount[], byVersion: VersionCount[], byFile: FileCount[],
+ *   sources: { mirror: string, github: string } }} Counts */
 /** @typedef {"zh" | "en"} Lang */
 /** @typedef {{ input: (a: "typing" | "click" | "scroll") => void, setKeysPerSecond: (n: number) => void,
  *   point: (x: number, y: number) => void, setLang: (l: Lang) => void,
@@ -19,7 +34,7 @@
 
 const html = document.documentElement;
 const RELEASES = "https://github.com/sparkjokerben/jokbet/releases";
-const PAGES = /** @type {const} */ (["home", "download", "changelog", "about", "404"]);
+const PAGES = /** @type {const} */ (["home", "download", "changelog", "about", "stats", "404"]);
 /** Which page this is: the body says so. */
 const page = PAGES.find((p) => p === document.body.dataset.page) ?? "home";
 
@@ -41,6 +56,7 @@ const T = {
       download: "下载 — Jokbet",
       changelog: "更新日志 — Jokbet",
       about: "关于 — Jokbet",
+      stats: "下载统计 — Jokbet",
       "404": "404 — Jokbet",
     },
     platforms: "macOS 11+ · Windows · Linux（X11）",
@@ -61,6 +77,19 @@ const T = {
     checksum: "SHA-256 校验值",
     checksumNone: "未公布校验值",
     prerelease: "预发布",
+    downloads: "已被下载 {n} 次",
+    downloadsHint: "本站镜像与 GitHub 的合计，含应用自动更新",
+    statsReach: "本站镜像 {mirror} 次 · GitHub {github} 次",
+    statsReachMirror: "本站镜像 {mirror} 次 · GitHub 的数字暂时读不到",
+    statsReachGithub: "GitHub {github} 次 · 本站镜像暂时读不到",
+    statsSince: "镜像自 {first} 起计数，最后一条是 {last}（按 UTC 分日）。",
+    statsUpdated: "GitHub 的数字更新于 {when}，每天刷新一次。",
+    statsRaw: "GitHub 自己报告 {raw} 次；发布流程取走的、以及签名文件上的次数都没有计入合计。",
+    statsBars: "最近 {days} 天的每日下载次数，最多的一天 {most} 次。",
+    statsEmpty: "暂时读不到下载统计。",
+    statsOther: "其他",
+    unknown: "未知",
+    clients: { browser: "浏览器", script: "命令安装", updater: "应用自动更新", other: "其他" },
     macos: {
       "macos-aarch64-zip": "macOS · Apple 芯片（aarch64）",
       "macos-aarch64": "macOS · Apple 芯片（aarch64）",
@@ -80,6 +109,7 @@ const T = {
       download: "Download — Jokbet",
       changelog: "Changelog — Jokbet",
       about: "About — Jokbet",
+      stats: "Download counts — Jokbet",
       "404": "404 — Jokbet",
     },
     platforms: "macOS 11+ · Windows · Linux (X11)",
@@ -100,6 +130,19 @@ const T = {
     checksum: "SHA-256",
     checksumNone: "no published checksum",
     prerelease: "prerelease",
+    downloads: "{n} downloads",
+    downloadsHint: "This site's mirror and GitHub together, app updates included",
+    statsReach: "{mirror} from this site's mirror · {github} from GitHub",
+    statsReachMirror: "{mirror} from this site's mirror · GitHub's number cannot be read right now",
+    statsReachGithub: "{github} from GitHub · this site's count cannot be read right now",
+    statsSince: "The mirror has counted since {first}; its last day is {last} (UTC days).",
+    statsUpdated: "GitHub's numbers were refreshed {when}, once a day.",
+    statsRaw: "GitHub itself reports {raw}: what publishing the release fetched, and what a signature file collected, are not counted.",
+    statsBars: "Downloads a day over the last {days} days; the busiest day had {most}.",
+    statsEmpty: "The download counts cannot be read right now.",
+    statsOther: "other",
+    unknown: "unknown",
+    clients: { browser: "a browser", script: "a command line", updater: "the app updating itself", other: "something else" },
     macos: {
       "macos-aarch64-zip": "macOS · Apple silicon (aarch64)",
       "macos-aarch64": "macOS · Apple silicon (aarch64)",
@@ -138,6 +181,11 @@ const GROUPS = /** @type {{ key: "macos" | "windows" | "linux", ids: string[] }[
 const bytes = (n) => (n === null ? "" : n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.ceil(n / 1024)} KB`);
 /** @param {string | null} iso */
 const day = (iso) => (iso ? iso.slice(0, 10) : "");
+/** A number as the visitor's language writes them. @param {number} n */
+const number = (n) => new Intl.NumberFormat(lang() === "zh" ? "zh-CN" : "en-US").format(n);
+/** A sentence of T, with its {placeholders} filled in.
+ * @param {string} template @param {Record<string, string | number>} [values] */
+const say = (template, values = {}) => template.replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? ""));
 
 // --- the release notes ------------------------------------------------------
 
@@ -488,6 +536,202 @@ async function loadJson(url) {
   }
 }
 
+// --- the download counts ----------------------------------------------------
+
+/** How many days the chart draws: the month anyone recognizes. The Worker
+ * sends three of them. */
+const DAYS = 30;
+
+/** @type {Counts | null} */
+let counts = null;
+
+/** What the page has when the Worker cannot answer at all. No numbers is not
+ * the same as no downloads, and every page that shows one says which it is. */
+const NO_COUNTS = /** @type {Counts} */ ({
+  schema: 1,
+  generatedAt: "",
+  total: null,
+  mirror: null,
+  github: null,
+  byPlatform: [],
+  byVersion: [],
+  byFile: [],
+  sources: { mirror: "unavailable", github: "unavailable" },
+});
+
+/** The counts, once a visit, drawn wherever they belong. */
+async function loadCounts() {
+  if (!counts) {
+    counts = /** @type {Counts | null} */ (await loadJson("/api/downloads.json")) ?? NO_COUNTS;
+  }
+  drawBadge();
+  drawStats();
+}
+
+/** The number of downloads, where a page has room for it. Nothing at all until
+ * there is a number: a page claiming "0 downloads" because it could not read
+ * one would be worse than a page saying nothing. */
+function drawBadge() {
+  const host = $("download-total");
+  if (!host) return;
+  const t = T[lang()];
+  const total = counts?.total ?? null;
+  host.replaceChildren();
+  host.hidden = total === null;
+  if (total === null) return;
+  const badge = el("span", say(t.downloads, { n: number(total) }));
+  badge.className = "stat";
+  badge.title = t.downloadsHint;
+  host.append(badge);
+}
+
+/** One half nothing could read is a dash, never a zero. @param {number | null} n */
+const half = (n) => (n === null ? "—" : number(n));
+
+/** A country code as a name, where the browser has one to give.
+ * @param {string} code */
+function countryName(code) {
+  try {
+    return new Intl.DisplayNames([lang() === "zh" ? "zh-CN" : "en"], { type: "region" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
+/** A table body: the first cell of a row names it, the rest are numbers.
+ * @param {HTMLElement | null} host @param {string[][]} rows */
+function fillRows(host, rows) {
+  if (!host) return;
+  host.replaceChildren();
+  for (const cells of rows) {
+    const tr = el("tr");
+    cells.forEach((cell, i) => {
+      if (!i) {
+        const th = el("th", cell);
+        th.setAttribute("scope", "row");
+        tr.append(th);
+        return;
+      }
+      const td = el("td", cell);
+      td.className = "n";
+      tr.append(td);
+    });
+    host.append(tr);
+  }
+}
+
+/** The whole of /stats: the number, the two halves it is made of, the days, and
+ * the tables. The page's own words are in its markup; the numbers are here. */
+function drawStats() {
+  const body = $("stats-body");
+  if (!body || !counts) return;
+  const t = T[lang()];
+  const total = counts.total;
+  const empty = $("stats-empty");
+  if (empty) {
+    empty.hidden = total !== null;
+    if (total === null) empty.replaceChildren(el("span", t.statsEmpty));
+  }
+  body.hidden = total === null;
+  if (total === null) return;
+
+  const mirror = counts.mirror;
+  const github = counts.github;
+  $("stats-total")?.replaceChildren(el("span", say(t.downloads, { n: number(total) })));
+  const reach = mirror && github
+    ? say(t.statsReach, { mirror: number(mirror.total), github: number(github.total) })
+    : mirror
+      ? say(t.statsReachMirror, { mirror: number(mirror.total) })
+      : github
+        ? say(t.statsReachGithub, { github: number(github.total) })
+        : "";
+  $("stats-split")?.replaceChildren(el("span", reach));
+
+  // Where the numbers come from, and how old each half is. GitHub's own count
+  // is always the larger one — it counts downloads nobody made.
+  const about = $("stats-when");
+  if (about) {
+    const lines = [];
+    if (mirror?.first) lines.push(say(t.statsSince, { first: mirror.first, last: mirror.last ?? mirror.first }));
+    if (github) {
+      lines.push(say(t.statsUpdated, { when: github.updatedAt ? day(github.updatedAt) : t.unknown }));
+      if (github.raw !== github.total) lines.push(say(t.statsRaw, { raw: number(github.raw) }));
+    }
+    about.replaceChildren();
+    for (const line of lines) {
+      const p = el("p", line);
+      p.className = "note";
+      about.append(p);
+    }
+  }
+
+  const days = (mirror?.byDay ?? []).slice(-DAYS);
+  const bars = $("stats-bars");
+  if (bars) {
+    const most = Math.max(1, ...days.map((point) => point.count));
+    bars.replaceChildren();
+    for (const point of days) {
+      const bar = el("div");
+      bar.className = "bar";
+      // A day with something on it is never too small to see.
+      bar.style.height = point.count ? `${Math.max(3, Math.round((point.count / most) * 100))}%` : "0";
+      bar.title = `${point.day} · ${number(point.count)}`;
+      bars.append(bar);
+    }
+    bars.setAttribute("aria-label", say(t.statsBars, { days: number(days.length), most: number(most) }));
+    $("stats-from")?.replaceChildren(el("span", days[0]?.day ?? ""));
+    $("stats-to")?.replaceChildren(el("span", days[days.length - 1]?.day ?? ""));
+  }
+  fillRows($("stats-days"), days.map((point) => [point.day, number(point.count)]));
+
+  // The mirror has these two; GitHub publishes a running total per file and
+  // nothing else, so there is no day, no client and no country to give.
+  const who = $("stats-who");
+  const timeline = $("stats-days-block");
+  if (who) who.hidden = !mirror;
+  if (timeline) timeline.hidden = !mirror;
+  const client = /** @param {string} id */ (id) => /** @type {Record<string, string>} */ (t.clients)[id] ?? id;
+  fillRows($("stats-clients"), (mirror?.byClient ?? []).map((row) => [client(row.client), number(row.count)]));
+  fillRows($("stats-countries"), (mirror?.byCountry ?? []).map((row) => [countryName(row.country), number(row.count)]));
+
+  // A Mac build ships as a zip and as a disk image, and the page names both the
+  // same — so the platform table adds such a pair together, and the file table
+  // below is where the two are told apart.
+  /** @type {Map<string, { mirror: number | null, github: number | null }>} */
+  const sums = new Map();
+  for (const row of counts.byPlatform) {
+    const label = row.platform ? platformLabel(lang(), row.platform) : t.statsOther;
+    const so = sums.get(label) ?? { mirror: 0, github: 0 };
+    sums.set(label, {
+      mirror: so.mirror === null || row.mirror === null ? null : so.mirror + row.mirror,
+      github: so.github === null || row.github === null ? null : so.github + row.github,
+    });
+  }
+  /** @param {{ mirror: number | null, github: number | null }} of */
+  const together = (of) => (of.mirror ?? 0) + (of.github ?? 0);
+  fillRows(
+    $("stats-platforms"),
+    [...sums]
+      .sort(([, a], [, b]) => together(b) - together(a))
+      .map(([label, of]) => [label, half(of.mirror), half(of.github), number(together(of))]),
+  );
+  fillRows(
+    $("stats-versions"),
+    counts.byVersion.map((row) => [`v${row.version}`, half(row.mirror), half(row.github), number(row.total)]),
+  );
+  fillRows(
+    $("stats-files"),
+    counts.byFile.map((row) => [
+      row.name,
+      row.platform ? platformLabel(lang(), row.platform) : t.statsOther,
+      `v${row.version}`,
+      half(row.mirror),
+      half(row.github),
+      number(row.total),
+    ]),
+  );
+}
+
 // --- the pet ----------------------------------------------------------------
 
 /** @type {Pet | null} */
@@ -583,6 +827,8 @@ function setLang(next, chosen = false) {
   pet?.setLang(next);
   renderRelease();
   renderChangelog();
+  drawBadge();
+  drawStats();
 }
 
 // --- copy buttons -----------------------------------------------------------
@@ -648,6 +894,10 @@ async function main() {
       source: "unavailable",
     };
     renderRelease();
+    // The number of downloads, beside the version it belongs to.
+    await loadCounts();
+  } else if (page === "stats") {
+    await loadCounts();
   }
   await petting;
 }

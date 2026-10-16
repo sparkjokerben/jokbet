@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+  <head>
+    <!-- partial:head -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f4f0" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#141413" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/assets/favicon.ico" sizes="any" />
+    <link rel="icon" href="/assets/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+    <!-- The headlines' own face, so the first paint is the final one. -->
+    <link rel="preload" href="/assets/fonts/silkscreen-400.woff2" as="font" type="font/woff2" crossorigin />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Jokbet" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:image" content="https://jokbet.jokerben.top/assets/og.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Jokbet 的像素形象，站在一条屏幕边线上" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/boot.js"></script>
+    <script type="module" src="/app.js"></script>
+    <!-- /partial:head -->
+    <title>下载统计 — Jokbet · Download counts</title>
+    <meta
+      name="description"
+      content="Jokbet 各安装包被下载了多少次：本站镜像与 GitHub 的合计，按天、平台、版本、客户端类型和地区列出。"
+    />
+    <!-- Unlisted on purpose: nothing links here, and this is not a page to hand
+         to a search engine. -->
+    <meta name="robots" content="noindex, nofollow" />
+  </head>
+  <body data-page="stats">
+    <div class="page">
+      <!-- partial:header -->
+      <header class="top">
+        <a href="/" aria-label="Jokbet"><img class="mark" src="/assets/wordmark.svg" alt="JOKBET" width="116" height="28" /></a>
+        <nav class="nav" aria-label="网站 / Site">
+          <a href="/"><span data-lang="zh">首页</span><span data-lang="en" lang="en">Home</span></a>
+          <a href="/download"><span data-lang="zh">下载</span><span data-lang="en" lang="en">Download</span></a>
+          <a href="/changelog"><span data-lang="zh">更新日志</span><span data-lang="en" lang="en">Changelog</span></a>
+          <a href="/about"><span data-lang="zh">关于</span><span data-lang="en" lang="en">About</span></a>
+          <a href="https://github.com/sparkjokerben/jokbet">GitHub</a>
+        </nav>
+        <div class="langs" role="group" aria-label="语言 / Language">
+          <button type="button" data-set-lang="zh" aria-pressed="false" lang="zh-Hans">中文</button>
+          <button type="button" data-set-lang="en" aria-pressed="false" lang="en">English</button>
+        </div>
+      </header>
+      <!-- /partial:header -->
+
+      <!-- partial:rail -->
+      <!-- The pet's column: on a wide screen it is sticky, and the creature stands on
+           the bottom edge of the window all the way down the page, the way it stands
+           on the bottom of your screen. -->
+      <div class="rail">
+        <div class="pet-host" id="pet">
+          <img class="pet-poster" src="/assets/jokbet-poster.png" width="240" height="156" alt="" />
+        </div>
+      </div>
+      <!-- /partial:rail -->
+
+      <main class="content">
+        <section class="page-head">
+          <h1>
+            <span data-lang="zh">下载统计</span>
+            <span data-lang="en" lang="en">Download counts</span>
+          </h1>
+          <p class="lede">
+            <span data-lang="zh">有多少次把 Jokbet 拿回了家：本站镜像数的加上 GitHub 的数字。</span>
+            <span data-lang="en" lang="en">How many times Jokbet has been taken home: this site's own count and GitHub's, added up.</span>
+          </p>
+        </section>
+
+        <div id="stats-body" hidden>
+          <section class="block" id="numbers">
+            <p class="stat-total" id="stats-total"></p>
+            <p class="stat-split" id="stats-split"></p>
+            <div id="stats-when"></div>
+          </section>
+
+          <section class="block" id="stats-days-block">
+            <h2><span data-lang="zh">最近 30 天</span><span data-lang="en" lang="en">The last 30 days</span></h2>
+            <div class="bars" id="stats-bars" role="img"></div>
+            <p class="bar-axis"><span id="stats-from"></span><span id="stats-to"></span></p>
+            <p class="note">
+              <span data-lang="zh">只有本站镜像有按天的记录：GitHub 给的是每个文件的累计数，没有时间线。</span>
+              <span data-lang="en" lang="en"
+                >Only this site's mirror has days: GitHub publishes a running total per file, and no timeline.</span
+              >
+            </p>
+            <details class="fold">
+              <summary><span data-lang="zh">每天的数目</span><span data-lang="en" lang="en">Every day, as numbers</span></summary>
+              <table class="stats">
+                <thead>
+                  <tr>
+                    <th scope="col"><span data-lang="zh">日期</span><span data-lang="en" lang="en">Day</span></th>
+                    <th scope="col" class="n"><span data-lang="zh">次数</span><span data-lang="en" lang="en">Downloads</span></th>
+                  </tr>
+                </thead>
+                <tbody id="stats-days"></tbody>
+              </table>
+            </details>
+          </section>
+
+          <section class="block" id="stats-who">
+            <h2><span data-lang="zh">谁在下</span><span data-lang="en" lang="en">Who asked</span></h2>
+            <table class="stats">
+              <thead>
+                <tr>
+                  <th scope="col"><span data-lang="zh">来源</span><span data-lang="en" lang="en">Client</span></th>
+                  <th scope="col" class="n"><span data-lang="zh">次数</span><span data-lang="en" lang="en">Downloads</span></th>
+                </tr>
+              </thead>
+              <tbody id="stats-clients"></tbody>
+            </table>
+            <p class="note">
+              <span data-lang="zh">看的是浏览器的标识，不是人：命令安装指 <code>install.sh</code>／<code>install.ps1</code> 这类脚本，应用自动更新是桌宠自己来取的。</span>
+              <span data-lang="en" lang="en"
+                >Told apart by what the client calls itself, not by who it is: a command-line install is
+                <code>install.sh</code> or <code>install.ps1</code>, and an app update is the pet fetching its own new
+                build.</span
+              >
+            </p>
+            <h2><span data-lang="zh">来自哪里</span><span data-lang="en" lang="en">Where from</span></h2>
+            <table class="stats">
+              <thead>
+                <tr>
+                  <th scope="col"><span data-lang="zh">地区</span><span data-lang="en" lang="en">Country</span></th>
+                  <th scope="col" class="n"><span data-lang="zh">次数</span><span data-lang="en" lang="en">Downloads</span></th>
+                </tr>
+              </thead>
+              <tbody id="stats-countries"></tbody>
+            </table>
+            <p class="note">
+              <span data-lang="zh">Cloudflare 在请求上标出的国家代码，只到国家为止，没有地址、没有 IP。</span>
+              <span data-lang="en" lang="en"
+                >The country Cloudflare puts on a request: no further than the country, no address and no IP.</span
+              >
+            </p>
+          </section>
+
+          <section class="block" id="platforms">
+            <h2>平台 · Platform</h2>
+            <table class="stats">
+              <thead>
+                <tr>
+                  <th scope="col"><span data-lang="zh">平台</span><span data-lang="en" lang="en">Platform</span></th>
+                  <th scope="col" class="n"><span data-lang="zh">本站镜像</span><span data-lang="en" lang="en">Mirror</span></th>
+                  <th scope="col" class="n">GitHub</th>
+                  <th scope="col" class="n"><span data-lang="zh">合计</span><span data-lang="en" lang="en">Total</span></th>
+                </tr>
+              </thead>
+              <tbody id="stats-platforms"></tbody>
+            </table>
+          </section>
+
+          <section class="block" id="versions">
+            <h2>版本 · Version</h2>
+            <table class="stats">
+              <thead>
+                <tr>
+                  <th scope="col"><span data-lang="zh">版本</span><span data-lang="en" lang="en">Version</span></th>
+                  <th scope="col" class="n"><span data-lang="zh">本站镜像</span><span data-lang="en" lang="en">Mirror</span></th>
+                  <th scope="col" class="n">GitHub</th>
+                  <th scope="col" class="n"><span data-lang="zh">合计</span><span data-lang="en" lang="en">Total</span></th>
+                </tr>
+              </thead>
+              <tbody id="stats-versions"></tbody>
+            </table>
+          </section>
+
+          <section class="block" id="files">
+            <h2><span data-lang="zh">下载最多的 20 个文件</span><span data-lang="en" lang="en">The 20 files downloaded most</span></h2>
+            <table class="stats">
+              <thead>
+                <tr>
+                  <th scope="col"><span data-lang="zh">文件</span><span data-lang="en" lang="en">File</span></th>
+                  <th scope="col"><span data-lang="zh">平台</span><span data-lang="en" lang="en">Platform</span></th>
+                  <th scope="col"><span data-lang="zh">版本</span><span data-lang="en" lang="en">Version</span></th>
+                  <th scope="col" class="n"><span data-lang="zh">本站镜像</span><span data-lang="en" lang="en">Mirror</span></th>
+                  <th scope="col" class="n">GitHub</th>
+                  <th scope="col" class="n"><span data-lang="zh">合计</span><span data-lang="en" lang="en">Total</span></th>
+                </tr>
+              </thead>
+              <tbody id="stats-files"></tbody>
+            </table>
+            <p class="note">
+              <span data-lang="zh">更新包（<code>Jokbet_aarch64.app.tar.gz</code> 这类）每个版本都有一份，所以同一个文件名会出现多次，各自的版本不同。</span>
+              <span data-lang="en" lang="en"
+                >An update bundle (<code>Jokbet_aarch64.app.tar.gz</code> and the like) belongs to every release, so the
+                same file name appears once per version it was downloaded from.</span
+              >
+            </p>
+          </section>
+        </div>
+
+        <p class="empty" id="stats-empty">
+          <span data-lang="zh">正在读取下载统计…</span>
+          <span data-lang="en" lang="en">Reading the download counts…</span>
+        </p>
+
+        <section class="block" id="counting">
+          <h2><span data-lang="zh">这些数字是什么</span><span data-lang="en" lang="en">What these numbers are</span></h2>
+          <ul class="list-flat">
+            <li>
+              <span data-lang="zh">一次下载，指本站镜像（<code>/dl/…</code>）真正发出了一份完整的文件。文件的探测请求（HEAD）、断点续传的片段、以及浏览器自己从缓存里拿的，都不计数。</span>
+              <span data-lang="en" lang="en"
+                >One download is one whole file this site's mirror (<code>/dl/…</code>) really served. A metadata probe, a
+                resumed range, and whatever a browser takes from its own cache are not counted.</span
+              >
+            </li>
+            <li>
+              <span data-lang="zh">含应用自动更新：桌宠每次更新自己也是一次下载，它和第一次安装在这里分不出来。GitHub 那半边同样如此。</span>
+              <span data-lang="en" lang="en"
+                >App updates are in there: the pet fetching its own new build is a download like any other, and it cannot
+                be told apart from a first install — on GitHub's side neither.</span
+              >
+            </li>
+            <li>
+              <span data-lang="zh">同一个人下载两次就记两次：这一页不识别访客，所以也不去重。</span>
+              <span data-lang="en" lang="en"
+                >The same person downloading twice counts twice: nothing here identifies a visitor, so nothing can
+                deduplicate one.</span
+              >
+            </li>
+            <li>
+              <span data-lang="zh">GitHub 的数字每天刷新一次，覆盖每个版本的每个文件；发布流程自己取走的次数、以及签名文件（<code>.sig</code>）上的次数不计入合计 —— 签名是更新器从清单里读的，没有人会单独下载它。</span>
+              <span data-lang="en" lang="en"
+                >GitHub's numbers are refreshed once a day and cover every file of every release; what publishing the
+                release fetched itself, and what a signature file (<code>.sig</code>) collected, are left out of the
+                total — a signature is read out of the manifest, and nobody downloads one.</span
+              >
+            </li>
+            <li>
+              <span data-lang="zh">日期按 UTC 分日，北京时间要往后加 8 小时。GitHub 那半边没有日期，所以柱子只画本站镜像。</span>
+              <span data-lang="en" lang="en"
+                >Days are UTC days (Beijing is eight hours ahead). GitHub's half has no days at all, which is why the
+                bars are the mirror's alone.</span
+              >
+            </li>
+          </ul>
+        </section>
+
+        <noscript>
+          <p class="note">
+            <span data-lang="zh">这一页的数字需要 JavaScript。</span>
+            <span data-lang="en" lang="en">These numbers need JavaScript.</span>
+          </p>
+        </noscript>
+      </main>
+
+      <!-- partial:footer -->
+      <footer class="foot">
+        <p class="links">
+          <a href="https://github.com/sparkjokerben/jokbet">GitHub</a>
+          <a href="https://github.com/sparkjokerben/jokbet/releases">
+            <span data-lang="zh">GitHub 发布页</span><span data-lang="en" lang="en">GitHub releases</span>
+          </a>
+          <a href="https://github.com/sparkjokerben/jokbet/blob/main/LICENSE">
+            <span data-lang="zh">MIT 协议</span><span data-lang="en" lang="en">MIT license</span>
+          </a>
+        </p>
+        <div class="disclaimer">
+          <p lang="en">
+            <strong>Unofficial fan project.</strong> Not affiliated with, endorsed by, or sponsored by Anthropic. Claude, Claude Code
+            and Clawd are trademarks or characters of Anthropic.
+          </p>
+          <p lang="zh-Hans">
+            <strong>非官方同人作品</strong>，与 Anthropic 无关，也未获其认可或赞助。Claude、Claude Code 和 Clawd 是 Anthropic
+            的商标或角色。
+          </p>
+        </div>
+      </footer>
+      <!-- /partial:footer -->
+    </div>
+  </body>
+</html>

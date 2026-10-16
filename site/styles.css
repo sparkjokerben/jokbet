@@ -777,6 +777,128 @@ code {
   margin-top: 18px;
 }
 
+/* --- the download counts ------------------------------------------------- */
+
+/* The number of downloads on the home page and the download page: one hairline
+   chip, no link — /stats is not a page to hand to anyone. */
+.stat {
+  display: inline-block;
+  border: 1px solid var(--line-hard);
+  background: var(--surface);
+  padding: 1px 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.meta #download-total:not(:empty) {
+  margin-right: 12px;
+}
+
+/* /stats: the one number the page is about, and the two halves it is made of. */
+.stat-total {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(28px, 5vw, 44px);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.stat-split {
+  margin: 10px 0 14px;
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
+/* A month of days: one bar each, the busiest day at full height, standing on
+   the page's own hairline. Nothing rounds and nothing is coloured — but a day
+   with something on it is never too small to see. */
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 120px;
+  margin: 20px 0 6px;
+  border-bottom: 1px solid var(--line-hard);
+}
+
+.bar {
+  flex: 1 1 0;
+  background: var(--ink-mute);
+}
+
+.bar:hover {
+  background: var(--pet-deep);
+}
+
+.bar-axis {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-mute);
+}
+
+/* The tables of numbers: hairline rows, the numbers in the mono face, lined up
+   on the right where they can be compared down a column. */
+.stats {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0;
+  font-size: 13px;
+}
+
+.stats th,
+.stats td {
+  padding: 7px 10px 7px 0;
+  text-align: left;
+  font-weight: 400;
+  border-bottom: 1px solid var(--line);
+}
+
+.stats thead th {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-mute);
+  border-bottom-color: var(--line-hard);
+}
+
+.stats tbody th {
+  color: var(--ink);
+}
+
+.stats .n {
+  padding-right: 0;
+  text-align: right;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+
+.stats tbody tr:hover th,
+.stats tbody tr:hover .n {
+  color: var(--pet-deep);
+}
+
+/* The one folded part of the page. */
+.fold {
+  margin-top: 16px;
+}
+
+.fold summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.fold summary:hover {
+  color: var(--pet-deep);
+}
+
 /* --- footer -------------------------------------------------------------- */
 
 .foot {
