@@ -1,7 +1,72 @@
 {
  "schema": 1,
- "generatedAt": "2026-10-15T03:42:36.160Z",
+ "generatedAt": "2026-10-17T03:40:15.598Z",
  "releases": [
+  {
+   "version": "0.4.9",
+   "tag": "v0.4.9",
+   "name": "Jokbet v0.4.9",
+   "pubDate": "2026-10-17T03:39:16Z",
+   "prerelease": false,
+   "notes": "这一版修复了桌宠头顶休息提醒气泡的左侧圆角被窗口裁切的问题。\n\n- **休息提醒气泡完整显示。** 窗口较窄时，气泡会自适应收窄并留出边距，让圆角不再被裁掉。\n\n---\n\nThis release fixes the break reminder bubble’s left rounded corner being clipped by the window.\n\n- **The break reminder stays inside the window.** On narrower windows, the banner adjusts its width and leaves room at the sides so its rounded corners remain visible.\n\n---\n\nUnofficial fan project, not affiliated with Anthropic. Builds are not notarized or code-signed by a trusted authority.\n非官方同人作品，与 Anthropic 无关。安装包未经官方签名，首次打开的步骤见[下载页](https://jokbet.jokerben.top/download#install)。\n\nSee the [download page](https://jokbet.jokerben.top/download#install) for install steps.",
+   "url": "https://github.com/sparkjokerben/jokbet/releases/tag/v0.4.9",
+   "files": [
+    {
+     "platform": "macos-aarch64-zip",
+     "name": "Jokbet_0.4.9_aarch64.app.zip",
+     "size": 4079442,
+     "sha256": "54b9105ad257a8b72f22b4d8824044a8a20a6d4b6597eca3c93f0bc6e0dcab9e"
+    },
+    {
+     "platform": "macos-aarch64",
+     "name": "Jokbet_0.4.9_aarch64.dmg",
+     "size": 4119469,
+     "sha256": "baff66ce5960a2889c983eaec52869fd8e927027386034ad8e882b78fa9be488"
+    },
+    {
+     "platform": "macos-x64-zip",
+     "name": "Jokbet_0.4.9_x64.app.zip",
+     "size": 4426420,
+     "sha256": "d446e4ca396281a6bba7d5a116b80cb62c1b94b9168bb6a34563a86186abc4cc"
+    },
+    {
+     "platform": "macos-x64",
+     "name": "Jokbet_0.4.9_x64.dmg",
+     "size": 4453946,
+     "sha256": "fccdf89562f717c71f809f9669b15f8b8eaf16c3092a24e19afe923d7077493c"
+    },
+    {
+     "platform": "windows-x64",
+     "name": "Jokbet_0.4.9_x64-setup.exe",
+     "size": 3488313,
+     "sha256": "75233887d3e30681010c7262de3a4a0ddcd2c2c2955ec29eb0dc755b9582589c"
+    },
+    {
+     "platform": "windows-x64-msi",
+     "name": "Jokbet_0.4.9_x64_en-US.msi",
+     "size": 4796416,
+     "sha256": "d06a6642886df1ad8fbaa5613a78c2c7fe6801efc3d88ada37339cda52267a39"
+    },
+    {
+     "platform": "windows-x64-portable",
+     "name": "Jokbet_0.4.9_x64-portable.zip",
+     "size": 4373786,
+     "sha256": "0a8941f9a1d58af38588a4f8daca4587dd88640b7f477794956fe1b395673cb2"
+    },
+    {
+     "platform": "linux-appimage",
+     "name": "Jokbet_0.4.9_amd64.AppImage",
+     "size": 83163640,
+     "sha256": "3178d0a8647083fb95ad08480a79fce5ecfd344d5c06fe352d6d76f4e9f5d9ea"
+    },
+    {
+     "platform": "linux-deb",
+     "name": "Jokbet_0.4.9_amd64.deb",
+     "size": 4878960,
+     "sha256": "f4aa030b8fe6afe47813228a3b968d899694c41dd0c71d8f42b26347002c1e33"
+    }
+   ]
+  },
   {
    "version": "0.4.8",
    "tag": "v0.4.8",
