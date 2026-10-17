@@ -11,6 +11,12 @@ the fuller entries elsewhere:
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.9] — 2026-10-17
+
+### Fixed
+
+- **The break reminder is no longer clipped by the window.** On a narrow window or when the pet is offset, the banner leaves room at the sides so its rounded corners stay visible.
+
 ## [0.4.8] — 2026-10-15
 
 ### Added
