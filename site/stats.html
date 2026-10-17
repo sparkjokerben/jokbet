@@ -232,11 +232,12 @@
               >
             </li>
             <li>
-              <span data-lang="zh">GitHub 的数字每天刷新一次，覆盖每个版本的每个文件；发布流程自己取走的次数、以及签名文件（<code>.sig</code>）上的次数不计入合计 —— 签名是更新器从清单里读的，没有人会单独下载它。</span>
+              <span data-lang="zh">GitHub 的数字每天刷新一次，覆盖每个版本的每个文件；GitHub 自己发布流程取走的次数和签名文件（<code>.sig</code>）上的次数不计入 GitHub 那一半。更新器通常从清单里读签名；若本站镜像真的发出了一份完整签名文件，则和其他文件一样会计一次。</span>
               <span data-lang="en" lang="en"
-                >GitHub's numbers are refreshed once a day and cover every file of every release; what publishing the
-                release fetched itself, and what a signature file (<code>.sig</code>) collected, are left out of the
-                total — a signature is read out of the manifest, and nobody downloads one.</span
+                >GitHub's numbers are refreshed once a day and cover every file of every release; the publishing
+                pipeline's own fetches and the counts on signature files (<code>.sig</code>) are removed from GitHub's
+                half. The updater normally reads the signature from its manifest; if this mirror serves a whole
+                signature file, it is counted like any other file.</span
               >
             </li>
             <li>

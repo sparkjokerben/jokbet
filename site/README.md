@@ -191,11 +191,13 @@ written out, under a statement of what is and is not in them.
   60 unauthenticated requests an hour per address.
 - **Neither half counts the other's downloads.** A request the bucket cannot
   serve is redirected to GitHub, which counts it there, so the Worker does not
-  count the redirect. And GitHub's numbers carry the pipeline's own fetches —
+  count the redirect. GitHub's numbers carry the pipeline's own fetches —
   publishing a release downloads the whole release once — so each file is
-  reduced by what publishing cost it before it is added up, and a signature file,
-  which is read out of the manifest rather than downloaded, counts for nothing.
-  `/stats` shows GitHub's raw number beside the corrected one.
+  reduced by what publishing cost it before GitHub's half is added up. Signature
+  files are removed from GitHub's count because the updater reads them from the
+  manifest; if this mirror actually serves a whole `.sig` file, that R2 read is
+  counted like any other file. `/stats` shows GitHub's raw number beside the
+  corrected one.
 
 Read them by hand:
 
