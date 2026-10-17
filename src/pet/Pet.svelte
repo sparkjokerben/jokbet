@@ -391,7 +391,7 @@
     cursor: grab;
   }
   .banner {
-    max-width: 210px;
+    max-width: min(210px, calc(100% - 32px));
     padding: 4px 10px;
     border-radius: 999px;
     background: #b85a3a;
