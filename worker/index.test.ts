@@ -473,9 +473,12 @@ describe("/api/downloads.json", () => {
   const day = (back: number) => new Date(Date.now() - back * 86_400_000).toISOString().slice(0, 10);
   const zip = "Jokbet_0.4.8_aarch64.app.zip";
   const dmg = "Jokbet_0.4.7_x64.dmg";
+  const oldDmg = "Jokbet_0.1.0_aarch64.dmg";
 
-  /** The counter's rows, as the one aggregate query returns them. */
+  /** The counter's rows, as the combined live + R2-history query returns them.
+   * The history has a file and a date, but no country or user agent to recover. */
   const rows = [
+    { day: day(2), tag: "v0.1.0", name: oldDmg, client: "unknown", country: null, n: 121 },
     { day: day(0), tag: "v0.4.8", name: zip, client: "browser", country: "CN", n: 3 },
     { day: day(0), tag: "v0.4.8", name: zip, client: "script", country: null, n: 1 },
     { day: day(1), tag: "v0.4.7", name: dmg, client: "updater", country: "US", n: 2 },
@@ -491,30 +494,52 @@ describe("/api/downloads.json", () => {
     files: [
       { platform: "macos-aarch64-zip", version: "0.4.8", tag: "v0.4.8", name: zip, count: 5, raw: 6 },
       { platform: "macos-x64", version: "0.4.7", tag: "v0.4.7", name: dmg, count: 4, raw: 5 },
+      { platform: "macos-aarch64", version: "0.1.0", tag: "v0.1.0", name: oldDmg, count: 0, raw: 1 },
     ],
   };
   const published = { DOWNLOADS: bucket({ "manifests/downloads.json": JSON.stringify(document) }), ASSETS: assets() };
 
-  it("adds what the mirror served to what GitHub counted, and says where each came from", async () => {
-    const response = await call("/api/downloads.json", { ...published, STATS: d1({ rows }) });
+  it("merges the R2 backfill into the mirror counts, without adding a history source", async () => {
+    const stats = d1({ rows });
+    const response = await call("/api/downloads.json", { ...published, STATS: stats });
     const counts = await countsOf(response);
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("application/json");
-    expect(counts.total).toBe(15);
-    expect(counts.mirror).toMatchObject({ total: 6, first: day(1), last: day(0) });
-    // And nothing of the Worker's own: a Map would reach the page as an empty
-    // object, which is what the tallies behind the tables are.
+    expect(counts.total).toBe(136);
+    expect(counts.mirror).toMatchObject({ total: 127, first: day(2), last: day(0) });
+    // The history table is internal: no third source or extra fields on mirror.
     expect(Object.keys(counts.mirror ?? {}).sort()).toEqual(["byClient", "byCountry", "byDay", "first", "last", "total"]);
+    expect(stats.asked[0]).toContain("download_history");
     expect(counts.github).toEqual({ total: 9, raw: 11, updatedAt: "2026-10-16T03:17:00Z" });
     expect(counts.sources).toEqual({ mirror: "d1", github: "r2" });
     expect(counts.byPlatform).toEqual([
+      { platform: "macos-aarch64", mirror: 121, github: 0, total: 121 },
       { platform: "macos-aarch64-zip", mirror: 4, github: 5, total: 9 },
       { platform: "macos-x64", mirror: 2, github: 4, total: 6 },
     ]);
-    expect(counts.byVersion.map((v) => v.version)).toEqual(["0.4.8", "0.4.7"]);
-    expect(counts.byFile[0]).toMatchObject({ name: zip, platform: "macos-aarch64-zip", version: "0.4.8", mirror: 4, github: 5, total: 9 });
-    expect(counts.mirror?.byClient.map((c) => c.client)).toEqual(["browser", "updater", "script"]);
+    expect(counts.byVersion.map((v) => v.version)).toEqual(["0.1.0", "0.4.8", "0.4.7"]);
+    expect(counts.byFile.find((file) => file.name === oldDmg)).toMatchObject({
+      platform: "macos-aarch64",
+      version: "0.1.0",
+      mirror: 121,
+      github: 0,
+      total: 121,
+    });
+    expect(counts.byFile.find((file) => file.name === zip)).toMatchObject({
+      platform: "macos-aarch64-zip",
+      version: "0.4.8",
+      mirror: 4,
+      github: 5,
+      total: 9,
+    });
+    expect(counts.mirror?.byClient).toEqual([
+      { client: "unknown", count: 121 },
+      { client: "browser", count: 3 },
+      { client: "updater", count: 2 },
+      { client: "script", count: 1 },
+    ]);
+    // Old R2 metrics have no country dimension; no country is guessed for them.
     expect(counts.mirror?.byCountry).toEqual([
       { country: "CN", count: 3 },
       { country: "US", count: 2 },
@@ -528,6 +553,7 @@ describe("/api/downloads.json", () => {
     expect(days).toHaveLength(90);
     expect(days[days.length - 1]).toEqual({ day: day(0), count: 4 });
     expect(days[days.length - 2]).toEqual({ day: day(1), count: 2 });
+    expect(days[days.length - 3]).toEqual({ day: day(2), count: 121 });
     expect(days[0].count).toBe(0);
   });
 
@@ -563,7 +589,7 @@ describe("/api/downloads.json", () => {
       const counts = await countsOf(await call("/api/downloads.json", { DOWNLOADS: store, ASSETS: assets(), STATS: d1({ rows }) }));
 
       expect(counts.github).toBe(null);
-      expect(counts.total).toBe(6);
+      expect(counts.total).toBe(127);
       expect(counts.sources.github).toBe("unavailable");
       expect(counts.byPlatform[0].github).toBe(null);
     }

@@ -174,6 +174,14 @@ written out, under a statement of what is and is not in them.
   sums those rows by day, platform, version, client class and country. Nothing
   identifies anyone — no address, no cookie, and the user agent is reduced to one
   of four words before it is stored.
+  The same mirror totals include the R2 history we could still recover on
+  2026-10-17: successful asset reads whose response contained the whole object,
+  from 2026-09-24 onward. Partial reads and manifest requests were left out; the
+  old metrics have no client or country, so their client is `unknown` and no
+  country is inferred. Cloudflare's R2 metrics expose at most 31 days, so anything
+  older than that window cannot be recovered there. A Range that happened to read
+  the entire object cannot be distinguished from a full GET; neither metric proves
+  that a visitor saved the file.
 - **GitHub's half** is the counters on its own release assets, which everyone who
   downloads from GitHub and the app's updater both feed. Only GitHub has those
   numbers and only GitHub moves them, so the *Refresh the download counts*
@@ -193,7 +201,7 @@ Read them by hand:
 
 ```sh
 npx wrangler d1 execute jokbet-stats --remote --command \
-  "SELECT day, count(*) AS n FROM downloads GROUP BY day ORDER BY day DESC LIMIT 30"
+  "SELECT day, SUM(n) AS n FROM (SELECT day, count(*) AS n FROM downloads GROUP BY day UNION ALL SELECT day, SUM(downloads) AS n FROM download_history GROUP BY day) GROUP BY day ORDER BY day DESC LIMIT 30"
 curl -s https://jokbet.jokerben.top/api/downloads.json
 ```
 

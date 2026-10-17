@@ -68,9 +68,18 @@ export function record(
 
 // --- the sums ---------------------------------------------------------------
 
-/** The counter's rows, grouped: one query and one scan of the table, reduced
- * into the five dimensions the page draws. */
-const COUNTED = "SELECT day, tag, name, client, country, count(*) AS n FROM downloads GROUP BY day, tag, name, client, country";
+/** The counter's rows, plus the dated object reads recovered from R2. Live
+ * rows have their client class and country; history has neither, so it joins as
+ * "unknown" with a null country. One scan of each table, one reduction. */
+const COUNTED = `
+  SELECT day, tag, name, client, country, SUM(n) AS n
+  FROM (
+    SELECT day, tag, name, client, country, 1 AS n FROM downloads
+    UNION ALL
+    SELECT day, tag, name, 'unknown' AS client, NULL AS country, downloads AS n FROM download_history
+  )
+  GROUP BY day, tag, name, client, country
+`;
 
 /** How many days the chart is given, dense and zero-filled: gaps in it would
  * read as days that never happened. */

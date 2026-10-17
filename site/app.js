@@ -89,7 +89,7 @@ const T = {
     statsEmpty: "暂时读不到下载统计。",
     statsOther: "其他",
     unknown: "未知",
-    clients: { browser: "浏览器", script: "命令安装", updater: "应用自动更新", other: "其他" },
+    clients: { browser: "浏览器", script: "命令安装", updater: "应用自动更新", other: "其他", unknown: "未知" },
     macos: {
       "macos-aarch64-zip": "macOS · Apple 芯片（aarch64）",
       "macos-aarch64": "macOS · Apple 芯片（aarch64）",
@@ -142,7 +142,7 @@ const T = {
     statsEmpty: "The download counts cannot be read right now.",
     statsOther: "other",
     unknown: "unknown",
-    clients: { browser: "a browser", script: "a command line", updater: "the app updating itself", other: "something else" },
+    clients: { browser: "a browser", script: "a command line", updater: "the app updating itself", other: "something else", unknown: "unknown" },
     macos: {
       "macos-aarch64-zip": "macOS · Apple silicon (aarch64)",
       "macos-aarch64": "macOS · Apple silicon (aarch64)",

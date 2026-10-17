@@ -119,11 +119,11 @@
               <tbody id="stats-clients"></tbody>
             </table>
             <p class="note">
-              <span data-lang="zh">看的是浏览器的标识，不是人：命令安装指 <code>install.sh</code>／<code>install.ps1</code> 这类脚本，应用自动更新是桌宠自己来取的。</span>
+              <span data-lang="zh">看的是浏览器的标识，不是人：命令安装指 <code>install.sh</code>／<code>install.ps1</code> 这类脚本，应用自动更新是桌宠自己来取的。早期 R2 历史数据没有客户端信息，合并在“未知”里。</span>
               <span data-lang="en" lang="en"
                 >Told apart by what the client calls itself, not by who it is: a command-line install is
                 <code>install.sh</code> or <code>install.ps1</code>, and an app update is the pet fetching its own new
-                build.</span
+                build. Earlier R2 history has no client detail and is included under “unknown.”</span
               >
             </p>
             <h2><span data-lang="zh">来自哪里</span><span data-lang="en" lang="en">Where from</span></h2>
@@ -137,9 +137,10 @@
               <tbody id="stats-countries"></tbody>
             </table>
             <p class="note">
-              <span data-lang="zh">Cloudflare 在请求上标出的国家代码，只到国家为止，没有地址、没有 IP。</span>
+              <span data-lang="zh">Cloudflare 在请求上标出的国家代码，只到国家为止，没有地址、没有 IP。历史数据没有地区维度，不会猜测。</span>
               <span data-lang="en" lang="en"
-                >The country Cloudflare puts on a request: no further than the country, no address and no IP.</span
+                >The country Cloudflare puts on a request: no further than the country, no address and no IP. Historical
+                data has no country dimension; none is inferred.</span
               >
             </p>
           </section>
@@ -208,10 +209,12 @@
           <h2><span data-lang="zh">这些数字是什么</span><span data-lang="en" lang="en">What these numbers are</span></h2>
           <ul class="list-flat">
             <li>
-              <span data-lang="zh">一次下载，指本站镜像（<code>/dl/…</code>）真正发出了一份完整的文件。文件的探测请求（HEAD）、断点续传的片段、以及浏览器自己从缓存里拿的，都不计数。</span>
+              <span data-lang="zh">本站 Worker 实时只计不带 Range 的整包 GET；回填的 R2 历史仅在读取字节数等于对象大小时计入。历史上如果 Range 恰好覆盖整份对象，无法与普通 GET 区分。缓存命中、HEAD 和部分续传不计。这里数的是服务端读出，不保证文件已写入访客磁盘。</span>
               <span data-lang="en" lang="en"
-                >One download is one whole file this site's mirror (<code>/dl/…</code>) really served. A metadata probe, a
-                resumed range, and whatever a browser takes from its own cache are not counted.</span
+                >The live Worker counts a whole-file GET with no Range header; recovered R2 history counts reads whose
+                response bytes equal the object size. A historical Range covering the whole object cannot be told apart
+                from a plain GET. Cache hits, HEAD probes and partial resumes are not counted. This is what the server
+                read, not proof the visitor saved the file.</span
               >
             </li>
             <li>
